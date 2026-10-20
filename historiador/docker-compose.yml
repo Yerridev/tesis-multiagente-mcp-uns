@@ -1,0 +1,115 @@
+# Historiador del UNS - Modulo de caudal MCC-09 (USS)
+# Mosquitto corre en Windows (fuera de Docker); los contenedores lo alcanzan via host.docker.internal.
+#
+#   docker compose up -d          -> levanta TimescaleDB, ingestor, Grafana y el lienzo vivo (http://localhost:8765)
+#   docker compose logs -f ingestor
+#
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    container_name: uns-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-uns}
+      POSTGRES_USER: ${DB_USER:-uns_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambiar_esto}
+      MCP_READER_PASSWORD: ${MCP_READER_PASSWORD:-lector_cambiar}
+      TZ: America/Lima
+    ports:
+      - "5432:5432"
+    volumes:
+      - tsdb-data:/var/lib/postgresql/data
+      - ./db/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./db/02_timescale.sql:/docker-entrypoint-initdb.d/02_timescale.sql:ro
+      - ./db/03_roles.sh:/docker-entrypoint-initdb.d/03_roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-uns_admin} -d ${DB_NAME:-uns}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ingestor:
+    build: ./ingestor
+    container_name: uns-ingestor
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      UNS_BASE: ${UNS_BASE:-uss/campus/lab-automatizacion/sl01la07/caudal-mcc09}
+      DB_DSN: postgresql://${DB_USER:-uns_admin}:${DB_PASSWORD:-cambiar_esto}@timescaledb:5432/${DB_NAME:-uns}
+      TZ: America/Lima
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Segunda instancia del mismo ingestor para el modulo de nivel (MicroLogix 1100).
+  # Las variables se guardan con prefijo "nivel-mcn09/" para no mezclarse con las de caudal.
+  ingestor-nivel:
+    build: ./ingestor
+    container_name: uns-ingestor-nivel
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      UNS_BASE: uss/campus/lab-automatizacion/sl01la07/nivel-mcn09
+      VAR_PREFIX: nivel-mcn09/
+      MQTT_CLIENT_ID: uns-ingestor-nivel
+      DB_DSN: postgresql://${DB_USER:-uns_admin}:${DB_PASSWORD:-cambiar_esto}@timescaledb:5432/${DB_NAME:-uns}
+      TZ: America/Lima
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: uns-grafana
+    restart: unless-stopped
+    depends_on:
+      - timescaledb
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_DEFAULT_THEME: dark
+      DB_USER: ${DB_USER:-uns_admin}
+      DB_PASSWORD: ${DB_PASSWORD:-cambiar_esto}
+      DB_NAME: ${DB_NAME:-uns}
+      TZ: America/Lima
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+  lienzo:
+    build: ./lienzo
+    container_name: uns-lienzo
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DB_DSN: postgresql://mcp_lector:${MCP_READER_PASSWORD:-lector_cambiar}@timescaledb:5432/${DB_NAME:-uns}
+      MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      UNS_BASE: ${UNS_BASE:-uss/campus/lab-automatizacion/sl01la07/caudal-mcc09}
+      LLM_PROVEEDOR: ${LLM_PROVEEDOR:-gemini}          # gemini | anthropic | openai (compatible)
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-5-5}
+      TZ: America/Lima
+    ports:
+      - "127.0.0.1:8765:8080"   # solo en la laptop (8080 lo usa otro programa)
+    volumes:
+      - ./mcp_servidor:/app/mcp_servidor   # mismo servidor MCP y knowledge graph (editable desde el lienzo)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  tsdb-data:
+  grafana-data:

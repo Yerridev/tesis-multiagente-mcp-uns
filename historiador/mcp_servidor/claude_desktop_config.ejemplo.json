@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "caudal-mcc09": {
+      "command": "Y:\\proyects26\\tesis\\historiador\\.venv\\Scripts\\python.exe",
+      "args": ["Y:\\proyects26\\tesis\\historiador\\mcp_servidor\\servidor_mcp.py"],
+      "env": {
+        "MCP_DSN": "postgresql://mcp_lector:TU_CLAVE_LECTOR@localhost:5432/uns"
+      }
+    }
+  }
+}

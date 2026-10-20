@@ -1,0 +1,194 @@
+{
+  "io": {
+    "I:0.0{2}": [
+      38,
+      0
+    ],
+    "O:0.0{2}": [
+      12,
+      0
+    ],
+    "I:1.0{6}": [
+      0,
+      0,
+      0,
+      5,
+      5,
+      1192
+    ],
+    "O:1.0{2}": [
+      0,
+      0
+    ]
+  },
+  "files": {
+    "B3": [
+      5394,
+      2048,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "N7": [
+      4914,
+      0,
+      1900,
+      4914,
+      16512,
+      14016,
+      16250,
+      0,
+      89,
+      0,
+      1,
+      100,
+      1,
+      0,
+      2457,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4914
+    ],
+    "F8": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      3.0,
+      0.10000000149011612,
+      0.009999999776482582,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "T4": [
+      {
+        "PRE": 3500,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 35,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 2,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 102,
+        "ACC": 0,
+        "EN": true,
+        "TT": false,
+        "DN": true,
+        "CU": true,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      },
+      {
+        "PRE": 3,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      }
+    ],
+    "C5": [
+      {
+        "PRE": 0,
+        "ACC": 0,
+        "EN": false,
+        "TT": false,
+        "DN": false,
+        "CU": false,
+        "CD": false
+      }
+    ]
+  },
+  "sizes": {
+    "B3": 11,
+    "N7": 21,
+    "F8": 10,
+    "T4": 11,
+    "C5": 1
+  },
+  "file_directory": "{'B0': {'elements': 11, 'length': 22}, 'T1': {'elements': 11, 'length': 66}, 'C2': {'elements': 1, 'length': 6}, 'R3': {'elements': 1, 'length': 6}, 'N4': {'elements': 21, 'length': 42}, 'F5': {'elements': 10, 'length': 40}, 'PD9': {'elements': 1, 'length': 46}}"
+}

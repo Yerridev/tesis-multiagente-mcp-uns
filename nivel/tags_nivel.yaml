@@ -1,0 +1,98 @@
+# Diccionario de tags - Modulo Control de Nivel MCN-09/001 (Inducontrol)
+# PLC: MicroLogix 1100 (1763-LEC) + 1762-IF2OF2  |  IP 192.168.114.9  |  EtherNet/IP (pycomm3 SLCDriver)
+# Acceso: SOLO LECTURA
+# Estado: BORRADOR v0.1 (19/10/2026) - validado con prueba en marcha manual
+#   confirmado = visto cambiar en vivo y coherente con la logica ladder
+#   hipotesis  = deducido de la logica / backup, falta prueba dirigida
+
+plc:
+  id: mcn09
+  ip: 192.168.114.9
+  driver: pycomm3.SLCDriver
+  poll_s: 1.0
+  uns_base: uss/lab-automatizacion/modulo-nivel/mcn09
+
+tags:
+  # ---------------- Proceso ----------------
+  nivel_raw:
+    addr: N7:4
+    tipo: int
+    estado: confirmado
+    nota: >
+      PV del PID PD12:0. Viene del sensor ultrasonico TS-30S (mide DISTANCIA):
+      el valor BAJA cuando el tanque se llena y SUBE cuando se vacia.
+      Rango visto 11104..16536. Falta calibrar a cm/% (2 puntos).
+    escala: {raw_lleno: null, raw_vacio: null, unidad: "%"}
+
+  velocidad_bomba_raw:
+    addr: I:1.5          # direccion tal como la reporta pycomm3
+    tipo: int
+    estado: hipotesis
+    nota: >
+      Sube a ~9000 al arrancar/girar potenciometro y cae a 0 al parar.
+      Probable: realimentacion de frecuencia del variador ATV11 o lectura del
+      potenciometro. Confirmar girando el potenciometro con la bomba en marcha.
+
+  salida_analogica_bomba:
+    addr: O:1.0
+    tipo: int
+    estado: confirmado
+    nota: "Consigna PLC->variador. En MANUAL queda en 0 (el potenciometro manda directo)."
+
+  # ---------------- Digitales ----------------
+  entradas_digitales:
+    addr: I:0.0
+    tipo: word
+    estado: hipotesis
+    bits:
+      0: "selector/pulsador (cambia 0<->1 junto con bit 1) - posible Local/Remoto o modo"
+      1: "complemento de bit 0"
+      2: "siempre 1 en la prueba (¿parada de emergencia NC / habilitacion?)"
+      5: "siempre 1 en la prueba (¿termico variador OK / nivel?)"
+
+  salidas_digitales:
+    addr: O:0.0
+    tipo: word
+    estado: confirmado
+    bits:
+      2: "bomba / variador en marcha (=1 durante la marcha)"
+      3: "bomba / piloto en marcha (=1 durante la marcha)"
+      4: "valvula Belimo ABRIR (temporizada por T4:0)"
+      5: "valvula Belimo CERRAR (temporizada por T4:1)"
+
+  # ---------------- Valvula ----------------
+  t_apertura_valvula:
+    addr: T4:0          # base 0.01 s, PRE 3500 = 35 s de carrera
+    estado: confirmado
+  t_cierre_valvula:
+    addr: T4:1
+    estado: hipotesis
+  t_apertura_sp: {addr: N7:1, estado: hipotesis, nota: "-> T4:0.PRE en modo remoto"}
+  t_cierre_sp:   {addr: N7:2, estado: hipotesis, nota: "-> T4:1.PRE en modo remoto (1900)"}
+
+  # ---------------- Control (estaticos sin SCADA) ----------------
+  setpoint_a_raw: {addr: N7:5, estado: hipotesis, nota: "14016 -> PD12:0.SPS en un modo"}
+  setpoint_b_raw: {addr: N7:6, estado: hipotesis, nota: "16250 -> PD12:0.SPS en otro modo"}
+  pid_cv_raw:     {addr: N7:14, estado: hipotesis, nota: "CV del PD12:0 (2457)"}
+  pid_params_a:   {addr: [N7:8, N7:9, N7:10], estado: hipotesis, nota: "Kc, Ti, Td juego A"}
+  pid_params_b:   {addr: [N7:11, N7:12, N7:13], estado: hipotesis, nota: "Kc, Ti, Td juego B"}
+  pid_params_float: {addr: [F8:4, F8:5, F8:6], estado: hipotesis, nota: "3.0 / 0.1 / 0.01"}
+
+  # ---------------- Estado interno ----------------
+  bits_internos:
+    addr: B3:0
+    tipo: word
+    estado: hipotesis
+    bits:
+      1: "=1 con bomba en marcha"
+      3: "selector de juego PID / modo (ver logica)"
+  limites_salida: {addr: [N7:0, N7:3, N7:20], nota: "4914 = limite/offset de salida analogica"}
+
+archivos_plc:   # directorio real del procesador
+  B3: 11
+  T4: 11
+  C5: 1
+  R6: 1
+  N7: 21
+  F8: 10
+  PD12: 1

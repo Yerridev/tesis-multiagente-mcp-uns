@@ -1,0 +1,36 @@
+# ===== Secretos (NUNCA subir) =====
+.env
+**/.env
+!**/.env.example
+**/claude_desktop_config.json
+
+# ===== Entornos y caches =====
+.venv/
+venv/
+**/.venv/
+**/__pycache__/
+*.pyc
+**/node_modules/
+**/dist/
+.idea/
+**/.idea/
+.vscode/
+
+# ===== Logs y datos generados =====
+**/logs/
+*.log
+
+# ===== Transcripciones de sesiones con IA (personales) =====
+session-*.md
+
+# ===== Respaldos locales (el historial de git ya cumple esa funcion) =====
+historiador/respaldo_*/
+historiador/mcp_servidor/conocimiento/respaldos/
+
+# ===== Programas originales de los PLC (propiedad del laboratorio / Inducontrol) =====
+# Se documentan en el repo pero no se publican los binarios. Quita estas lineas si el repo es privado
+# y quieres versionarlos.
+*.mwp
+*.RSS
+*.rss
+nivel/rss_streams/

@@ -1,0 +1,3 @@
+# Los scripts de inicializacion corren en Linux (contenedor): deben quedar con fin de linea LF.
+*.sh  text eol=lf
+*.sql text eol=lf

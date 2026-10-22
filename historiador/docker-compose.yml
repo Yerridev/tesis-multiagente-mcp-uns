@@ -64,6 +64,26 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Tercera instancia para el modulo de presion (NI cFP-2200). El conector corre en la VM Windows 7
+  # (DataSocket) y publica en el Mosquitto de la laptop. Variables con prefijo "presion-mcp09/".
+  ingestor-presion:
+    build: ./ingestor
+    container_name: uns-ingestor-presion
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      UNS_BASE: uss/campus/lab-automatizacion/sl01la07/presion-mcp09
+      VAR_PREFIX: presion-mcp09/
+      MQTT_CLIENT_ID: uns-ingestor-presion
+      DB_DSN: postgresql://${DB_USER:-uns_admin}:${DB_PASSWORD:-cambiar_esto}@timescaledb:5432/${DB_NAME:-uns}
+      TZ: America/Lima
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   grafana:
     image: grafana/grafana:11.3.0
     container_name: uns-grafana

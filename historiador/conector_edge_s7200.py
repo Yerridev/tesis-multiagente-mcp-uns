@@ -289,6 +289,9 @@ def main():
                         print(f"[{payload['timestamp']}] {d['n']:<22}{d['dir']:<7}= {v} {d.get('unidad') or ''}")
                 if t0 - ultimo_latido >= 10:
                     mq.publish(f"{BASE}/funcional/edge/heartbeat", ahora(), qos=0, retain=True)
+                    # Reafirma el estado: corrige un OFFLINE retenido que haya dejado otra instancia o un Last Will viejo
+                    mq.publish(f"{BASE}/funcional/edge/estado", "ONLINE", qos=1, retain=True)
+                    mq.publish(f"{BASE}/funcional/plc/conexion", "CONECTADO", qos=1, retain=True)
                     ultimo_latido = t0
             except Exception as e:
                 print(f"[{ahora()}] Error de lectura: {e}. Reconectando")

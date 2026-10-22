@@ -55,7 +55,8 @@ def interpretar(topic: str, payload: bytes):
             return ("evento", (datetime.now(timezone.utc), topic, texto))
         ts = dato.get("timestamp")
         t = datetime.fromisoformat(ts) if ts else datetime.now(timezone.utc)
-        direccion = (dato.get("source") or "").split("/")[-1] or None
+        # source = "<conector>/<direccion>"; la direccion puede contener '/' (MicroLogix: O:0/2)
+        direccion = (dato.get("source") or "").split("/", 1)[-1] or None
         return ("medicion", (t, variable, float(v), dato.get("unit"), "uns", direccion))
     return ("evento", (datetime.now(timezone.utc), topic, texto))
 

@@ -30,7 +30,7 @@ Entorno experimental: **Laboratorio de Automatización y Simulación de Procesos
 
 El proyecto diseña e implementa una arquitectura en capas que:
 
-1. **Adquiere** datos de PLC heterogéneos (Siemens y Allen-Bradley) con conectores edge de solo lectura.
+1. **Adquiere** datos de controladores heterogéneos (Siemens, Allen-Bradley y National Instruments) con conectores edge de solo lectura.
 2. **Normaliza y distribuye** las mediciones por **MQTT** bajo una jerarquía **Unified Namespace (UNS)**.
 3. **Almacena** el histórico en **TimescaleDB**, junto con los históricos del SCADA original (2008–2012).
 4. **Expone** los datos a agentes de IA mediante un **servidor MCP** con herramientas controladas (rol de base de datos de solo `SELECT`).
@@ -38,37 +38,38 @@ El proyecto diseña e implementa una arquitectura en capas que:
 
 ## 2. Estado actual
 
-*Actualizado: 19-oct-2026*
+*Actualizado: 21-oct-2026*
 
-| Componente | Caudal (MCC-09) | Nivel (MCN-09) |
-|---|---|---|
-| Comunicación con el PLC | ✅ Ethernet (CP243-1, S7, enlace 1) | ✅ Ethernet (EtherNet/IP, pycomm3) |
-| Mapa de variables | ✅ Validado (PC Access + tabla PID) | 🟡 Borrador v0.1 (lógica ladder + prueba en marcha) |
-| Calibración | ✅ Caudalímetro (13 puntos, R²=0,9997) | ⏳ Pendiente (2 puntos) |
-| Conector edge → MQTT | ✅ `conector_edge_s7200.py` v3.2 | ✅ `conector_edge_ml1100.py` v0.1 (falta prueba en sitio) |
-| Ingestor → TimescaleDB | ✅ `ingestor` | ✅ `ingestor-nivel` (prefijo `nivel-mcn09/`) |
-| Históricos `.lvm` importados | ✅ 2008–2011 | ⏳ Pendiente |
-| Dashboard Grafana | ✅ | ⏳ Pendiente |
-| Servidor MCP | ✅ 7 herramientas + grafo de conocimiento | ⏳ Pendiente |
-| Lienzo visual con agente | ✅ (Gemini) | ⏳ Pendiente |
+| Componente | Caudal (MCC-09) | Nivel (MCN-09) | Presión (MCP-09) |
+|---|---|---|---|
+| Comunicación con el controlador | ✅ Ethernet (CP243-1, S7, enlace 1) | ✅ Ethernet (EtherNet/IP, pycomm3) | ✅ NI-PSP vía DataSocket en la VM Windows 7 (recuperado el 21-oct, parado desde 2018) |
+| Mapa de variables | ✅ Validado (PC Access + tabla PID) | 🟡 Borrador v0.1 (lógica ladder + prueba en marcha) | 🟡 Variables compartidas `DATOS_PAC`/`pid`; la mayoría confirmadas en prueba |
+| Calibración | ✅ Caudalímetro (13 puntos, R²=0,9997) | ⏳ Pendiente (2 puntos) | 🟡 Escala validada contra la HMI (manómetro averiado) |
+| Conector edge → MQTT | ✅ `conector_edge_s7200.py` v3.2 | ✅ `conector_edge_ml1100.py` | ✅ `conector_edge_cfp2200.py` v0.3 (en la VM) |
+| Ingestor → TimescaleDB | ✅ `ingestor` | ✅ `ingestor-nivel` (prefijo `nivel-mcn09/`) | ✅ `ingestor-presion` (prefijo `presion-mcp09/`) |
+| Históricos `.lvm` importados | ✅ 2008–2011 | ⏳ Pendiente | ⏳ Pendiente (2008–2009) |
+| Dashboard Grafana | ✅ | ✅ | ✅ `presion_mcp09.json` |
+| Servidor MCP | ✅ + grafo de conocimiento | ✅ `servidor_mcp_nivel.py` | ✅ `servidor_mcp_presion.py` v1.0 + grafo |
+| Lienzo visual con agente | ✅ (Gemini) | ✅ | ✅ |
+| Observación | — | Funciona en manual (HMI/SCADA no operativos) | ⚠️ El Altivar 11 ignora la consigna del PID (lazo abierto) |
 
 ## 3. Arquitectura
 
 ```text
 ┌───────────────────────── FUENTES INDUSTRIALES (laboratorio USS) ─────────────────────────┐
-│  S7-200 CPU226 + CP243-1 (caudal)            MicroLogix 1100 + 1762-IF2OF2 (nivel)        │
-│  192.168.114.7  · S7 / TCP 102                192.168.114.9  · EtherNet/IP / TCP 44818    │
-└──────────────┬───────────────────────────────────────────────┬────────────────────────────┘
-               │ solo lectura (snap7)                          │ solo lectura (pycomm3)
-               ▼                                               ▼
-     conector_edge_s7200.py                          conector_edge_ml1100.py
-               │                                               │
-               └──────────────── MQTT (Mosquitto, Windows) ────┘
+│  S7-200 CPU226 + CP243-1 (caudal)   MicroLogix 1100 (nivel)        cFP-2200 (presión)      │
+│  192.168.114.7 · S7 / TCP 102       192.168.114.9 · EtherNet/IP    192.168.114.8 · NI-PSP │
+└──────────────┬───────────────────────────────┬──────────────────────────────┬─────────────┘
+               │ snap7 (laptop)                │ pycomm3 (laptop)             │ DataSocket (VM Win7 .30)
+               ▼                               ▼                              ▼
+     conector_edge_s7200.py          conector_edge_ml1100.py       conector_edge_cfp2200.py
+               │                               │                              │
+               └──────────────── MQTT (Mosquitto, laptop .10:1883) ───────────┘
                      uss/campus/lab-automatizacion/sl01la07/<equipo>/{funcional,descriptivo}/...
                                         │
                      ┌──────────────────┴──────────────────┐
                      ▼                                     ▼
-            ingestor (caudal)                     ingestor-nivel           ◄── importar_lvm.py
+   ingestor (caudal) · ingestor-nivel · ingestor-presion                   ◄── importar_lvm.py
                      └──────────────► TimescaleDB ◄────────┘                   (históricos SCADA)
                                         │
              ┌──────────────────────────┼───────────────────────────┐
@@ -83,7 +84,7 @@ Capas y responsabilidades:
 
 | Capa | Tecnología | Responsabilidad |
 |---|---|---|
-| Adquisición | Python (`python-snap7`, `pycomm3`) | Leer el PLC, convertir unidades, marcar tiempo, publicar por excepción y heartbeat |
+| Adquisición | Python (`python-snap7`, `pycomm3`, NI DataSocket vía `pywin32`) | Leer el PLC, convertir unidades, marcar tiempo, publicar por excepción y heartbeat |
 | Integración | MQTT (Mosquitto) + UNS | Desacoplar productores y consumidores; contexto en la ruta del tópico |
 | Historial | TimescaleDB (hypertable + agregado de 1 min) | Persistir mediciones en vivo (`uns`) e históricas (`lvm`) |
 | Acceso para IA | Servidor MCP | Herramientas acotadas, validadas y de solo lectura |
@@ -115,16 +116,32 @@ Capas y responsabilidades:
 | Situación | HMI y SCADA originales no operativos; el equipo funciona en modo manual |
 | Detalle | [`nivel/README.md`](nivel/README.md) |
 
+### 4.3 Módulo de control de presión MCP-09/001 — NI Compact FieldPoint cFP-2200
+
+| Elemento | Detalle |
+|---|---|
+| Controlador | **cFP-2200** (VxWorks, LabVIEW Real-Time 8.6, FieldPoint 6.0.2) + cFP-DI-301, cFP-DO-403, cFP-AIO-610 |
+| Programa | `startup.rtexe` del proyecto `MOD_PRESION.lvproj` (Corporación Córdova, 2008–2009); variables compartidas `DATOS_PAC` y `pid` |
+| Medición | Transmisor Danfoss MBS 3000, 0–6 bar, 4–20 mA → `psi = (mA − 4)/16 × 87` (validado contra la HMI) |
+| Actuadores | Variador Altivar 11 + bomba Pentax Ultra U5; válvula proporcional Danfoss EV260B (0–10 V) |
+| Acceso | NI-PSP (propietario, sin librería abierta) → driver NI-FieldPoint + DataSocket en la **VM Windows 7** (`192.168.114.30`) → MQTT |
+| Situación | Recuperado el 21-oct-2026 (DIP, bootline de VxWorks, reinstalación, programa y variables). HMI TPC-2106T y SCADA operativos; manómetro averiado; **el Altivar toma la velocidad de su perilla frontal e ignora al PID** |
+| Detalle | [`presion/README.md`](presion/README.md) · recuperación [`presion/RECUPERACION_cFP2200.md`](presion/RECUPERACION_cFP2200.md) · pruebas [`presion/pruebas_20261021.md`](presion/pruebas_20261021.md) |
+
 ## 5. Red del laboratorio
 
 | Equipo | IP | Función |
 |---|---|---|
 | S7-200 + CP243-1 (caudal) | `192.168.114.7` | Control del módulo de caudal |
+| cFP-2200 (presión) | `192.168.114.8` | Control del módulo de presión |
 | MicroLogix 1100 (nivel) | `192.168.114.9` | Control del módulo de nivel |
-| Laptop de tesis (Windows 11) | `192.168.114.10` (IP adicional) | Conectores, Mosquitto, Docker, MCP |
-| PC del laboratorio (Windows XP) | `192.168.114.70` | SCADA LabVIEW original de caudal (enlace 0 del CP243-1) |
-| PC/pantalla HMI | `192.168.114.72` | HMI existente |
-| VM Windows 7 | `192.168.114.30` | STEP 7-Micro/WIN y PC Access por USB/PPI (diagnóstico) |
+| Laptop de tesis (Windows 11) | `192.168.114.10` (IP adicional) | Conectores caudal/nivel, Mosquitto, Docker, MCP |
+| VM Windows 7 (VirtualBox) | `192.168.114.30` | **Conector de presión** (DataSocket); STEP 7-Micro/WIN y PC Access por USB/PPI |
+| PC del laboratorio (Windows XP, LabVIEW 8.6) | `192.168.114.70` (original) · `.80` (temporal) | Una sola PC: SCADA de caudal con `.70` (enlace 0 del CP243-1); se cambió a `.80` para el SCADA de presión y la recuperación del cFP. Vuelve a `.70` |
+| PC/pantalla HMI (caudal) | `192.168.114.72` | HMI existente |
+| HMI NI TPC-2106T (presión) | `192.168.114.82` | HMI del módulo de presión |
+
+La laptop debe tener la red Ethernet en perfil **Privado** y reglas de entrada para ICMP y TCP 1883; si no, la VM no llega a Mosquitto (ver [`red_laboratorio_plc.md`](red_laboratorio_plc.md)).
 
 Detalle de enlaces y TSAP: [`red_laboratorio_plc.md`](red_laboratorio_plc.md).
 
@@ -142,7 +159,7 @@ uss/campus/lab-automatizacion/sl01la07/<equipo>/
     └── equipo                 ficha técnica del equipo
 ```
 
-Equipos: `caudal-mcc09`, `nivel-mcn09`.
+Equipos: `caudal-mcc09`, `nivel-mcn09`, `presion-mcp09`.
 
 Formato de cada medición:
 
@@ -169,8 +186,12 @@ tesis/
 ├── diagramas.xps                 ← diagramas de la arquitectura
 ├── historiador/
 │   ├── conector_edge_s7200.py    ← conector caudal (S7-200 → MQTT) v3.2
-│   ├── conector_edge_ml1100.py   ← conector nivel (MicroLogix → MQTT) v0.1
-│   ├── docker-compose.yml        ← TimescaleDB, ingestor, ingestor-nivel, Grafana, lienzo
+│   ├── conector_edge_ml1100.py   ← conector nivel (MicroLogix → MQTT)
+│   ├── conector_edge_cfp2200.py  ← conector presión (cFP-2200 → MQTT) v0.3, corre en la VM
+│   ├── CONECTOR_CFP2200.bat      ← lanzador con reinicio automático (VM)
+│   ├── INICIAR_TODO.bat          ← arranque de toda la arquitectura (doble clic)
+│   ├── iniciar_arquitectura.ps1  ← lógica del arranque v2 (tolerante a equipos apagados)
+│   ├── docker-compose.yml        ← TimescaleDB, ingestores (caudal, nivel, presión), Grafana, lienzo
 │   ├── .env.example              ← plantilla de credenciales (copiar a .env)
 │   ├── db/                       ← esquema SQL, Timescale, roles y migraciones
 │   ├── ingestor/                 ← MQTT → TimescaleDB (VAR_PREFIX por equipo)
@@ -188,6 +209,14 @@ tesis/
     ├── extract_rss.py            ← extractor de proyectos RSLogix 500
     ├── rss_dump.txt              ← lógica extraída del programa
     └── mapa_ml1100_*.json        ← lecturas completas del PLC
+└── presion/
+    ├── README.md                 ← guía del módulo de presión
+    ├── RECUPERACION_cFP2200.md   ← procedimiento de recuperación del controlador
+    ├── pruebas_20261021.md       ← bitácora de pruebas en vivo
+    ├── prueba_*_20261021.csv     ← datos exportados de las pruebas
+    ├── probe_ni_vm*.py           ← sondeos OPC/DataSocket en la VM
+    ├── herramientas/             ← diag_cfp.py (FTP) y probe_cfp.py (puertos)
+    └── puente_presion_VI.md      ← alternativa descartada (puente LabVIEW)
 ```
 
 No se versionan: `.env`, entornos virtuales, logs, transcripciones de sesiones ni los binarios originales de los programas de PLC (`*.mwp`, `*.RSS`). Ver [`.gitignore`](.gitignore).
@@ -201,7 +230,20 @@ No se versionan: `.env`, entornos virtuales, logs, transcripciones de sesiones n
 - **Mosquitto** en Windows con `listener 1883 0.0.0.0` y `allow_anonymous true`.
 - Python 3.12 con: `pip install python-snap7 pycomm3 paho-mqtt "psycopg[binary]" olefile`.
 
-### Pasos
+### Arranque automático (recomendado)
+
+`historiador/INICIAR_TODO.bat` ejecuta `historiador/iniciar_arquitectura.ps1` v2, que funciona con **cualquier combinación** de equipos encendidos (1, 2 o los 3):
+
+1. Hace ping a `.7`, `.8` y `.9`; los equipos apagados se marcan y **no detienen** el arranque.
+2. Levanta Docker (si está disponible) y aplica las migraciones pendientes (marca v3.2, `06_presion_v01.sql` si falta el rango de presión).
+3. Abre una ventana por conector de la laptop (caudal, nivel) con bucle de reinicio y log en `logs\conector_<id>.log`.
+4. Para presión, enciende la VM con `VBoxManage` (nombre en `VM_PRESION` del `.env`) y espera el latido MQTT del conector de la VM.
+5. Prueba cada servidor MCP (`--probar`, log en `logs\mcp_probar_<id>.log`), registra en Claude Desktop los que falten y abre lienzo y Grafana.
+6. Muestra una tabla RESUMEN por equipo.
+
+En la VM, el conector arranca solo con un acceso directo a `CONECTOR_CFP2200.bat` en `shell:startup` (ver [`presion/README.md`](presion/README.md) §6).
+
+### Pasos manuales
 
 ```powershell
 # 1) Infraestructura
@@ -214,6 +256,8 @@ docker compose logs -f ingestor-nivel
 python conector_edge_s7200.py                        # caudal
 python conector_edge_ml1100.py                       # nivel (sin calibrar)
 python conector_edge_ml1100.py --raw-vacio A --raw-lleno B   # nivel calibrado
+# presión: en la VM Windows 7
+python conector_edge_cfp2200.py --broker 192.168.114.10      # o CONECTOR_CFP2200.bat
 
 # 3) Interfaces
 #    Grafana:  http://localhost:3000
@@ -243,6 +287,30 @@ Caso de uso de referencia:
 
 El agente no inventa mediciones ni define límites por su cuenta: si un dato está desactualizado o el rango es provisional, lo dice.
 
+### Lienzo de supervisión multi-equipo (http://localhost:8765)
+
+Todo se configura desde un **registro único**: `historiador/mcp_servidor/conocimiento/equipos.json`.
+
+| Vista | Contenido |
+|---|---|
+| **Navegación lateral** | Árbol UNS: campus › aula › equipos, con un semáforo por equipo (gris = normal, ámbar = atención, rojo = alarma o sin datos) |
+| **Vista general** (`#/`) | Una tarjeta por equipo: variable principal, mini tendencia de 30 min, modo, bomba, PLC y diagnóstico. Incluye la lista "Requiere atención" y el **agente coordinador** |
+| **Lienzo del equipo** (`#/equipo/<id>`) | La misma plantilla para todos: knowledge graph animado, diagnóstico con cadena causal, tendencia, UNS en vivo, línea de tiempo y agente |
+
+El agente abre los servidores MCP de **todos** los equipos registrados. Cada herramienta lleva el prefijo de su equipo (`caudal__diagnosticar_lazo`, `nivel__diagnosticar_nivel`, `presion__diagnosticar_presion`), así que una misma pregunta puede consultar y comparar varios módulos.
+
+### Servidor MCP de presión
+
+`servidor_mcp_presion.py` v1.0: `listar_variables`, `obtener_lectura`, `obtener_estado_plc`, `consultar_historial`, `comparar_con_rango` (3–40 psi del fabricante), `diagnosticar_presion` (con `momento` para reproducir el pasado) y `consultar_grafo` (`grafo_mcp09.json`, 14 nodos). Diagnósticos: `SIN_DATOS`, `SELECTOR_EN_0`, `SISTEMA_DETENIDO`, `MANUAL_EN_MARCHA`, `REMOTO_SIN_SETPOINT`, `ACTUADOR_NO_RESPONDE`, `SUBIENDO_A_SETPOINT`, `EN_SETPOINT`, `SOBRE_SETPOINT`, `FUERA_DE_SETPOINT`. Con los datos del 21-oct detectó correctamente el lazo abierto del Altivar (`ACTUADOR_NO_RESPONDE`).
+
+**Agregar un PLC nuevo:**
+1. Conector edge → MQTT bajo `uss/campus/lab-automatizacion/sl01la07/<id>/...`.
+2. Servicio de ingestor con `VAR_PREFIX=<id>/` en `docker-compose.yml`.
+3. Servidor MCP `servidor_mcp_<proceso>.py` con `listar_variables`, `obtener_lectura`, `_estado_enlace` y su `diagnosticar_*`.
+4. Grafo `conocimiento/grafo_<id>.json`.
+5. Entrada en `equipos.json`.
+6. Opcional: reglas de visualización por nodo en `lienzo/frontend/src/nodes/lecturas.ts`. Sin reglas, cada nodo muestra sus variables de forma genérica.
+
 ## 10. Historiador y datos históricos
 
 | Tabla | Contenido |
@@ -253,9 +321,9 @@ El agente no inventa mediciones ni define límites por su cuenta: si un dato est
 | `variables` | Catálogo publicado por cada conector |
 | `rangos_validados` | Rangos aceptados (**pendientes de validar con el responsable del laboratorio**) |
 
-Las variables de nivel se guardan con prefijo `nivel-mcn09/` (por ejemplo `nivel-mcn09/nivel/raw`). Las de caudal mantienen sus nombres originales (`caudal/pv_pid`, `pid/kc`…).
+Las variables de nivel se guardan con prefijo `nivel-mcn09/` (por ejemplo `nivel-mcn09/nivel/raw`) y las de presión con `presion-mcp09/` (por ejemplo `presion-mcp09/presion/psi`; migración `db/06_presion_v01.sql`). Las de caudal mantienen sus nombres originales (`caudal/pv_pid`, `pid/kc`…).
 
-Históricos del SCADA original: archivos `.lvm` de LabVIEW (caudal 2008–2011, ya importados; nivel 2008–2012, pendiente), importados de forma idempotente con `herramientas/importar_lvm.py`.
+Históricos del SCADA original: archivos `.lvm` de LabVIEW (caudal 2008–2011, ya importados; nivel 2008–2012 y presión 2008–2009, pendientes), importados de forma idempotente con `herramientas/importar_lvm.py`.
 
 ## 11. Evaluación experimental
 
@@ -275,7 +343,8 @@ Indicadores:
 
 ## 12. Seguridad
 
-- Conectores **sin funciones de escritura** (S7: solo lecturas `db_read`/`read_area`; MicroLogix: solo `plc.read`).
+- Conectores **sin funciones de escritura** (S7: solo lecturas `db_read`/`read_area`; MicroLogix: solo `plc.read`; cFP-2200: DataSocket solo en modo `ReadAutoUpdate`).
+- El Altivar 11 de presión no se reconfigura sin el responsable del laboratorio.
 - Rol de base de datos `mcp_lector` solo con `SELECT`, y sesiones read-only.
 - Secretos en `.env` (fuera del repositorio); `.env.example` como plantilla.
 - PLC y broker solo en la red local del laboratorio.
@@ -293,10 +362,16 @@ Indicadores:
 - [x] Comunicación EtherNet/IP con el MicroLogix 1100 (nivel)
 - [x] Extracción del programa RSLogix 500 y mapa de variables preliminar
 - [x] Conector de nivel e ingestor dedicado
+- [x] Herramientas MCP y dashboard para nivel
+- [x] Recuperación del cFP-2200 de presión (parado desde 2018)
+- [x] Lectura del cFP-2200 sin la PC del laboratorio (DataSocket en la VM), ingestor, MCP, Grafana y lienzo de presión
+- [x] `INICIAR_TODO` tolerante a equipos apagados
 - [ ] Calibración del nivel y confirmación de variables en hipótesis
-- [ ] Importar los históricos `.lvm` de nivel
-- [ ] Herramientas MCP y dashboard para nivel
-- [ ] Orquestación multiagente sobre los dos equipos
+- [ ] Importar los históricos `.lvm` de nivel y presión
+- [ ] Altivar 11 de presión con consigna AI1 (con el responsable) y nueva prueba del lazo
+- [ ] Casos de evaluación de presión
+- [ ] Módulo de temperatura (INDUCONTROL TEMPERATURA)
+- [ ] Orquestación multiagente sobre los tres equipos
 - [ ] Rangos operativos validados por el laboratorio
 - [ ] Campaña de evaluación y cálculo de indicadores
 
@@ -310,6 +385,10 @@ Indicadores:
 | CP243-1 | Módulo Ethernet del S7-200 |
 | TSAP | Identificador de punto de acceso en comunicaciones S7 |
 | EtherNet/IP / PCCC | Protocolo industrial de Rockwell y su encapsulado de comandos para SLC/MicroLogix |
+| cFP / FieldPoint | Familia de controladores modulares de National Instruments con LabVIEW Real-Time |
+| NI-PSP | Protocolo propietario de NI para variables compartidas en red |
+| DataSocket | Componente ActiveX de NI que lee variables NI-PSP/FieldPoint por URL (`psp://`, `fieldpoint://`) |
+| MAX | Measurement & Automation Explorer: configura controladores y E/S de NI |
 | MQTT | Protocolo de mensajería publicar/suscribir |
 | UNS | Unified Namespace: jerarquía común de datos industriales |
 | MCP | Model Context Protocol: estándar para conectar LLM con herramientas y contexto |

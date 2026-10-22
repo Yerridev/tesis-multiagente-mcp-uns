@@ -1,100 +1,130 @@
 # Módulo de control de nivel MCN-09/001 — MicroLogix 1100
 
-Segundo equipo integrado a la arquitectura de la tesis. Módulo didáctico de **Inducontrol Ingeniería S.A.C.** (2006) del Laboratorio de Automatización y Simulación de Procesos de la USS.
+Segundo equipo integrado a la arquitectura de la tesis. Es un módulo didáctico de **Inducontrol Ingeniería S.A.C.** (manual de 2006/2009) del Laboratorio de Automatización y Simulación de Procesos de la USS.
 
-> **Regla del proyecto:** integración **solo lectura**. Ningún script de esta carpeta escribe en el PLC (no existe ninguna llamada a `plc.write`).
+> **Regla del proyecto:** integración **solo lectura**. Ningún script de esta carpeta ni el conector escribe en el PLC (no existe ninguna llamada a `plc.write`).
 
-## 1. Equipo
+*Actualizado: 20-oct-2026 — mapa v0.2, calibración de nivel y contraste con el manual del fabricante.*
+
+## 1. Equipo y proceso
+
+```text
+        ┌──────── sensor ultrasónico Senix TS-30S1 (N7:4)
+        ▼
+   ┌─────────┐  T2: acrílico, 43 L, 60 cm (tanque controlado; rango de trabajo 0-35 cm)
+   │   T2    │
+   └────┬────┘  válvula Belimo LRB24-3 + válvula manual de salida → vuelve a T1
+        │
+   ┌────┴──────────────┐  T1: acero, 78 L (reserva) con interruptores Kobold NKP de nivel bajo/alto
+   │        T1         │
+   └───────────────────┘
+        ▲ bomba Pentax Ultra U5 120/3T + variador Altivar 11 (velocidad por potenciómetro en LOCAL)
+```
 
 | Elemento | Detalle |
 |---|---|
-| PLC | Allen-Bradley **MicroLogix 1100** (catálogo reportado: `1763-LEC`) |
-| Expansión analógica | **1762-IF2OF2** (2 entradas / 2 salidas analógicas) |
-| Comunicación | Puerto Ethernet integrado, **EtherNet/IP (PCCC)**, TCP 44818 |
-| IP | `192.168.114.9` |
-| Sensor de nivel | Ultrasónico **TS-30S** (mide **distancia** a la superficie del agua) |
-| Bomba | Pentax Ultra 7 con variador **Schneider Altivar 11** |
-| Válvula | **Belimo LRB24-3** (actuador flotante: abrir/cerrar por tiempo) |
-| HMI / SCADA originales | NI TPC-2106T + SCADA LabVIEW 8.6 (`NIVEL.exe`), hoy **no operativos** |
+| PLC | Allen-Bradley **MicroLogix 1100** (`1763-LEC`) + **1762-IF2OF2** |
+| Comunicación | Ethernet integrado, **EtherNet/IP (PCCC)**, TCP 44818, IP `192.168.114.9` |
+| Tablero | Pilotos SISTEMA ENERGIZADO, SISTEMA FUNCIONANDO, ALARMA NIVEL ALTO y ALARMA NIVEL BAJO; potenciómetro CONTROL MANUAL; pulsadores ARRANQUE y PARADA MANUAL; selector LOCAL–0–REMOTO; paro de emergencia |
+| HMI / SCADA originales | NI TPC-2106T (LabVIEW 8.6) + SCADA LabVIEW en PC. **No operativos** (ver §5) |
 
-## 2. Cómo se obtuvo el mapa de variables
+## 2. Cómo se obtuvo el mapa
 
-1. **Backup del laboratorio** (`BACKUP-4PLCS\INDUCONTROL NIVEL`): proyecto LabVIEW `MCN.lvproj`, librería de variables `Libreria_hmi.lvlib`, ~50 históricos `.lvm` (2008–2012), hojas técnicas y guías de práctica.
-2. **Proyecto RSLogix 500** `upload final.RSS`: se extrajo sin RSLogix con `extract_rss.py` (contenedor OLE + streams zlib). La lógica ladder permitió identificar direcciones, el PID `PD12:0`, los temporizadores de la válvula y los escalados.
-3. **Lectura en vivo** con `probe_ml1100.py` y `scan_ml1100.py` (directorio real de archivos de datos del procesador).
-4. **Prueba en marcha manual** (19-oct-2026) con `scan_ml1100.py --watch 2`: arranque/paro de bomba, llenado y apertura de válvula.
+1. **Backup del laboratorio:** proyecto LabVIEW, librería de variables, ~50 `.lvm` históricos y hojas técnicas.
+2. **Programa RSLogix 500** (`upload final.RSS`), extraído sin RSLogix con `extract_rss.py`.
+3. **Lectura en vivo:** `probe_ml1100.py` y `scan_ml1100.py`, que dan el directorio real de archivos de datos.
+4. **Pruebas en marcha** (19 y 20-oct-2026): arranque, parada, selector, potenciómetro y llenado/vaciado.
+5. **Calibración** del nivel en 4 puntos medidos con regla en T2.
+6. **Contraste con el manual del fabricante** (43 páginas, fotografiado).
 
-### Archivos de datos reales del procesador
+Detalle completo: [`tags_nivel.yaml`](tags_nivel.yaml).
 
-| Archivo | Elementos | Uso |
-|---|---|---|
-| `B3` | 11 | Bits internos (modos, marcha, alarmas) |
-| `T4` | 11 | Temporizadores (válvula `T4:0`/`T4:1` base 0,01 s; `T4:2`, `T4:3` base 1 s) |
-| `C5` | 1 | Contador |
-| `R6` | 1 | Control |
-| `N7` | 21 | Enteros: nivel, setpoints, parámetros PID, límites de salida |
-| `F8` | 10 | Flotantes (`F8:4..6` = 3,0 / 0,1 / 0,01) |
-| `PD12` | 1 | Bloque PID |
+## 3. Calibración del nivel
 
-## 3. Variables identificadas
-
-Detalle completo en [`tags_nivel.yaml`](tags_nivel.yaml).
-**Confirmado** = visto en vivo y coherente con la lógica. **Hipótesis** = deducido, falta prueba dirigida.
-
-| Variable | Dirección | Estado | Observación |
+| Altura en T2 | `N7:4` | Recta | Error |
 |---|---|---|---|
-| Nivel (crudo) | `N7:4` | confirmado | PV del PID. **Inverso:** baja al llenar (el sensor mide distancia). Rango visto 11104–16536 |
-| Velocidad bomba (cruda) | `I:1.5`* | hipótesis | ~9000 en marcha, 0 parada |
-| Consigna PLC → variador | `O:1.0` | confirmado | 0 en modo manual (el potenciómetro manda directo) |
-| Bomba en marcha | `O:0/2`, `O:0/3` | confirmado | |
-| Válvula abrir | `O:0/4` + `T4:0` | confirmado | Carrera 35 s (`PRE` 3500 × 0,01 s) |
-| Válvula cerrar | `O:0/5` + `T4:1` | hipótesis | |
-| Selector del tablero | `I:0/0` ↔ `I:0/1` | hipótesis | Posible Local/Remoto |
-| Setpoints | `N7:5`, `N7:6` | hipótesis | Se copian a `PD12:0.SPS` según el modo |
-| Kc, Ti, Td | `N7:8–10`, `N7:11–13` | hipótesis | Dos juegos, seleccionados por `B3:0/3` |
-| CV del PID | `N7:14` | hipótesis | Escalado en `N7:20` hacia `O:1.0` |
-| Tiempos de válvula (SP) | `N7:1`, `N7:2` | hipótesis | → `T4:0.PRE`, `T4:1.PRE` en modo remoto |
+| 0 cm | 16 220 | 16 348 | 0,3 cm |
+| 15 cm | 10 540 | 10 348 | 0,5 cm |
+| 30 cm | 4 390 | 4 347 | 0,1 cm |
+| 39 cm | 640 | 747 | 0,3 cm |
+
+**`nivel_cm = (16348 − N7:4) / 400`**
+
+- El sensor mide distancia, así que `N7:4` baja cuando el tanque se llena.
+- **Satura cerca de 40–41 cm**, aunque T2 mide 60 cm.
+- El rango de trabajo del fabricante es **0–35 cm**.
+- El ultrasónico produce picos de eco con agua turbulenta. Por eso `nivel/cm` usa una mediana de 3 muestras.
+
+## 4. Variables
+
+| Variable UNS | Dirección | Estado |
+|---|---|---|
+| `nivel/raw`, `nivel/cm`, `nivel/pct`, `nivel/fuera_rango_sensor` | `N7:4` | confirmado |
+| `bomba/potenciometro_raw` | `I:1.5`* | confirmado |
+| `bomba/frecuencia_estimada_hz` | `I:1.5` × 0,00195 | hipótesis (2 puntos) |
+| `estado/selector_remoto` / `estado/selector_local` | `I:0/0` / `I:0/1` | confirmado (centro = ambos en 0) |
+| `estado/tanque1_con_agua` | `I:0/2` | confirmado (nivel bajo de T1 → para la bomba) |
+| `estado/alarma_nivel_bajo_tanque1` | `O:0/1` | confirmado |
+| `estado/pulsador_arranque` | `I:0/4` | confirmado |
+| `estado/bomba_marcha`, `estado/piloto_marcha` | `O:0/2`, `O:0/3` | confirmado |
+| `valvula/abriendo` + `valvula/t_apertura` | `O:0/4` + `T4:0` | confirmado (35 s al entrar en modo) |
+| `estado/mando_i03` / `estado/piloto_o00` | `I:0/3` / `O:0/0` | hipótesis: nivel ALTO de T1 y su piloto |
+| `estado/entrada_5` | `I:0/5` | hipótesis: paro de emergencia (NC) |
+| `pid/*`, `valvula/*_sp` | `N7:1–14` | hipótesis (estáticos sin HMI) |
 
 \* Dirección tal como la resuelve `pycomm3`.
 
-## 4. Por qué el HMI y el SCADA originales no funcionan
+La PARADA MANUAL detiene la bomba (confirmado), pero su entrada no se identificó: es un pulso de menos de 1 s.
 
-Según `MCN.lvproj` y `MCN.aliases`, la arquitectura original era **PLC ↔ PC SCADA (`192.168.114.90`, LabVIEW) ↔ HMI TPC-2106T**. Las variables compartidas que lee el HMI se publicaban desde esa PC. En modo remoto, el PLC espera que la PC escriba setpoints y parámetros en `N7`. Sin esa PC, solo opera el **modo manual**: potenciómetro → variador.
+## 5. Por qué el HMI y el SCADA no funcionan
 
-Revivir el SCADA implicaría escribir en el PLC, lo que queda **fuera del alcance** de la tesis.
+Según el manual (p. 11), el **HMI se comunica directamente con el PLC por Ethernet** y es el controlador principal. La PC solo manda si el HMI le cede el control.
 
-## 5. Scripts
+- El HMI **enciende y ejecuta su aplicación**, pero el proyecto LabVIEW lo tiene en `192.168.1.110`, mientras que el PLC está en `192.168.114.9` (otra subred).
+- **Causa probable:** cambio de direccionamiento del PLC, lo que deja al HMI sin comunicación.
+- **Consecuencia:** el modo REMOTO (PID) no recibe setpoint ni parámetros. Solo opera el modo LOCAL.
+- Corregirlo implica modificar el PLC o el HMI, lo que queda **fuera del alcance** de la tesis (solo lectura).
+
+## 6. Diferencias encontradas en el manual
+
+El manual tiene errores copiados del módulo de caudal: "Sensor/Transmisor de Caudal", "0–35 l/min", "2 módulos de salida analógica" y "sensor 15–400 cm". Se priorizan las mediciones y las fichas técnicas de cada componente.
+
+La ficha de la válvula Belimo indica **95 s** de carrera, pero el PLC la acciona **35 s**. Lo más probable es que la apertura "total" del arranque sea en realidad parcial.
+
+## 7. Scripts
 
 | Script | Función |
 |---|---|
-| `probe_ml1100.py` | Primera prueba: TCP 44818, tipo de procesador y lectura de bloques básicos |
-| `scan_ml1100.py` | Descubre los archivos de datos y su tamaño, lee todo, guarda `mapa_ml1100_*.json`. Con `--watch N` muestra solo lo que cambia |
-| `extract_rss.py` | Extrae texto y lógica de un `.RSS` de RSLogix 500 (sin RSLogix) → `rss_dump.txt` |
-| `../historiador/conector_edge_ml1100.py` | **Conector productivo** PLC → MQTT (UNS) |
+| `probe_ml1100.py` | Prueba inicial de comunicación |
+| `scan_ml1100.py` | Mapa completo de archivos de datos; `--watch N` muestra solo los cambios |
+| `extract_rss.py` | Extrae lógica y texto de un `.RSS` de RSLogix 500 |
+| `../historiador/conector_edge_ml1100.py` | **Conector productivo v0.2** PLC → MQTT (UNS), ya calibrado |
+| `../historiador/mcp_servidor/servidor_mcp_nivel.py` | **Servidor MCP** de solo lectura para agentes de IA |
+| `../historiador/db/05_nivel_v02.sql` | Migración: renombra variables v0.1, recalcula `nivel/cm` y carga el rango 0–35 cm |
 
-```powershell
-pip install pycomm3 olefile paho-mqtt
-python scan_ml1100.py                 # mapa completo
-python scan_ml1100.py --watch 2       # cambios en vivo
-python extract_rss.py "Y:\Downloads\upload final.RSS"
-```
+## 8. Servidor MCP `nivel-mcn09`
 
-## 6. Integración con el historiador
-
-- **Tópico base UNS:** `uss/campus/lab-automatizacion/sl01la07/nivel-mcn09`
-- **Ingestor:** servicio `ingestor-nivel` en `historiador/docker-compose.yml`. Guarda con prefijo `nivel-mcn09/` (por ejemplo `nivel-mcn09/nivel/raw`) para no mezclarse con caudal.
+| Herramienta | Qué responde |
+|---|---|
+| `listar_variables` | Variables del módulo con dirección, unidad, estado y último dato |
+| `obtener_lectura` | Último valor con **VIGENTE / DESACTUALIZADO** |
+| `obtener_estado_plc` | Enlace, modo, bomba, nivel y tendencia, potenciómetro, válvula, T1 y alarmas |
+| `consultar_historial` | Estadísticas y serie resumida (`uns` o `lvm`) |
+| `comparar_con_rango` | Contraste con 0–35 cm (rango del fabricante, falta validar en el laboratorio) |
+| `diagnosticar_nivel` | Diagnóstico por reglas: LLENANDO, NIVEL_ESTABLE, BOMBA_DETENIDA, TANQUE1_NIVEL_BAJO, REMOTO_SIN_SUPERVISOR… con tendencia en cm/min y **caudal neto estimado** (0,717 L/cm). Con `momento` reproduce un instante pasado. |
 
 ```powershell
 cd ..\historiador
-python conector_edge_ml1100.py                                         # sin calibrar: publica nivel/raw
-python conector_edge_ml1100.py --raw-vacio <N7:4 vacío> --raw-lleno <N7:4 lleno>   # agrega nivel/pct
+$env:MCP_DSN = "postgresql://mcp_lector:TU_CLAVE_LECTOR@localhost:5432/uns"
+python mcp_servidor\servidor_mcp_nivel.py --probar
 ```
 
-## 7. Pendientes
+Para conectarlo a Claude Desktop, usa el bloque `nivel-mcn09` de `mcp_servidor/claude_desktop_config.ejemplo.json`.
 
-- [ ] Calibración de nivel en 2 puntos (tanque bajo / alto) → `--raw-vacio`, `--raw-lleno`.
-- [ ] Confirmar `I:1.5` girando el potenciómetro con la bomba en marcha.
-- [ ] Confirmar el significado de `I:0/0`–`I:0/5` y de los bits de `B3`.
-- [ ] Importar los `.lvm` históricos de nivel (mapa de canales por confirmar).
-- [ ] Servidor MCP `nivel-mcn09` (listar_variables, obtener_lectura, consultar_historial, obtener_estado_plc, comparar_con_rango).
+## 9. Pendientes
+
+- [ ] Confirmar `I:0/3` / `O:0/0` (nivel alto de T1) e `I:0/5` (emergencia) cuando ocurran.
+- [ ] Más puntos para la frecuencia del variador.
+- [ ] Importar los `.lvm` históricos de nivel (2008–2012).
+- [ ] Grafo de conocimiento y dashboard de Grafana para nivel.
 - [ ] Rango operativo validado por el responsable del laboratorio.

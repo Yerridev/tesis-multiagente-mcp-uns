@@ -11,9 +11,14 @@ Mapa de canales (inferido de los datos; el SCADA los guardo como "Untitled..."):
 Es idempotente: si un archivo se importa dos veces (o aparece duplicado en otra carpeta),
 las filas repetidas se descartan por la restriccion UNIQUE (variable, fuente, time).
 
+Modulo de NIVEL MCN-09 (--modulo nivel): mismo formato de 8 canales, variables con prefijo 'nivel-mcn09/':
+  0 setpoint (cm) | 1 nivel T2 (cm) | 2 senal de control (%) | 3 valvula (%) | 4 Kc | 5 Ti | 6 Td | 7 modo (0/1/2)
+  Evidencia: el canal 1 satura en ~42 cm igual que el sensor ultrasonico hoy (~40,7 cm) y la escala del HMI es 0-35 cm.
+
 Uso:
     pip install "psycopg[binary]"
     python importar_lvm.py "Y:\\Downloads\\TODO-CAUDAL-PC-XP" --dsn postgresql://uns_admin:cambiar_esto@localhost:5432/uns
+    python importar_lvm.py CARPETA_NIVEL --modulo nivel --dsn ...
     python importar_lvm.py CARPETA --solo-revisar        # no escribe; muestra lo que importaria
 """
 import argparse
@@ -22,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TZ_LIMA = timezone(timedelta(hours=-5))
-CANALES = [
+CANALES_CAUDAL = [
     ("caudal/setpoint", "L/min"),
     ("caudal/pv_pid", "L/min"),
     ("actuadores/variador_pct", "%"),
@@ -32,6 +37,18 @@ CANALES = [
     ("pid/td", "min"),
     ("estado/modo_lvm", None),
 ]
+CANALES_NIVEL = [
+    ("nivel-mcn09/pid/setpoint_cm", "cm"),
+    ("nivel-mcn09/nivel/cm", "cm"),          # mismo nombre que el dato en vivo: comparable con fuente='lvm'
+    ("nivel-mcn09/pid/senal_control_pct", "%"),
+    ("nivel-mcn09/valvula/apertura_pct", "%"),
+    ("nivel-mcn09/pid/kc", None),
+    ("nivel-mcn09/pid/ti", None),
+    ("nivel-mcn09/pid/td", None),
+    ("nivel-mcn09/estado/modo_lvm", None),
+]
+MODULOS = {"caudal": CANALES_CAUDAL, "nivel": CANALES_NIVEL}
+CANALES = CANALES_CAUDAL   # se reemplaza en main() segun --modulo
 
 
 def num(texto: str, decimal: str) -> float:
@@ -126,7 +143,11 @@ def main():
     p.add_argument("carpeta", help="Carpeta raiz; se buscan .lvm en todas las subcarpetas")
     p.add_argument("--dsn", default="postgresql://uns_admin:cambiar_esto@localhost:5432/uns")
     p.add_argument("--solo-revisar", action="store_true", help="No escribe en la base")
+    p.add_argument("--modulo", choices=sorted(MODULOS), default="caudal", help="Mapa de canales a usar")
     a = p.parse_args()
+    global CANALES
+    CANALES = MODULOS[a.modulo]
+    print(f"Modulo: {a.modulo} -> {', '.join(v for v, _ in CANALES)}\n")
 
     archivos = sorted(Path(a.carpeta).rglob("*.lvm"))
     if not archivos:

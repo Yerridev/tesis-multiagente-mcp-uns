@@ -1,4 +1,4 @@
-import type { Diagnostico, EventoLinea, Grafo, Salud, Valor, Enlace } from './types';
+import type { Diagnostico, EquipoCfg, EventoLinea, Grafo, Organizacion, ResumenEquipo, Salud, Valor, Enlace } from './types';
 
 async function j<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
@@ -21,42 +21,55 @@ const q = (o: Record<string, string | number | undefined | null>) =>
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join('&');
 
+/** API general (todos los equipos). */
 export const api = {
   salud: () => j<Salud>('/api/salud'),
-  grafo: () => j<Grafo>('/api/grafo'),
-  guardarGrafo: (g: Partial<Grafo>) =>
-    j<{ ok: boolean; respaldo: string }>('/api/grafo', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(g),
-    }),
-  estado: (momento?: string) =>
-    j<{ momento: string; en_vivo: boolean; valores: Record<string, Valor>; enlace: Enlace | null }>(
-      `/api/estado?${q({ momento })}`,
-    ),
-  diagnostico: (momento?: string) => j<Diagnostico>(`/api/diagnostico?${q({ momento })}`),
-  rango: () => j<{ desde: string | null; hasta: string | null }>('/api/rango'),
-  eventos: (inicio: string, fin: string) => j<EventoLinea[]>(`/api/eventos?${q({ inicio, fin })}`),
-  historial: (variables: string[], inicio: string, fin: string, puntos = 300) =>
-    j<{ inicio: string; fin: string; paso_s: number; series: Record<string, [string, number][]> }>(
-      `/api/historial?${q({ variables: variables.join(','), inicio, fin, puntos })}`,
-    ),
-  variables: () =>
-    j<{ variables: { variable: string; unidad: string | null; descripcion: string | null; direccion: string | null }[] }>(
-      '/api/variables',
-    ),
+  equipos: () => j<{ organizacion: Organizacion; equipos: EquipoCfg[] }>('/api/equipos'),
+  planta: () => j<{ consultado: string; equipos: ResumenEquipo[] }>('/api/planta'),
 };
 
-/** Lee un stream SSE de POST /api/agente y entrega cada evento JSON. */
+/** API de un equipo concreto (rutas /api/e/{id}/...). */
+export function apiEquipo(id: string) {
+  const b = `/api/e/${encodeURIComponent(id)}`;
+  return {
+    grafo: () => j<Grafo>(`${b}/grafo`),
+    guardarGrafo: (g: Partial<Grafo>) =>
+      j<{ ok: boolean; respaldo: string }>(`${b}/grafo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(g),
+      }),
+    estado: (momento?: string) =>
+      j<{ momento: string; en_vivo: boolean; valores: Record<string, Valor>; enlace: Enlace | null }>(
+        `${b}/estado?${q({ momento })}`,
+      ),
+    diagnostico: (momento?: string) => j<Diagnostico>(`${b}/diagnostico?${q({ momento })}`),
+    rango: () => j<{ desde: string | null; hasta: string | null }>(`${b}/rango`),
+    eventos: (inicio: string, fin: string) => j<EventoLinea[]>(`${b}/eventos?${q({ inicio, fin })}`),
+    historial: (variables: string[], inicio: string, fin: string, puntos = 300) =>
+      j<{ inicio: string; fin: string; paso_s: number; series: Record<string, [string, number][]> }>(
+        `${b}/historial?${q({ variables: variables.join(','), inicio, fin, puntos })}`,
+      ),
+    variables: () =>
+      j<{ variables: { variable: string; unidad: string | null; descripcion: string | null; direccion: string | null }[] }>(
+        `${b}/variables`,
+      ),
+    wsUrl: () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/vivo/${encodeURIComponent(id)}`,
+  };
+}
+
+/** Lee un stream SSE de POST /api/agente y entrega cada evento JSON.
+ *  'equipo' = equipo que el usuario esta viendo (null = vista general: el agente coordina todos). */
 export async function conversar(
   mensajes: { role: 'user' | 'assistant'; content: string }[],
+  equipo: string | null,
   alEvento: (ev: Record<string, unknown>) => void,
   senal?: AbortSignal,
 ) {
   const r = await fetch('/api/agente', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mensajes }),
+    body: JSON.stringify({ mensajes, equipo }),
     signal: senal,
   });
   if (!r.ok || !r.body) {

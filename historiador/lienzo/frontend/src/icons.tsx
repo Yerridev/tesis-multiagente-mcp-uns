@@ -11,8 +11,29 @@ const S = (props: { children: React.ReactNode }) => (
   </svg>
 );
 
+/** Nodos de otros equipos que usan el mismo simbolo. */
+const ALIAS: Record<string, string> = {
+  tanque_t1: 'tanque', tanque_t2: 'tanque', interruptor_nivel_t1: 'sensor_nivel', sensor_ultrasonico: 'ultrasonico',
+};
+
 export function Icono({ id, tipo, activo, giro }: { id: string; tipo: string } & P) {
-  switch (id) {
+  switch (ALIAS[id] ?? id) {
+    case 'ultrasonico':
+      return (
+        <S>
+          <rect x="13" y="5" width="14" height="8" rx="2" />
+          <path d="M14 18c4 2.5 8 2.5 12 0M11 23c6 3.5 12 3.5 18 0M8 28c8 4.5 16 4.5 24 0" />
+        </S>
+      );
+    case 'pulsadores':
+      return (
+        <S>
+          <circle cx="13" cy="20" r="6" />
+          <circle cx="27" cy="20" r="6" />
+          <path d="M11 20l2 2 3-4" />
+          <path d="M25 18h4v4h-4z" />
+        </S>
+      );
     case 'tanque':
       return (
         <S>

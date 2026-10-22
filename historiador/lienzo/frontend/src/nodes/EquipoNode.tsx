@@ -16,10 +16,10 @@ const LADOS: [Position, string][] = [
 
 function EquipoNode({ id, data, selected }: NodeProps) {
   const nodo = (data as { nodo: NodoGrafo }).nodo;
-  const { valores, enlace, diag, resalte, agenteTocando, editando } = useEstado();
-  const L = lectura(id, nodo.variables, valores, enlace, diag);
-  const varPct = valorNum(valores, 'actuadores/variador_pct') ?? 0;
-  const marcha = (valorNum(valores, 'estado/sistema_funcionando') ?? 0) >= 0.5;
+  const { equipo, valores, enlace, diag, resalte, agenteTocando, editando } = useEstado();
+  const L = lectura(equipo?.id, id, nodo.variables, valores, enlace, diag);
+  const varPct = (valorNum(valores, equipo?.velocidad?.variable) ?? 0) * (equipo?.velocidad?.factor_pct ?? 1);
+  const marcha = (valorNum(valores, equipo?.marcha) ?? 0) >= 0.5;
   const enCadena = resalte.nodos.has(id);
   const tocado = agenteTocando.has(id);
   const cls = ['eq', `tipo-${nodo.tipo}`, enCadena ? `en-cadena fuente-${resalte.fuente}` : '', tocado ? 'tocado' : '',

@@ -8,16 +8,17 @@ interface Props {
   desde: number;
   hasta: number;
   eventos: EventoLinea[];
+  /** variable -> [clase si 1, texto si 1, clase si 0, texto si 0] (de equipos.json) */
+  marcas: Record<string, [string, string, string, string]>;
   onCambio: (m: string | null) => void;
 }
 
-const MARCA: Record<string, (v: number) => [string, string]> = {
-  'estado/sistema_funcionando': (v) => (v ? ['arranque', 'Bomba arranca'] : ['parada', 'Bomba se detiene']),
-  'estado/selector_remoto': (v) => (v ? ['modo', 'Pasa a REMOTO'] : ['modo', 'Sale de REMOTO']),
-  'estado/nivel_bajo': (v) => (v ? ['alarma', 'Nivel bajo'] : ['modo', 'Nivel normal']),
-};
-
-export default function TimeBar({ momento, desde, hasta, eventos, onCambio }: Props) {
+export default function TimeBar({ momento, desde, hasta, eventos, marcas: MARCAS, onCambio }: Props) {
+  const marcaDe = (variable: string, v: number): [string, string] => {
+    const m = MARCAS[variable];
+    if (!m) return ['modo', variable];
+    return v ? [m[0], m[1]] : [m[2], m[3]];
+  };
   const [jugando, setJugando] = useState(false);
   const [vel, setVel] = useState(20);
   const actual = momento ? Date.parse(momento) : hasta;
@@ -45,7 +46,7 @@ export default function TimeBar({ momento, desde, hasta, eventos, onCambio }: Pr
       <div className="tb-pista">
         <div className="tb-marcas">
           {marcas.map((e, i) => {
-            const [cls, txt] = (MARCA[e.variable] ?? (() => ['modo', e.variable]))(e.valor);
+            const [cls, txt] = marcaDe(e.variable, e.valor);
             return (
               <button key={i} className={`tb-marca ${cls}`} style={{ left: pos(Date.parse(e.t)) }}
                 title={`${fmtHora(e.t)} · ${txt}`} onClick={() => { setJugando(false); onCambio(e.t); }} />

@@ -68,7 +68,77 @@ export interface Salud {
   mqtt: boolean;
   agente: boolean;
   modelo: string;
+  proveedor?: string;
   solo_lectura: boolean;
+  equipos_cargados?: string[];
+}
+
+/* ---------- registro de equipos (mcp_servidor/conocimiento/equipos.json) */
+export interface VarCfg {
+  variable: string;
+  nombre: string;
+  unidad: string;
+  decimales?: number;
+  min?: number;
+  max?: number;
+  aviso?: number;
+  alarma?: number;
+}
+
+export interface SerieCfg {
+  v: string;
+  nombre: string;
+  eje: number;
+  paso?: boolean;
+  color?: string;
+  grueso?: boolean;
+}
+
+export interface EquipoCfg {
+  id: string;
+  alias: string;
+  nombre: string;
+  codigo: string;
+  proceso: string;
+  fabricante?: string;
+  plc: string;
+  ip: string;
+  protocolo: string;
+  uns_base: string;
+  prefijo_db: string;
+  diagnostico: string;
+  grafo: string;
+  disponible?: boolean;
+  principal: VarCfg;
+  secundario?: VarCfg;
+  marcha: string;
+  velocidad?: { variable: string; factor_pct: number };
+  flujo?: { variable: string; factor: number };
+  tendencia: {
+    ejes: { nombre: string; min?: number; max?: number }[];
+    series: SerieCfg[];
+    lineas?: { eje: number; valor: number; nombre: string }[];
+  };
+  kpis: { k: string; n: string; u: string; d?: number }[];
+  eventos: Record<string, [string, string, string, string]>;
+  sugerencias: string[];
+}
+
+export interface Organizacion {
+  campus?: string;
+  area?: string;
+  aula?: string;
+  uns_raiz?: string;
+}
+
+export interface ResumenEquipo {
+  id: string;
+  disponible?: boolean;
+  enlace?: Enlace | null;
+  valores?: Record<string, Valor>;
+  diagnostico?: { diagnostico: string; explicacion: string; recomendacion: string };
+  spark?: [string, number][];
+  error?: string;
 }
 
 export interface EventoLinea {

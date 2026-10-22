@@ -6,16 +6,15 @@ import TendenciaPanel from '../panels/TendenciaPanel';
 import UnsPanel from '../panels/UnsPanel';
 import { useEstado } from '../ctx';
 
-const TITULO: Record<string, [string, string]> = {
-  diagnostico: ['Diagnóstico del lazo', 'diagnosticar_lazo · knowledge graph'],
-  agente: ['Agente de IA', 'Claude + MCP'],
-  tendencia: ['Tendencia', 'TimescaleDB'],
-  uns: ['Unified Namespace', 'MQTT en vivo'],
-};
-
 function PanelNode({ data }: NodeProps) {
   const d = data as { kind: string; agenteHabilitado?: boolean; modelo?: string };
-  const { momento } = useEstado();
+  const { equipo, momento } = useEstado();
+  const TITULO: Record<string, [string, string]> = {
+    diagnostico: ['Diagnóstico', `${equipo?.diagnostico ?? ''} · knowledge graph`],
+    agente: ['Agente de IA', 'MCP de todos los equipos'],
+    tendencia: ['Tendencia', 'TimescaleDB'],
+    uns: ['Unified Namespace', 'MQTT en vivo'],
+  };
   const [t, sub] = TITULO[d.kind] ?? [d.kind, ''];
   return (
     <div className={`panel panel-${d.kind}`}>
@@ -27,7 +26,8 @@ function PanelNode({ data }: NodeProps) {
       </div>
       <div className="panel-cuerpo nodrag">
         {d.kind === 'diagnostico' && <DiagnosticoPanel />}
-        {d.kind === 'agente' && <AgentePanel habilitado={Boolean(d.agenteHabilitado)} modelo={d.modelo ?? ''} />}
+        {d.kind === 'agente' && <AgentePanel habilitado={Boolean(d.agenteHabilitado)} modelo={d.modelo ?? ''}
+          equipo={equipo?.id ?? null} sugerencias={equipo?.sugerencias} />}
         {d.kind === 'tendencia' && <TendenciaPanel />}
         {d.kind === 'uns' && <UnsPanel />}
       </div>

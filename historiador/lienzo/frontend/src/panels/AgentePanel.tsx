@@ -6,7 +6,9 @@ import type { Arista } from '../types';
 
 interface Paso {
   id: string;
-  nombre: string;
+  nombre: string; // nombre de la herramienta sin prefijo
+  alias: string;  // equipo al que consulta (caudal, nivel...)
+  equipo?: string;
   entrada: Record<string, unknown>;
   ms?: number;
   error?: boolean;
@@ -20,11 +22,10 @@ interface Turno {
   error?: string;
 }
 
-const SUGERENCIAS = [
-  '¿El caudal está siguiendo al setpoint? Si no, ¿por qué?',
-  '¿Por qué se detuvo la bomba a las 15:18?',
-  'Compara el desempeño de hoy con el SCADA de 2008-2011',
-  '¿Qué equipos influyen sobre el caudal de la línea?',
+const GENERALES = [
+  '¿Cómo están todos los equipos del laboratorio ahora?',
+  '¿Qué equipos tienen alguna alarma o advertencia?',
+  '¿Qué equipos están en marcha y en qué modo?',
 ];
 
 function resumen(nombre: string, d: Record<string, unknown> | null): string {
@@ -37,12 +38,17 @@ function resumen(nombre: string, d: Record<string, unknown> | null): string {
   return 'ok';
 }
 
-export default function AgentePanel({ habilitado, modelo }: { habilitado: boolean; modelo: string }) {
+/** Chat con el agente. 'equipo' = equipo visible (null en la vista general: el agente coordina todos los equipos).
+ *  Las herramientas llegan como "<alias>__<herramienta>"; solo se resalta en el lienzo lo del equipo visible. */
+export default function AgentePanel({ habilitado, modelo, equipo, sugerencias }: {
+  habilitado: boolean; modelo: string; equipo: string | null; sugerencias?: string[];
+}) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [texto, setTexto] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const fin = useRef<HTMLDivElement>(null);
   const { agenteToca, agenteCadena, nodosDeVariables } = useAcciones();
+  const lista = sugerencias && sugerencias.length ? sugerencias : GENERALES;
 
   useEffect(() => {
     fin.current?.scrollIntoView({ block: 'end' }); // en Chrome reciente devuelve una promesa: no retornarla
@@ -58,35 +64,38 @@ export default function AgentePanel({ habilitado, modelo }: { habilitado: boolea
     setOcupado(true);
     const actualizar = (f: (t: Turno) => Turno) =>
       setTurnos((ts) => ts.map((t, i) => (i === ts.length - 1 ? f(t) : t)));
-    await conversar(historial, (ev) => {
+    await conversar(historial, equipo, (ev) => {
       switch (ev.tipo) {
         case 'texto':
           actualizar((t) => ({ ...t, content: t.content + String(ev.delta ?? '') }));
           break;
         case 'herramienta': {
           const entrada = (ev.entrada ?? {}) as Record<string, unknown>;
-          actualizar((t) => ({ ...t, pasos: [...(t.pasos ?? []), { id: String(ev.id), nombre: String(ev.nombre), entrada }] }));
-          const vars = [
-            ...(Array.isArray(entrada.variables) ? (entrada.variables as string[]) : []),
-            ...(typeof entrada.variable === 'string' ? [entrada.variable] : []),
-          ];
-          const nodos = nodosDeVariables(vars);
-          if (typeof entrada.entidad === 'string') nodos.push(entrada.entidad);
-          if (ev.nombre === 'obtener_estado_plc') nodos.push('plc', 'bomba', 'selector');
-          if (nodos.length) agenteToca(nodos);
+          const [alias, nombre] = String(ev.nombre).includes('__') ? String(ev.nombre).split('__', 2) : ['', String(ev.nombre)];
+          actualizar((t) => ({ ...t, pasos: [...(t.pasos ?? []), { id: String(ev.id), nombre, alias, equipo: ev.equipo as string, entrada }] }));
+          if (equipo && ev.equipo === equipo) {
+            const vars = [
+              ...(Array.isArray(entrada.variables) ? (entrada.variables as string[]) : []),
+              ...(typeof entrada.variable === 'string' ? [entrada.variable] : []),
+            ];
+            const nodos = nodosDeVariables(vars);
+            if (typeof entrada.entidad === 'string') nodos.push(entrada.entidad);
+            if (nombre === 'obtener_estado_plc') nodos.push('plc', 'bomba', 'selector');
+            if (nodos.length) agenteToca(nodos);
+          }
           break;
         }
         case 'resultado': {
           const datos = (ev.datos ?? null) as Record<string, unknown> | null;
           actualizar((t) => ({
             ...t,
-            pasos: (t.pasos ?? []).map((p) => p.id === ev.id
-              ? { ...p, ms: Number(ev.ms), error: Boolean(ev.error), resumen: resumen(p.nombre, datos) } : p),
+            pasos: (t.pasos ?? []).map((x) => x.id === ev.id
+              ? { ...x, ms: Number(ev.ms), error: Boolean(ev.error), resumen: resumen(x.nombre, datos) } : x),
           }));
-          if (ev.nombre === 'diagnosticar_lazo' && datos) {
-            const ar = [...((datos.aristas_causales as Arista[]) ?? [])];
+          if (equipo && ev.equipo === equipo && datos && Array.isArray(datos.aristas_causales)) {
+            const ar = [...(datos.aristas_causales as Arista[])];
             ((datos.hallazgos_secundarios as { aristas?: Arista[] }[]) ?? []).forEach((h) => ar.push(...(h.aristas ?? [])));
-            agenteCadena(ar);
+            if (ar.length) agenteCadena(ar);
           }
           break;
         }
@@ -103,9 +112,11 @@ export default function AgentePanel({ habilitado, modelo }: { habilitado: boolea
       <div className="agente-chat nowheel">
         {turnos.length === 0 && (
           <div className="agente-vacio">
-            <p>Pregunta sobre el módulo. El agente usa las mismas herramientas MCP que Claude Desktop y marca en el lienzo lo que consulta.</p>
+            <p>{equipo
+              ? 'Pregunta sobre este módulo (o sobre otro: el agente tiene acceso a todos). Marca en el lienzo lo que consulta.'
+              : 'Vista general: el agente consulta a cada equipo con sus propias herramientas MCP y compara los resultados.'}</p>
             <div className="sugerencias">
-              {SUGERENCIAS.map((s) => (
+              {lista.map((s) => (
                 <button key={s} disabled={!habilitado || ocupado} onClick={() => enviar(s)}>{s}</button>
               ))}
             </div>
@@ -118,6 +129,7 @@ export default function AgentePanel({ habilitado, modelo }: { habilitado: boolea
                 {t.pasos.map((p) => (
                   <span key={p.id} className={`paso ${p.ms === undefined ? 'corriendo' : ''} ${p.error ? 'err' : ''}`}
                     title={JSON.stringify(p.entrada)}>
+                    {p.alias && <b className="paso-eq">{p.alias}</b>}
                     <code>{p.nombre}</code>
                     {p.resumen && <em>{p.resumen}</em>}
                     {p.ms !== undefined && <small>{p.ms} ms</small>}
@@ -141,7 +153,7 @@ export default function AgentePanel({ habilitado, modelo }: { habilitado: boolea
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto); } }} />
         <button type="submit" disabled={!habilitado || ocupado || !texto.trim()} aria-label="Enviar"><IcoEnviar /></button>
       </form>
-      <div className="agente-pie">{modelo} · herramientas por MCP · solo lectura</div>
+      <div className="agente-pie">{modelo} · MCP de todos los equipos · solo lectura</div>
     </div>
   );
 }

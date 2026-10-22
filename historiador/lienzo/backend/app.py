@@ -1,24 +1,25 @@
 """
-Lienzo vivo del modulo de caudal MCC-09 - backend (FastAPI).  v1.0
+Lienzo vivo multi-equipo del laboratorio USS - backend (FastAPI).  v2.0
 
-- Sirve el knowledge graph (lectura y edicion con respaldo automatico).
-- Estado y diagnostico en vivo o en cualquier momento pasado (maquina del tiempo), leyendo TimescaleDB con el
-  rol de solo lectura mcp_lector.
-- Reenvia por WebSocket lo que publica el UNS (MQTT) para los valores en vivo.
-- Agente: Claude (Anthropic) o Gemini/otra API compatible con OpenAI + cliente MCP (stdio) del mismo
-  servidor_mcp.py que usa Claude Desktop. Se elige con LLM_PROVEEDOR en el .env.
-Ninguna ruta escribe en el PLC ni en la base de datos.
+- Lee el registro de equipos (mcp_servidor/conocimiento/equipos.json): cada equipo trae su base UNS, su prefijo en
+  la base de datos, su servidor MCP, su diagnostico y su knowledge graph. Agregar un PLC = agregar una entrada.
+- Vista de planta (/api/planta): resumen de todos los equipos para la pantalla de inicio.
+- Rutas por equipo (/api/e/{id}/...): grafo (lectura/edicion con respaldo), estado y diagnostico en vivo o en un
+  momento pasado, historial, eventos y WebSocket del UNS.
+- Agente: un solo chat que abre como cliente MCP (stdio) los servidores de TODOS los equipos registrados; las
+  herramientas llevan el prefijo del equipo (caudal__..., nivel__...) para que el modelo coordine entre ellos.
+Ninguna ruta escribe en los PLC ni en la base de datos (rol mcp_lector, sesiones read-only).
 """
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import os
 import re
 import shutil
 import sys
-import threading
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -33,9 +34,9 @@ from psycopg.rows import dict_row
 DB_DSN = os.getenv("DB_DSN", "postgresql://mcp_lector:lector_cambiar@localhost:5432/uns")
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
-BASE = os.getenv("UNS_BASE", "uss/campus/lab-automatizacion/sl01la07/caudal-mcc09")
 MCP_DIR = Path(os.getenv("MCP_DIR", Path(__file__).resolve().parents[2] / "mcp_servidor"))
-GRAFO = MCP_DIR / "conocimiento" / "grafo_mcc09.json"
+CONOCIMIENTO = MCP_DIR / "conocimiento"
+REGISTRO = CONOCIMIENTO / "equipos.json"
 PROVEEDOR = os.getenv("LLM_PROVEEDOR", "anthropic").strip().lower()   # anthropic | gemini | openai (compatible)
 PROVEEDORES = {
     "anthropic": {"clave": "ANTHROPIC_API_KEY", "modelo": os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5"), "url": None,
@@ -54,7 +55,60 @@ TIPOS = {"equipo", "sensor", "actuador", "control", "mando", "proteccion", "proc
 
 os.environ.setdefault("MCP_DSN", DB_DSN)
 sys.path.insert(0, str(MCP_DIR))
-import servidor_mcp as srv  # noqa: E402  (mismas reglas de diagnostico que el agente)
+
+
+# ----------------------------------------------------------------------------- registro de equipos
+def _leer_registro() -> dict:
+    reg = json.loads(REGISTRO.read_text(encoding="utf-8"))
+    ids = [e["id"] for e in reg["equipos"]]
+    if len(ids) != len(set(ids)):
+        raise RuntimeError("equipos.json tiene ids repetidos")
+    return reg
+
+
+REG = _leer_registro()
+EQUIPOS: dict[str, dict] = {e["id"]: e for e in REG["equipos"]}
+MODULOS: dict[str, Any] = {}
+for _e in REG["equipos"]:
+    try:
+        MODULOS[_e["id"]] = importlib.import_module(_e["mcp_modulo"])  # mismas reglas que usa el agente
+    except Exception as _err:  # noqa: BLE001  (un equipo mal configurado no debe tumbar el lienzo)
+        print(f"[lienzo] no se pudo cargar {_e['mcp_modulo']} ({_e['id']}): {_err!r}", flush=True)
+
+
+def eq(equipo: str) -> dict:
+    cfg = EQUIPOS.get(equipo)
+    if not cfg:
+        raise HTTPException(404, f"Equipo '{equipo}' no registrado. Opciones: {', '.join(EQUIPOS)}")
+    return cfg
+
+
+def modulo(cfg: dict):
+    m = MODULOS.get(cfg["id"])
+    if m is None:
+        raise HTTPException(503, f"El servidor MCP de {cfg['id']} ({cfg['mcp_modulo']}) no se pudo cargar")
+    return m
+
+
+def largo(cfg: dict, v: str) -> str:
+    return cfg["prefijo_db"] + v
+
+
+def corto(cfg: dict, v: str) -> str:
+    p = cfg["prefijo_db"]
+    return v[len(p):] if p and v.startswith(p) else v
+
+
+def filtro(cfg: dict) -> tuple[str, dict]:
+    """Fragmento SQL que deja solo las variables de este equipo en la tabla mediciones."""
+    if cfg["prefijo_db"]:
+        return "variable LIKE %(pfx)s", {"pfx": cfg["prefijo_db"] + "%"}
+    otros = [e["prefijo_db"] + "%" for e in EQUIPOS.values() if e["prefijo_db"]]
+    return ("NOT (variable LIKE ANY(%(otros)s))", {"otros": otros}) if otros else ("TRUE", {})
+
+
+def grafo_path(cfg: dict) -> Path:
+    return CONOCIMIENTO / cfg["grafo"]
 
 
 def ahora() -> datetime:
@@ -85,10 +139,10 @@ def consulta(sql: str, params: dict | tuple = ()) -> list[dict]:
 
 # ----------------------------------------------------------------------------- MQTT -> WebSocket
 class Vivo:
-    """Un cliente MQTT compartido; reparte cada mensaje a los WebSocket conectados."""
+    """Un cliente MQTT compartido para todos los equipos; reparte cada mensaje a los WebSocket de ese equipo."""
 
     def __init__(self):
-        self.clientes: set[asyncio.Queue] = set()
+        self.clientes: dict[asyncio.Queue, str] = {}
         self.loop: asyncio.AbstractEventLoop | None = None
         self.conectado = False
         self.c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"lienzo-{os.getpid()}")
@@ -103,23 +157,28 @@ class Vivo:
 
     def _on_connect(self, c, _u, _f, rc, _p=None):
         self.conectado = True
-        c.subscribe(f"{BASE}/funcional/#", qos=0)
+        for e in EQUIPOS.values():
+            c.subscribe(f"{e['uns_base']}/funcional/#", qos=0)
 
     def _on_message(self, _c, _u, msg):
-        topic = msg.topic[len(BASE) + len("/funcional/"):]
+        cfg = next((e for e in EQUIPOS.values() if msg.topic.startswith(e["uns_base"] + "/funcional/")), None)
+        if not cfg:
+            return
+        topic = msg.topic[len(cfg["uns_base"]) + len("/funcional/"):]
         texto = msg.payload.decode("utf-8", "replace")
         try:
             d = json.loads(texto)
         except json.JSONDecodeError:
             d = None
         if isinstance(d, dict) and "value" in d:
-            ev = {"tipo": "valor", "variable": topic, "valor": d["value"], "unidad": d.get("unit"),
+            ev = {"tipo": "valor", "equipo": cfg["id"], "variable": topic, "valor": d["value"], "unidad": d.get("unit"),
                   "t": d.get("timestamp")}
         else:
-            ev = {"tipo": "evento", "variable": topic, "texto": texto, "t": iso(ahora())}
+            ev = {"tipo": "evento", "equipo": cfg["id"], "variable": topic, "texto": texto, "t": iso(ahora())}
         if self.loop:
-            for q in list(self.clientes):
-                self.loop.call_soon_threadsafe(q.put_nowait, ev)
+            for q, quien in list(self.clientes.items()):
+                if quien in ("*", cfg["id"]):
+                    self.loop.call_soon_threadsafe(q.put_nowait, ev)
 
 
 vivo = Vivo()
@@ -132,10 +191,10 @@ async def lifespan(_app):
     vivo.c.loop_stop()
 
 
-app = FastAPI(title="Lienzo MCC-09", lifespan=lifespan)
+app = FastAPI(title="Lienzo del laboratorio USS", lifespan=lifespan)
 
 
-# ----------------------------------------------------------------------------- API
+# ----------------------------------------------------------------------------- API general
 @app.get("/api/salud")
 def salud():
     try:
@@ -144,17 +203,82 @@ def salud():
     except Exception:  # noqa: BLE001
         db = False
     return {"db": db, "mqtt": vivo.conectado, "agente": bool(os.getenv(CFG["clave"])), "modelo": MODELO,
-            "proveedor": CFG["nombre"],
-            "solo_lectura": True}
+            "proveedor": CFG["nombre"], "solo_lectura": True,
+            "equipos_cargados": [k for k in EQUIPOS if k in MODULOS]}
 
 
-@app.get("/api/grafo")
-def leer_grafo():
-    return json.loads(GRAFO.read_text(encoding="utf-8"))
+@app.get("/api/equipos")
+def equipos():
+    publicos = [{k: v for k, v in e.items() if k not in ("mcp_modulo",)} | {"disponible": e["id"] in MODULOS}
+                for e in REG["equipos"]]
+    return {"organizacion": REG.get("organizacion", {}), "equipos": publicos}
 
 
-@app.put("/api/grafo")
-async def guardar_grafo(req: Request):
+def _ultimos(cfg: dict, vs: list[str], t: datetime | None = None) -> dict[str, dict]:
+    t = t or ahora()
+    filas = consulta(
+        """SELECT DISTINCT ON (variable) variable, valor, unidad, time FROM mediciones
+           WHERE fuente = 'uns' AND variable = ANY(%(vs)s) AND time <= %(t)s AND time > %(t)s - interval '1 day'
+           ORDER BY variable, time DESC""", {"vs": [largo(cfg, v) for v in vs], "t": t})
+    return {corto(cfg, f["variable"]): f for f in filas}
+
+
+def _diagnostico(cfg: dict, momento: str | None) -> dict:
+    d = getattr(modulo(cfg), cfg["diagnostico"])(momento)
+    d.setdefault("cadena_causal", [])
+    d.setdefault("aristas_causales", [])
+    d.setdefault("hallazgos_secundarios", [])
+    d.setdefault("evidencia", {})
+    return d
+
+
+def _resumen(cfg: dict) -> dict:
+    p = cfg["principal"]
+    s = cfg.get("secundario")
+    salida: dict[str, Any] = {"id": cfg["id"], "disponible": cfg["id"] in MODULOS}
+    try:
+        salida["enlace"] = modulo(cfg)._estado_enlace()
+    except Exception as e:  # noqa: BLE001
+        salida["enlace"] = None
+        salida["error"] = str(e)[:200]
+        return salida
+    vs = [p["variable"], cfg["marcha"], "estado/selector_remoto", "estado/selector_local"] + ([s["variable"]] if s else [])
+    u = _ultimos(cfg, vs)
+    salida["valores"] = {k: {"valor": f["valor"], "unidad": f["unidad"], "t": iso(f["time"])} for k, f in u.items()}
+    try:
+        d = _diagnostico(cfg, None)
+        salida["diagnostico"] = {k: d.get(k) for k in ("diagnostico", "explicacion", "recomendacion")}
+    except Exception as e:  # noqa: BLE001
+        salida["diagnostico"] = {"diagnostico": "ERROR", "explicacion": str(e)[:200], "recomendacion": ""}
+    t1 = ahora()
+    t0 = t1 - timedelta(minutes=30)
+    spark = consulta(
+        """SELECT date_bin('30 seconds', time, %(t0)s) AS t, avg(valor) AS v FROM mediciones
+           WHERE fuente = 'uns' AND variable = %(v)s AND time >= %(t0)s AND time < %(t1)s GROUP BY 1 ORDER BY 1""",
+        {"v": largo(cfg, p["variable"]), "t0": t0, "t1": t1})
+    salida["spark"] = [[iso(f["t"]), round(f["v"], 3)] for f in spark]
+    return salida
+
+
+@app.get("/api/planta")
+async def planta():
+    """Resumen de todos los equipos (tarjetas de la vista general). Se calcula en paralelo."""
+    res = await asyncio.gather(*(asyncio.to_thread(_resumen, e) for e in REG["equipos"]), return_exceptions=True)
+    return {"consultado": iso(ahora()),
+            "equipos": [r if isinstance(r, dict) else {"id": e["id"], "error": str(r)[:200]}
+                        for e, r in zip(REG["equipos"], res)]}
+
+
+# ----------------------------------------------------------------------------- API por equipo
+@app.get("/api/e/{equipo}/grafo")
+def leer_grafo(equipo: str):
+    return json.loads(grafo_path(eq(equipo)).read_text(encoding="utf-8"))
+
+
+@app.put("/api/e/{equipo}/grafo")
+async def guardar_grafo(equipo: str, req: Request):
+    cfg = eq(equipo)
+    ruta = grafo_path(cfg)
     g = await req.json()
     nodos, rel = g.get("nodos"), g.get("relaciones")
     if not isinstance(nodos, dict) or not isinstance(rel, list) or not nodos:
@@ -178,54 +302,63 @@ async def guardar_grafo(req: Request):
         if clave in vistos:
             raise HTTPException(400, f"Relacion repetida: {clave}")
         vistos.add(clave)
-    actual = json.loads(GRAFO.read_text(encoding="utf-8"))
-    respaldos = GRAFO.parent / "respaldos"
+    actual = json.loads(ruta.read_text(encoding="utf-8"))
+    respaldos = ruta.parent / "respaldos"
     respaldos.mkdir(exist_ok=True)
     marca = datetime.now(TZ_LIMA).strftime("%Y%m%d_%H%M%S")
-    shutil.copy2(GRAFO, respaldos / f"grafo_mcc09_{marca}.json")
+    nombre_resp = f"{ruta.stem}_{marca}.json"
+    shutil.copy2(ruta, respaldos / nombre_resp)
     nuevo = {**actual, "nodos": nodos, "relaciones": rel, "layout": g.get("layout", actual.get("layout", {})),
              "editado": iso(ahora())}
-    tmp = GRAFO.with_suffix(".tmp")
+    tmp = ruta.with_suffix(".tmp")
     tmp.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(GRAFO)
-    return {"ok": True, "respaldo": f"respaldos/grafo_mcc09_{marca}.json", "nodos": len(nodos), "relaciones": len(rel)}
+    tmp.replace(ruta)
+    return {"ok": True, "respaldo": f"respaldos/{nombre_resp}", "nodos": len(nodos), "relaciones": len(rel)}
 
 
-@app.get("/api/variables")
-def variables():
-    return srv.listar_variables()
+@app.get("/api/e/{equipo}/variables")
+def variables(equipo: str):
+    return modulo(eq(equipo)).listar_variables()
 
 
-@app.get("/api/rango")
-def rango():
-    f = consulta("SELECT min(time) AS desde, max(time) AS hasta FROM mediciones WHERE fuente = 'uns'")[0]
+@app.get("/api/e/{equipo}/rango")
+def rango(equipo: str):
+    cfg = eq(equipo)
+    w, p = filtro(cfg)
+    f = consulta(f"SELECT min(time) AS desde, max(time) AS hasta FROM mediciones WHERE fuente = 'uns' AND {w}", p)[0]
     return {"desde": iso(f["desde"]), "hasta": iso(f["hasta"])}
 
 
-@app.get("/api/estado")
-def estado(momento: str | None = None):
+@app.get("/api/e/{equipo}/estado")
+def estado(equipo: str, momento: str | None = None):
+    cfg = eq(equipo)
     t = parse_t(momento) or ahora()
+    w, p = filtro(cfg)
     filas = consulta(
-        """SELECT DISTINCT ON (variable) variable, valor, unidad, time FROM mediciones
-           WHERE fuente = 'uns' AND time <= %(t)s AND time > %(t)s - interval '2 hours'
-           ORDER BY variable, time DESC""", {"t": t})
-    valores = {f["variable"]: {"valor": f["valor"], "unidad": f["unidad"], "t": iso(f["time"]),
-                               "edad_s": round((t - f["time"]).total_seconds(), 1)} for f in filas}
-    enlace = srv._estado_enlace() if momento is None else None
-    return {"momento": iso(t), "en_vivo": momento is None, "valores": valores, "enlace": enlace}
+        f"""SELECT DISTINCT ON (variable) variable, valor, unidad, time FROM mediciones
+            WHERE fuente = 'uns' AND {w} AND time <= %(t)s AND time > %(t)s - interval '2 hours'
+            ORDER BY variable, time DESC""", {"t": t, **p})
+    valores = {corto(cfg, f["variable"]): {"valor": f["valor"], "unidad": f["unidad"], "t": iso(f["time"]),
+                                           "edad_s": round((t - f["time"]).total_seconds(), 1)} for f in filas}
+    enlace = modulo(cfg)._estado_enlace() if momento is None else None
+    return {"equipo": cfg["id"], "momento": iso(t), "en_vivo": momento is None, "valores": valores, "enlace": enlace}
 
 
-@app.get("/api/diagnostico")
-def diagnostico(momento: str | None = None):
+@app.get("/api/e/{equipo}/diagnostico")
+def diagnostico(equipo: str, momento: str | None = None):
+    cfg = eq(equipo)
     try:
-        return srv.diagnosticar_lazo(momento)
+        return _diagnostico(cfg, momento)
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
         raise HTTPException(400, str(e))
 
 
-@app.get("/api/historial")
-def historial(variables: str, minutos: float = 30, inicio: str | None = None, fin: str | None = None,
+@app.get("/api/e/{equipo}/historial")
+def historial(equipo: str, variables: str, minutos: float = 30, inicio: str | None = None, fin: str | None = None,
               puntos: int = 300):
+    cfg = eq(equipo)
     vs = [v for v in variables.split(",") if v][:12]
     t1 = parse_t(fin) or ahora()
     t0 = parse_t(inicio) or (t1 - timedelta(minutes=minutos))
@@ -233,47 +366,68 @@ def historial(variables: str, minutos: float = 30, inicio: str | None = None, fi
     filas = consulta(
         """SELECT variable, date_bin(make_interval(secs => %(p)s), time, %(t0)s) AS t, avg(valor) AS v
            FROM mediciones WHERE fuente = 'uns' AND variable = ANY(%(vs)s) AND time >= %(t0)s AND time < %(t1)s
-           GROUP BY 1, 2 ORDER BY 1, 2""", {"p": paso, "t0": t0, "t1": t1, "vs": vs})
+           GROUP BY 1, 2 ORDER BY 1, 2""", {"p": paso, "t0": t0, "t1": t1, "vs": [largo(cfg, v) for v in vs]})
     series: dict[str, list] = {v: [] for v in vs}
     for f in filas:
-        series[f["variable"]].append([iso(f["t"]), round(f["v"], 3)])
+        series[corto(cfg, f["variable"])].append([iso(f["t"]), round(f["v"], 3)])
     return {"inicio": iso(t0), "fin": iso(t1), "paso_s": paso, "series": series}
 
 
-@app.get("/api/eventos")
-def eventos(inicio: str | None = None, fin: str | None = None, horas: float = 4):
-    """Cambios de estado (bomba, modo) para marcar la linea de tiempo."""
+@app.get("/api/e/{equipo}/eventos")
+def eventos(equipo: str, inicio: str | None = None, fin: str | None = None, horas: float = 4):
+    """Cambios de estado (los definidos en 'eventos' del registro) para marcar la linea de tiempo."""
+    cfg = eq(equipo)
+    vs = [largo(cfg, v) for v in cfg.get("eventos", {})]
+    if not vs:
+        return []
     t1 = parse_t(fin) or ahora()
     t0 = parse_t(inicio) or (t1 - timedelta(hours=horas))
     filas = consulta(
         """SELECT variable, time, valor FROM (
              SELECT variable, time, valor, lag(valor) OVER (PARTITION BY variable ORDER BY time) AS prev
-             FROM mediciones WHERE fuente = 'uns' AND time BETWEEN %(t0)s AND %(t1)s
-               AND variable IN ('estado/sistema_funcionando', 'estado/selector_remoto', 'estado/nivel_bajo')) x
-           WHERE prev IS DISTINCT FROM valor AND prev IS NOT NULL ORDER BY time""", {"t0": t0, "t1": t1})
-    return [{"variable": f["variable"], "t": iso(f["time"]), "valor": f["valor"]} for f in filas]
+             FROM mediciones WHERE fuente = 'uns' AND time BETWEEN %(t0)s AND %(t1)s AND variable = ANY(%(vs)s)) x
+           WHERE prev IS DISTINCT FROM valor AND prev IS NOT NULL ORDER BY time""", {"t0": t0, "t1": t1, "vs": vs})
+    return [{"variable": corto(cfg, f["variable"]), "t": iso(f["time"]), "valor": f["valor"]} for f in filas]
 
 
-@app.websocket("/ws/vivo")
-async def ws_vivo(ws: WebSocket):
+@app.websocket("/ws/vivo/{equipo}")
+async def ws_vivo(ws: WebSocket, equipo: str):
+    if equipo not in EQUIPOS:
+        await ws.close(code=4404)
+        return
     await ws.accept()
     q: asyncio.Queue = asyncio.Queue(maxsize=2000)
-    vivo.clientes.add(q)
+    vivo.clientes[q] = equipo
     try:
-        await ws.send_json({"tipo": "snapshot", **await asyncio.to_thread(estado)})
+        await ws.send_json({"tipo": "snapshot", **await asyncio.to_thread(estado, equipo)})
         while True:
             ev = await q.get()
             await ws.send_json(ev)
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:
-        vivo.clientes.discard(q)
+        vivo.clientes.pop(q, None)
 
 
-# ----------------------------------------------------------------------------- agente (Claude + MCP)
-SISTEMA_EXTRA = """Respondes dentro del lienzo visual del modulo de caudal MCC-09. Escribe en espanol, breve y
-concreto: primero la conclusion con su numero y unidad, luego la evidencia. Usa siempre las herramientas antes de
-afirmar algo del proceso. El sistema es de solo lectura: no puedes cambiar setpoints ni arrancar o parar equipos."""
+# ----------------------------------------------------------------------------- agente (LLM + MCP de todos los equipos)
+def _sistema_extra(equipo: str | None) -> str:
+    lista = "\n".join(f"- {e['nombre']} {e['codigo']} (prefijo de herramientas '{e['alias']}__'): PLC {e['plc']}"
+                      for e in REG["equipos"] if e["id"] in MODULOS)
+    if equipo and equipo in EQUIPOS:
+        e = EQUIPOS[equipo]
+        contexto = (f"El usuario esta viendo el equipo {e['nombre']} ({e['codigo']}). Si la pregunta no nombra otro "
+                    f"equipo, se refiere a este: usa las herramientas '{e['alias']}__'.")
+    else:
+        contexto = ("El usuario esta en la VISTA GENERAL del laboratorio. Si la pregunta abarca varios equipos "
+                    "(estado general, alarmas, cual rinde peor...), consulta a cada uno con sus herramientas y "
+                    "compara; responde con una linea por equipo y luego la conclusion.")
+    return f"""Respondes dentro del lienzo de supervision del Laboratorio de Automatizacion USS. Equipos integrados:
+{lista}
+Cada herramienta lleva el prefijo del equipo al que consulta; nunca mezcles datos de un equipo con otro.
+{contexto}
+Escribe en espanol, breve y concreto: primero la conclusion con su numero y unidad, luego la evidencia. Usa siempre las
+herramientas antes de afirmar algo del proceso. Todo es de solo lectura: no puedes cambiar setpoints ni arrancar o
+parar equipos."""
 
 
 def _bloque(b) -> dict:
@@ -346,97 +500,125 @@ def _sse(d: dict) -> str:
 @app.post("/api/agente")
 async def agente(req: Request):
     cuerpo = await req.json()
+    equipo_ctx = cuerpo.get("equipo") or None
     historial_chat = [m for m in cuerpo.get("mensajes", []) if m.get("role") in ("user", "assistant")
                       and isinstance(m.get("content"), str) and m["content"].strip()][-12:]
     if not historial_chat or historial_chat[-1]["role"] != "user":
         raise HTTPException(400, "El ultimo mensaje debe ser del usuario")
     if not os.getenv(CFG["clave"]):
         raise HTTPException(503, f"Falta {CFG['clave']} en el archivo .env del historiador")
+    por_alias = {e["alias"]: e for e in REG["equipos"] if e["id"] in MODULOS}
 
     async def flujo():
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
 
-        params = StdioServerParameters(command=sys.executable, args=[str(MCP_DIR / "servidor_mcp.py")],
-                                       env={**os.environ, "MCP_DSN": DB_DSN})
         try:
-            async with stdio_client(params) as (r, w):
-                async with ClientSession(r, w) as sesion:
-                    init = await sesion.initialize()
-                    tools = (await sesion.list_tools()).tools
-                    yield _sse({"tipo": "inicio", "modelo": MODELO, "proveedor": CFG["nombre"], "herramientas": len(tools)})
-                    sistema = (init.instructions or "") + "\n\n" + SISTEMA_EXTRA
+            async with AsyncExitStack() as pila:
+                sesiones: dict[str, Any] = {}
+                tools: list[tuple[str, Any]] = []
+                instrucciones: list[str] = []
+                for alias, e in por_alias.items():
+                    params = StdioServerParameters(command=sys.executable, args=[str(MCP_DIR / e["mcp_script"])],
+                                                   env={**os.environ, "MCP_DSN": DB_DSN})
+                    r, w = await pila.enter_async_context(stdio_client(params))
+                    s = await pila.enter_async_context(ClientSession(r, w))
+                    init = await s.initialize()
+                    sesiones[alias] = s
+                    tools += [(alias, t) for t in (await s.list_tools()).tools]
+                    instrucciones.append(f"### {e['nombre']} {e['codigo']} (herramientas '{alias}__')\n"
+                                         f"{init.instructions or ''}")
+                yield _sse({"tipo": "inicio", "modelo": MODELO, "proveedor": CFG["nombre"], "herramientas": len(tools),
+                            "equipos": list(por_alias)})
+                sistema = "\n\n".join(instrucciones) + "\n\n" + _sistema_extra(equipo_ctx)
 
-                    async def ejecutar(uid: str, nombre: str, entrada: dict):
-                        """Llama la herramienta MCP; devuelve (eventos SSE, texto para el modelo, es_error)."""
-                        t0 = asyncio.get_running_loop().time()
-                        res = await sesion.call_tool(nombre, entrada)
-                        texto = "".join(getattr(c, "text", "") for c in res.content)
-                        ms = round((asyncio.get_running_loop().time() - t0) * 1000)
-                        try:
-                            datos = json.loads(texto)
-                        except json.JSONDecodeError:
-                            datos = None
-                        return (_sse({"tipo": "resultado", "id": uid, "nombre": nombre, "ms": ms,
-                                      "error": bool(res.is_error), "datos": datos}), texto, bool(res.is_error))
+                def nombre_llm(alias: str, t) -> str:
+                    return f"{alias}__{t.name}"
 
-                    if PROVEEDOR == "anthropic":
-                        import anthropic
-                        cliente = anthropic.AsyncAnthropic()
-                        herramientas = [{"name": t.name, "description": t.description or "",
-                                         "input_schema": t.input_schema} for t in tools]
-                        msgs: list[dict[str, Any]] = [dict(m) for m in historial_chat]
-                        for _ in range(8):
-                            async with cliente.messages.stream(model=MODELO, max_tokens=1500, system=sistema,
-                                                               tools=herramientas, messages=msgs) as st:
-                                async for ev in st:
-                                    if ev.type == "text":
-                                        yield _sse({"tipo": "texto", "delta": ev.text})
-                                final = await st.get_final_message()
-                            msgs.append({"role": "assistant",
-                                         "content": [_bloque(b) for b in final.content if b.type in ("text", "tool_use")]})
-                            usos = [b for b in final.content if b.type == "tool_use"]
-                            if not usos:
-                                break
-                            resultados = []
-                            for u in usos:
-                                yield _sse({"tipo": "herramienta", "id": u.id, "nombre": u.name, "entrada": u.input})
-                                ev_res, texto, err = await ejecutar(u.id, u.name, u.input)
-                                yield ev_res
-                                resultados.append({"type": "tool_result", "tool_use_id": u.id,
-                                                   "content": texto[:60000], "is_error": err})
-                            msgs.append({"role": "user", "content": resultados})
-                    else:
-                        # Gemini u otra API compatible con OpenAI (chat.completions + tools)
-                        from openai import AsyncOpenAI
-                        cliente = AsyncOpenAI(api_key=os.getenv(CFG["clave"]), base_url=CFG["url"])
-                        herramientas = [{"type": "function", "function": {
-                            "name": t.name, "description": (t.description or "")[:1000],
-                            "parameters": _esquema_compatible(t.input_schema)}} for t in tools]
-                        msgs = [{"role": "system", "content": sistema}] + [dict(m) for m in historial_chat]
-                        for _ in range(8):
-                            resp = await cliente.chat.completions.create(model=MODELO, messages=msgs, tools=herramientas,
-                                                                         tool_choice="auto")
-                            m = resp.choices[0].message
-                            llamadas = m.tool_calls or []
-                            if m.content and not llamadas:
-                                yield _sse({"tipo": "texto", "delta": m.content})
-                            msgs.append({"role": "assistant", "content": m.content or "", **({"tool_calls": [
-                                {"id": c.id, "type": "function",
-                                 "function": {"name": c.function.name, "arguments": c.function.arguments or "{}"}}
-                                for c in llamadas]} if llamadas else {})})
-                            if not llamadas:
-                                break
-                            for c in llamadas:
-                                try:
-                                    entrada = json.loads(c.function.arguments or "{}") or {}
-                                except json.JSONDecodeError:
-                                    entrada = {}
-                                entrada = {k: v for k, v in entrada.items() if v is not None}
-                                yield _sse({"tipo": "herramienta", "id": c.id, "nombre": c.function.name, "entrada": entrada})
-                                ev_res, texto, err = await ejecutar(c.id, c.function.name, entrada)
-                                yield ev_res
-                                msgs.append({"role": "tool", "tool_call_id": c.id, "content": texto[:60000]})
+                def descripcion(alias: str, t) -> str:
+                    e = por_alias[alias]
+                    return f"[{e['nombre']} {e['codigo']}] {t.description or ''}"
+
+                async def ejecutar(uid: str, nombre: str, entrada: dict):
+                    """Llama la herramienta MCP del equipo; devuelve (evento SSE, texto para el modelo, es_error)."""
+                    alias, _, herramienta = nombre.partition("__")
+                    if alias not in sesiones or not herramienta:
+                        msg = f"Herramienta desconocida: {nombre}"
+                        return (_sse({"tipo": "resultado", "id": uid, "nombre": nombre, "ms": 0, "error": True,
+                                      "datos": None}), msg, True)
+                    t0 = asyncio.get_running_loop().time()
+                    res = await sesiones[alias].call_tool(herramienta, entrada)
+                    texto = "".join(getattr(c, "text", "") for c in res.content)
+                    ms = round((asyncio.get_running_loop().time() - t0) * 1000)
+                    try:
+                        datos = json.loads(texto)
+                    except json.JSONDecodeError:
+                        datos = None
+                    return (_sse({"tipo": "resultado", "id": uid, "nombre": nombre, "equipo": por_alias[alias]["id"],
+                                  "ms": ms, "error": bool(res.is_error), "datos": datos}), texto, bool(res.is_error))
+
+                def ev_herramienta(uid: str, nombre: str, entrada: dict) -> str:
+                    alias = nombre.partition("__")[0]
+                    return _sse({"tipo": "herramienta", "id": uid, "nombre": nombre, "entrada": entrada,
+                                 "equipo": por_alias.get(alias, {}).get("id")})
+
+                if PROVEEDOR == "anthropic":
+                    import anthropic
+                    cliente = anthropic.AsyncAnthropic()
+                    herramientas = [{"name": nombre_llm(a, t), "description": descripcion(a, t),
+                                     "input_schema": t.input_schema} for a, t in tools]
+                    msgs: list[dict[str, Any]] = [dict(m) for m in historial_chat]
+                    for _ in range(10):
+                        async with cliente.messages.stream(model=MODELO, max_tokens=1800, system=sistema,
+                                                           tools=herramientas, messages=msgs) as st:
+                            async for ev in st:
+                                if ev.type == "text":
+                                    yield _sse({"tipo": "texto", "delta": ev.text})
+                            final = await st.get_final_message()
+                        msgs.append({"role": "assistant",
+                                     "content": [_bloque(b) for b in final.content if b.type in ("text", "tool_use")]})
+                        usos = [b for b in final.content if b.type == "tool_use"]
+                        if not usos:
+                            break
+                        resultados = []
+                        for u in usos:
+                            yield ev_herramienta(u.id, u.name, u.input)
+                            ev_res, texto, err = await ejecutar(u.id, u.name, u.input)
+                            yield ev_res
+                            resultados.append({"type": "tool_result", "tool_use_id": u.id,
+                                               "content": texto[:60000], "is_error": err})
+                        msgs.append({"role": "user", "content": resultados})
+                else:
+                    # Gemini u otra API compatible con OpenAI (chat.completions + tools)
+                    from openai import AsyncOpenAI
+                    cliente = AsyncOpenAI(api_key=os.getenv(CFG["clave"]), base_url=CFG["url"])
+                    herramientas = [{"type": "function", "function": {
+                        "name": nombre_llm(a, t), "description": descripcion(a, t)[:1000],
+                        "parameters": _esquema_compatible(t.input_schema)}} for a, t in tools]
+                    msgs = [{"role": "system", "content": sistema}] + [dict(m) for m in historial_chat]
+                    for _ in range(10):
+                        resp = await cliente.chat.completions.create(model=MODELO, messages=msgs, tools=herramientas,
+                                                                     tool_choice="auto")
+                        m = resp.choices[0].message
+                        llamadas = m.tool_calls or []
+                        if m.content and not llamadas:
+                            yield _sse({"tipo": "texto", "delta": m.content})
+                        msgs.append({"role": "assistant", "content": m.content or "", **({"tool_calls": [
+                            {"id": c.id, "type": "function",
+                             "function": {"name": c.function.name, "arguments": c.function.arguments or "{}"}}
+                            for c in llamadas]} if llamadas else {})})
+                        if not llamadas:
+                            break
+                        for c in llamadas:
+                            try:
+                                entrada = json.loads(c.function.arguments or "{}") or {}
+                            except json.JSONDecodeError:
+                                entrada = {}
+                            entrada = {k: v for k, v in entrada.items() if v is not None}
+                            yield ev_herramienta(c.id, c.function.name, entrada)
+                            ev_res, texto, err = await ejecutar(c.id, c.function.name, entrada)
+                            yield ev_res
+                            msgs.append({"role": "tool", "tool_call_id": c.id, "content": texto[:60000]})
             yield _sse({"tipo": "fin"})
         except BaseException as e:  # noqa: BLE001  (los grupos de excepciones de anyio esconden la causa real)
             causa = _causa(e)

@@ -2,11 +2,10 @@ import { useMemo, useState } from 'react';
 import { useEstado } from '../ctx';
 import { fmtHora, fmtNum } from '../api';
 
-const BASE = 'uss/campus/lab-automatizacion/sl01la07/caudal-mcc09/funcional';
-
 export default function UnsPanel() {
-  const { valores, momento, grafo } = useEstado();
-  const [abiertas, setAbiertas] = useState<Record<string, boolean>>({ caudal: true, actuadores: true, estado: true, pid: false });
+  const { equipo, valores, momento, grafo } = useEstado();
+  const BASE = `${equipo?.uns_base ?? ''}/funcional`;
+  const [abiertas, setAbiertas] = useState<Record<string, boolean>>({ caudal: true, nivel: true, actuadores: true, bomba: true, estado: true, pid: false });
   const grupos = useMemo(() => {
     const g: Record<string, [string, string][]> = {};
     Object.keys(valores).sort().forEach((v) => {

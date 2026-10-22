@@ -2,18 +2,19 @@ import { memo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import { useEstado, valorNum } from '../ctx';
 
-const FLUJO = new Set(['alimenta', 'impulsa']);
+const FLUJO = new Set(['alimenta', 'impulsa', 'descarga_en']);
 
 function RelacionEdge(props: EdgeProps) {
   const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected } = props;
   const rel = (data as { rel: string; nota?: string }).rel;
   const nota = (data as { nota?: string }).nota;
-  const { valores, resalte, editando } = useEstado();
+  const { equipo, valores, resalte, editando } = useEstado();
   const [path, lx, ly] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 14, offset: 22 });
   const enCadena = resalte.aristas.has(`${source}|${target}`);
-  const caudal = valorNum(valores, 'caudal/pv_pid') ?? 0;
-  const marcha = (valorNum(valores, 'estado/sistema_funcionando') ?? 0) >= 0.5;
-  const fluye = FLUJO.has(rel) && marcha && caudal > 0.5;
+  // intensidad del flujo segun el equipo (caudal real en caudal; frecuencia de la bomba como proxy en nivel)
+  const caudal = (valorNum(valores, equipo?.flujo?.variable) ?? 0) * (equipo?.flujo?.factor ?? 1);
+  const marcha = (valorNum(valores, equipo?.marcha) ?? 0) >= 0.5;
+  const fluye = FLUJO.has(rel) && rel !== 'descarga_en' && marcha && caudal > 0.5;
   // 60 L/min -> 1,1 s por recorrido; 5 L/min -> ~6 s
   const dur = Math.max(1.1, Math.min(7, 66 / Math.max(caudal, 1)));
   const n = fluye ? Math.max(2, Math.round(caudal / 10)) : 0;

@@ -5,6 +5,7 @@
 #   - Caudal  (S7-200, 192.168.114.7)      -> conector en esta laptop (ventana propia, se reinicia solo)
 #   - Nivel   (MicroLogix, 192.168.114.9)  -> conector en esta laptop (ventana propia, se reinicia solo)
 #   - Presion (cFP-2200, 192.168.114.8)    -> conector en la VM Windows 7 (DataSocket); este script enciende la VM
+#   - Temperatura (Twido, 192.168.114.10)  -> conector en esta laptop (Modbus TCP 502, ventana propia, se reinicia solo)
 # Los conectores reintentan solos: un PLC que se enciende DESPUES se integra sin volver a ejecutar este script.
 # Todo queda registrado en historiador\logs\arranque.log (version anterior: respaldo_2026-10-19\iniciar_arquitectura_v1.ps1)
 $ErrorActionPreference = "Continue"
@@ -35,7 +36,10 @@ $Equipos = @(
                 mcp = "servidor_mcp_nivel.py" },
     [ordered]@{ id = "presion-mcp09"; nombre = "Presion MCP-09 (cFP-2200)";    ip = "192.168.114.8"; puerto = $null;
                 donde = "vm";     script = "conector_edge_cfp2200.py"; mods = ""; pip = "";
-                mcp = "servidor_mcp_presion.py" }
+                mcp = "servidor_mcp_presion.py" },
+    [ordered]@{ id = "temperatura-mct09"; nombre = "Temperatura MCT-09 (Twido)"; ip = "192.168.114.10"; puerto = 502;
+                donde = "laptop"; script = "conector_edge_twido.py"; mods = "pymodbus, paho.mqtt"; pip = "pymodbus paho-mqtt";
+                mcp = "servidor_mcp_temperatura.py" }
 )
 $Estado = @{}
 foreach ($e in $Equipos) { $Estado[$e.id] = [ordered]@{ red = "?"; conector = "?"; datos = "?"; detalle = "" } }
@@ -62,8 +66,10 @@ else { Aviso "Agente del lienzo: proveedor $Prov sin clave ($ClaveLlm vacia en e
 Paso "2. Red del laboratorio y equipos (un equipo apagado NO detiene el arranque)"
 $ips = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty IPAddress)
 Info ("IPs de esta laptop: " + ($ips -join ", "))
+if ($ips -contains "192.168.114.12") { Ok "La laptop tiene 192.168.114.12 (IP de la laptop de tesis; broker MQTT de la VM de presion)" }
+else { Aviso "La laptop NO tiene 192.168.114.12: la VM de presion no encontrara el broker MQTT (CONECTOR_CFP2200.bat usa .12)" }
 if ($ips -contains "192.168.114.10") { Ok "La laptop tiene 192.168.114.10 (cliente autorizado del enlace 1 del S7-200)" }
-else { Aviso "La laptop NO tiene 192.168.114.10: el conector de caudal no podra leer el S7-200 (enlace 1 del CP243-1)" }
+else { Aviso "La laptop NO tiene 192.168.114.10: el conector de caudal no podra leer el S7-200 (el enlace 1 del CP243-1 solo acepta .10, que hoy ocupa el Twido de temperatura; ver red_laboratorio_plc.md)" }
 foreach ($e in $Equipos) {
     $vivo = Ping $e.ip
     if ($vivo -and $e.puerto) { $vivo = Puerto $e.ip $e.puerto }
@@ -92,7 +98,7 @@ if (Get-Command Get-NetFirewallRule -ErrorAction SilentlyContinue) {
 }
 
 # ---------------------------------------------------------------- 4. Docker
-Paso "4. Docker: TimescaleDB, ingestores (3), Grafana y lienzo"
+Paso "4. Docker: TimescaleDB, ingestores (4), Grafana y lienzo"
 $DockerOk = $false
 docker info *> $null
 if ($LASTEXITCODE -ne 0) {
@@ -133,6 +139,12 @@ if ($DockerOk) {
         Get-Content -Raw "db\06_presion_v01.sql" | docker exec -i uns-timescaledb psql -U $DbUser -d $DbName -v ON_ERROR_STOP=1 2>&1 | ForEach-Object { Info "  $_" }
         if ($LASTEXITCODE -eq 0) { Ok "Presion v0.1 aplicada" } else { Aviso "La migracion de presion fallo (ver lineas anteriores); se continua" }
     }
+    $hayTemp = Sql "SELECT count(*) FROM rangos_validados WHERE variable = 'temperatura-mct09/temperatura/principal_c'"
+    if ($hayTemp -and [int]$hayTemp -gt 0) { Ok "Temperatura v0.1: ya aplicada" }
+    else {
+        Get-Content -Raw "db\07_temperatura_v01.sql" | docker exec -i uns-timescaledb psql -U $DbUser -d $DbName -v ON_ERROR_STOP=1 2>&1 | ForEach-Object { Info "  $_" }
+        if ($LASTEXITCODE -eq 0) { Ok "Temperatura v0.1 aplicada" } else { Aviso "La migracion de temperatura fallo (ver lineas anteriores); se continua" }
+    }
 } else { Aviso "Sin base de datos: se omiten las migraciones" }
 
 # ---------------------------------------------------------------- 6. Python
@@ -158,7 +170,7 @@ function PythonPara($mods, $pip) {
     return $null
 }
 
-# ---------------------------------------------------------------- 7. Conectores en esta laptop (caudal y nivel)
+# ---------------------------------------------------------------- 7. Conectores en esta laptop (caudal, nivel y temperatura)
 Paso "7. Conectores edge en esta laptop (se lanzan aunque el PLC este apagado: esperan y reintentan solos)"
 foreach ($e in ($Equipos | Where-Object { $_.donde -eq "laptop" })) {
     $script = $e.script
@@ -232,7 +244,7 @@ foreach ($e in $Equipos) {
     elseif ([int]$edad -lt 30) { $Estado[$e.id].datos = "CONECTOR SIN PLC"; Aviso "$($e.nombre): el conector corre pero el PLC no responde ($plc)" }
     else { $Estado[$e.id].datos = "SIN DATOS"; Aviso "$($e.nombre): sin datos en vivo" }
 }
-foreach ($c in @("uns-ingestor", "uns-ingestor-nivel", "uns-ingestor-presion")) {
+foreach ($c in @("uns-ingestor", "uns-ingestor-nivel", "uns-ingestor-presion", "uns-ingestor-temperatura")) {
     if ($DockerOk) { docker logs --tail 3 $c 2>&1 | ForEach-Object { Info "  $c> $_" } }
 }
 
@@ -253,7 +265,7 @@ if ($DockerOk -and (Test-Path $Venv)) {
 } else { Aviso "Sin base de datos o sin .venv: se omite la prueba de los servidores MCP" }
 
 # ---------------------------------------------------------------- 11. Claude Desktop
-Paso "11. Configuracion de Claude Desktop (3 servidores MCP)"
+Paso "11. Configuracion de Claude Desktop (4 servidores MCP)"
 $cfgPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
 try {
     if (Test-Path $cfgPath) { $cfg = Get-Content -Raw $cfgPath | ConvertFrom-Json }
@@ -272,7 +284,7 @@ try {
         if (Test-Path $cfgPath) { Copy-Item $cfgPath "$cfgPath.respaldo_$(Get-Date -Format yyyyMMdd_HHmmss)" }
         [IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
         Ok "$cambios servidor(es) MCP registrados en Claude Desktop (reinicia Claude Desktop para activarlos)"
-    } else { Ok "Claude Desktop ya tiene los 3 servidores MCP (caudal, nivel, presion)" }
+    } else { Ok "Claude Desktop ya tiene los 4 servidores MCP (caudal, nivel, presion, temperatura)" }
 } catch { Aviso "No se pudo revisar la configuracion de Claude Desktop: $_" }
 
 # ---------------------------------------------------------------- 12. Lienzo vivo y Grafana

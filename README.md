@@ -30,7 +30,7 @@ Entorno experimental: **Laboratorio de Automatización y Simulación de Procesos
 
 El proyecto diseña e implementa una arquitectura en capas que:
 
-1. **Adquiere** datos de controladores heterogéneos (Siemens, Allen-Bradley y National Instruments) con conectores edge de solo lectura.
+1. **Adquiere** datos de controladores heterogéneos (Siemens, Allen-Bradley, National Instruments y Schneider Electric) con conectores edge de solo lectura.
 2. **Normaliza y distribuye** las mediciones por **MQTT** bajo una jerarquía **Unified Namespace (UNS)**.
 3. **Almacena** el histórico en **TimescaleDB**, junto con los históricos del SCADA original (2008–2012).
 4. **Expone** los datos a agentes de IA mediante un **servidor MCP** con herramientas controladas (rol de base de datos de solo `SELECT`).
@@ -38,20 +38,20 @@ El proyecto diseña e implementa una arquitectura en capas que:
 
 ## 2. Estado actual
 
-*Actualizado: 21-oct-2026*
+*Actualizado: 23-oct-2026*
 
-| Componente | Caudal (MCC-09) | Nivel (MCN-09) | Presión (MCP-09) |
-|---|---|---|---|
-| Comunicación con el controlador | ✅ Ethernet (CP243-1, S7, enlace 1) | ✅ Ethernet (EtherNet/IP, pycomm3) | ✅ NI-PSP vía DataSocket en la VM Windows 7 (recuperado el 21-oct, parado desde 2018) |
-| Mapa de variables | ✅ Validado (PC Access + tabla PID) | 🟡 Borrador v0.1 (lógica ladder + prueba en marcha) | 🟡 Variables compartidas `DATOS_PAC`/`pid`; la mayoría confirmadas en prueba |
-| Calibración | ✅ Caudalímetro (13 puntos, R²=0,9997) | ⏳ Pendiente (2 puntos) | 🟡 Escala validada contra la HMI (manómetro averiado) |
-| Conector edge → MQTT | ✅ `conector_edge_s7200.py` v3.2 | ✅ `conector_edge_ml1100.py` | ✅ `conector_edge_cfp2200.py` v0.3 (en la VM) |
-| Ingestor → TimescaleDB | ✅ `ingestor` | ✅ `ingestor-nivel` (prefijo `nivel-mcn09/`) | ✅ `ingestor-presion` (prefijo `presion-mcp09/`) |
-| Históricos `.lvm` importados | ✅ 2008–2011 | ⏳ Pendiente | ⏳ Pendiente (2008–2009) |
-| Dashboard Grafana | ✅ | ✅ | ✅ `presion_mcp09.json` |
-| Servidor MCP | ✅ + grafo de conocimiento | ✅ `servidor_mcp_nivel.py` | ✅ `servidor_mcp_presion.py` v1.0 + grafo |
-| Lienzo visual con agente | ✅ (Gemini) | ✅ | ✅ |
-| Observación | — | Funciona en manual (HMI/SCADA no operativos) | ⚠️ El Altivar 11 ignora la consigna del PID (lazo abierto) |
+| Componente | Caudal (MCC-09) | Nivel (MCN-09) | Presión (MCP-09) | Temperatura (MCT-09) |
+|---|---|---|---|---|
+| Comunicación con el controlador | ✅ Ethernet (CP243-1, S7, enlace 1) | ✅ Ethernet (EtherNet/IP, pycomm3) | ✅ NI-PSP vía DataSocket en la VM Windows 7 (recuperado el 21-oct, parado desde 2018) | ✅ Modbus TCP (Twido, pymodbus) |
+| Mapa de variables | ✅ Validado (PC Access + tabla PID) | 🟡 Borrador v0.1 (lógica ladder + prueba en marcha) | 🟡 Variables compartidas `DATOS_PAC`/`pid`; la mayoría confirmadas en prueba | 🟡 v0.1: programa Twido + diagrama del SCADA + prueba en marcha |
+| Calibración | ✅ Caudalímetro (13 puntos, R²=0,9997) | ⏳ Pendiente (2 puntos) | 🟡 Escala validada contra la HMI (manómetro averiado) | 🟡 Escala del SCADA (cuentas×100/4095); falta termómetro |
+| Conector edge → MQTT | ✅ `conector_edge_s7200.py` v3.2 | ✅ `conector_edge_ml1100.py` | ✅ `conector_edge_cfp2200.py` v0.3 (en la VM) | ✅ `conector_edge_twido.py` v0.1 |
+| Ingestor → TimescaleDB | ✅ `ingestor` | ✅ `ingestor-nivel` (prefijo `nivel-mcn09/`) | ✅ `ingestor-presion` (prefijo `presion-mcp09/`) | ✅ `ingestor-temperatura` (prefijo `temperatura-mct09/`) |
+| Históricos `.lvm` importados | ✅ 2008–2011 | ⏳ Pendiente | ⏳ Pendiente (2008–2009) | ✅ 2009–2011 (13 archivos) |
+| Dashboard Grafana | ✅ | ✅ | ✅ `presion_mcp09.json` | ✅ `temperatura_mct09.json` |
+| Servidor MCP | ✅ + grafo de conocimiento | ✅ `servidor_mcp_nivel.py` | ✅ `servidor_mcp_presion.py` v1.0 + grafo | ✅ `servidor_mcp_temperatura.py` v1.0 + grafo |
+| Lienzo visual con agente | ✅ (Gemini) | ✅ | ✅ | ✅ |
+| Observación | — | Funciona en manual (HMI/SCADA no operativos) | ⚠️ El Altivar 11 ignora la consigna del PID (lazo abierto) | HMI y SCADA recuperados el 23-oct; ⚠️ relé de estado sólido de la resistencia en revisión |
 
 ## 3. Arquitectura
 
@@ -100,7 +100,7 @@ Capas y responsabilidades:
 | PLC | SIMATIC S7-200 CPU 226 + módulo Ethernet **CP243-1** |
 | Programa | STEP 7-Micro/WIN V4.0 (respaldo `BK_S7-200_CPU226_ORIGINAL_2026-10-13.mwp`, exportación `ANALISIS_CPU226.awl`) |
 | Medición | Caudalímetro Kobold DRG 4–20 mA, 0–141 L/min (calibrado) |
-| Acceso | Enlace 1 del CP243-1 (TSAP 11.00), cliente autorizado `192.168.114.10` |
+| Acceso | Enlace 1 del CP243-1 (TSAP 11.00), cliente autorizado `192.168.114.10` (la laptop pasó a `.12` el 23-oct-2026; ver conflicto de IP en [`red_laboratorio_plc.md`](red_laboratorio_plc.md)) |
 | Limitación | El CP243-1 rechaza leer AIW/AQW (error 0x03); se leen sus copias en memoria (MW3, MW2, MW25, VW8) |
 | Detalle | [`historiador/README.md`](historiador/README.md) |
 
@@ -128,6 +128,18 @@ Capas y responsabilidades:
 | Situación | Recuperado el 21-oct-2026 (DIP, bootline de VxWorks, reinstalación, programa y variables). HMI TPC-2106T y SCADA operativos; manómetro averiado; **el Altivar toma la velocidad de su perilla frontal e ignora al PID** |
 | Detalle | [`presion/README.md`](presion/README.md) · recuperación [`presion/RECUPERACION_cFP2200.md`](presion/RECUPERACION_cFP2200.md) · pruebas [`presion/pruebas_20261021.md`](presion/pruebas_20261021.md) |
 
+### 4.4 Módulo de control de temperatura MCT-09/001 — Schneider Twido
+
+| Elemento | Detalle |
+|---|---|
+| Controlador | **Twido TWDLCAE40DRF** (Ethernet integrado) + 2× **TWDAMM3HT**; IP `192.168.114.10` fija en su configuración |
+| Programa | TwidoSuite (`Twido1.xtwd`, Inducontrol, 2009). El programa real es más nuevo: el SCADA usa %M41/%M42, ausentes en el respaldo |
+| Medición | 2 Pt100 Danfoss MBT 5252 con transmisor 4–20 mA → `°C = cuentas × 100/4095` (escala del SCADA original) |
+| Actuadores | Resistencia calefactora por PWM (relé de estado sólido FOTEK SSR-25DA-H); bomba Pentax Ultra U5 + Altivar 11; enfriador con serpentín |
+| Acceso | Modbus TCP 502 (`%MWi` = registro *i*, `%Mi` = bobina *i*) desde la laptop, solo lectura |
+| Situación | 23-oct-2026: HMI y SCADA recuperados (Industrial Automation OPC Servers 5.1, objeto Modbus `temp`, PollRate `0:01`; despliegue de `LIB_PC`/`LIB_HMI`); Altivar pasado de mando local a 2 hilos (`tCC=2C`, `AIt=10U`). **Relé de estado sólido sin disipador: calentó sin orden del PLC; en revisión** |
+| Detalle | [`temperatura/README.md`](temperatura/README.md) · mapa [`temperatura/tags_temperatura.yaml`](temperatura/tags_temperatura.yaml) |
+
 ## 5. Red del laboratorio
 
 | Equipo | IP | Función |
@@ -135,11 +147,14 @@ Capas y responsabilidades:
 | S7-200 + CP243-1 (caudal) | `192.168.114.7` | Control del módulo de caudal |
 | cFP-2200 (presión) | `192.168.114.8` | Control del módulo de presión |
 | MicroLogix 1100 (nivel) | `192.168.114.9` | Control del módulo de nivel |
-| Laptop de tesis (Windows 11) | `192.168.114.10` (IP adicional) | Conectores caudal/nivel, Mosquitto, Docker, MCP |
+| PLC Schneider Twido TWDLCAE40DRF (temperatura) | `192.168.114.10` | Control del módulo de temperatura MCT-09/001; Modbus TCP 502 |
+| Laptop de tesis (Windows 11) | `192.168.114.12` (IP adicional) | Conectores caudal/nivel/temperatura, Mosquitto, Docker, MCP |
 | VM Windows 7 (VirtualBox) | `192.168.114.30` | **Conector de presión** (DataSocket); STEP 7-Micro/WIN y PC Access por USB/PPI |
 | PC del laboratorio (Windows XP, LabVIEW 8.6) | `192.168.114.70` (original) · `.80` (temporal) | Una sola PC: SCADA de caudal con `.70` (enlace 0 del CP243-1); se cambió a `.80` para el SCADA de presión y la recuperación del cFP. Vuelve a `.70` |
 | PC/pantalla HMI (caudal) | `192.168.114.72` | HMI existente |
 | HMI NI TPC-2106T (presión) | `192.168.114.82` | HMI del módulo de presión |
+| PC del laboratorio (misma PC XP) para temperatura | `192.168.114.100` | SCADA `MOD_TEMP.exe` + Industrial Automation OPC Servers (objeto Modbus `temp`) |
+| HMI NI TPC-2106T (temperatura) | `192.168.114.101` | HMI del módulo de temperatura (depende del SCADA de la PC .100) |
 
 La laptop debe tener la red Ethernet en perfil **Privado** y reglas de entrada para ICMP y TCP 1883; si no, la VM no llega a Mosquitto (ver [`red_laboratorio_plc.md`](red_laboratorio_plc.md)).
 
@@ -159,7 +174,7 @@ uss/campus/lab-automatizacion/sl01la07/<equipo>/
     └── equipo                 ficha técnica del equipo
 ```
 
-Equipos: `caudal-mcc09`, `nivel-mcn09`, `presion-mcp09`.
+Equipos: `caudal-mcc09`, `nivel-mcn09`, `presion-mcp09`, `temperatura-mct09`.
 
 Formato de cada medición:
 
@@ -225,7 +240,7 @@ No se versionan: `.env`, entornos virtuales, logs, transcripciones de sesiones n
 
 ### Requisitos
 
-- Windows 11 con una IP en `192.168.114.0/24` (para caudal, exactamente `192.168.114.10`).
+- Windows 11 con la IP `192.168.114.12` en la red del laboratorio. Para caudal el equipo debe tener `192.168.114.10` (único cliente del enlace 1 del CP243-1), IP que hoy ocupa el Twido de temperatura: ver [`red_laboratorio_plc.md`](red_laboratorio_plc.md).
 - **Docker Desktop**.
 - **Mosquitto** en Windows con `listener 1883 0.0.0.0` y `allow_anonymous true`.
 - Python 3.12 con: `pip install python-snap7 pycomm3 paho-mqtt "psycopg[binary]" olefile`.
@@ -249,7 +264,7 @@ En la VM, el conector arranca solo con un acceso directo a `CONECTOR_CFP2200.bat
 # 1) Infraestructura
 cd historiador
 copy .env.example .env               # definir contraseñas
-docker compose up -d --build         # TimescaleDB, ingestor, ingestor-nivel, Grafana, lienzo
+docker compose up -d --build         # TimescaleDB, 4 ingestores, Grafana, lienzo
 docker compose logs -f ingestor-nivel
 
 # 2) Conectores (cada uno en su terminal)
@@ -257,7 +272,8 @@ python conector_edge_s7200.py                        # caudal
 python conector_edge_ml1100.py                       # nivel (sin calibrar)
 python conector_edge_ml1100.py --raw-vacio A --raw-lleno B   # nivel calibrado
 # presión: en la VM Windows 7
-python conector_edge_cfp2200.py --broker 192.168.114.10      # o CONECTOR_CFP2200.bat
+python conector_edge_cfp2200.py --broker 192.168.114.12      # o CONECTOR_CFP2200.bat
+python conector_edge_twido.py                        # temperatura (Twido 192.168.114.10)
 
 # 3) Interfaces
 #    Grafana:  http://localhost:3000
@@ -303,6 +319,10 @@ El agente abre los servidores MCP de **todos** los equipos registrados. Cada her
 
 `servidor_mcp_presion.py` v1.0: `listar_variables`, `obtener_lectura`, `obtener_estado_plc`, `consultar_historial`, `comparar_con_rango` (3–40 psi del fabricante), `diagnosticar_presion` (con `momento` para reproducir el pasado) y `consultar_grafo` (`grafo_mcp09.json`, 14 nodos). Diagnósticos: `SIN_DATOS`, `SELECTOR_EN_0`, `SISTEMA_DETENIDO`, `MANUAL_EN_MARCHA`, `REMOTO_SIN_SETPOINT`, `ACTUADOR_NO_RESPONDE`, `SUBIENDO_A_SETPOINT`, `EN_SETPOINT`, `SOBRE_SETPOINT`, `FUERA_DE_SETPOINT`. Con los datos del 21-oct detectó correctamente el lazo abierto del Altivar (`ACTUADOR_NO_RESPONDE`).
 
+### Servidor MCP de temperatura
+
+`servidor_mcp_temperatura.py` v1.0: las 6 herramientas comunes (`consultar_historial` admite `fuente='lvm'` para el SCADA 2009–2011), `comparar_con_rango` (15–50 °C del fabricante) y `diagnosticar_temperatura` (con `momento`). Diagnósticos: `SIN_DATOS`, **`CALENTAMIENTO_SIN_ORDEN`** (sube con el lazo detenido: falla del relé de estado sólido), `SOBRE_LIMITE`, `FALLA_NIVEL`, `SELECTOR_EN_0`, `SISTEMA_DETENIDO`, `LAZO_SIN_PARAMETROS` (el PLC pierde SP y PID al apagarse), `RESISTENCIA_SIN_EFECTO`, `CALENTANDO_A_SETPOINT`, `EN_SETPOINT`, `SOBRE_SETPOINT` y `FUERA_DE_SETPOINT`. Grafo `grafo_mct09.json` (16 nodos).
+
 **Agregar un PLC nuevo:**
 1. Conector edge → MQTT bajo `uss/campus/lab-automatizacion/sl01la07/<id>/...`.
 2. Servicio de ingestor con `VAR_PREFIX=<id>/` en `docker-compose.yml`.
@@ -321,9 +341,9 @@ El agente abre los servidores MCP de **todos** los equipos registrados. Cada her
 | `variables` | Catálogo publicado por cada conector |
 | `rangos_validados` | Rangos aceptados (**pendientes de validar con el responsable del laboratorio**) |
 
-Las variables de nivel se guardan con prefijo `nivel-mcn09/` (por ejemplo `nivel-mcn09/nivel/raw`) y las de presión con `presion-mcp09/` (por ejemplo `presion-mcp09/presion/psi`; migración `db/06_presion_v01.sql`). Las de caudal mantienen sus nombres originales (`caudal/pv_pid`, `pid/kc`…).
+Las variables de nivel se guardan con prefijo `nivel-mcn09/` (por ejemplo `nivel-mcn09/nivel/raw`) las de presión con `presion-mcp09/` (por ejemplo `presion-mcp09/presion/psi`; migración `db/06_presion_v01.sql`) y las de temperatura con `temperatura-mct09/` (migración `db/07_temperatura_v01.sql`). Las de caudal mantienen sus nombres originales (`caudal/pv_pid`, `pid/kc`…).
 
-Históricos del SCADA original: archivos `.lvm` de LabVIEW (caudal 2008–2011, ya importados; nivel 2008–2012 y presión 2008–2009, pendientes), importados de forma idempotente con `herramientas/importar_lvm.py`.
+Históricos del SCADA original: archivos `.lvm` de LabVIEW (caudal 2008–2011 y temperatura 2009–2011, ya importados; nivel 2008–2012 y presión 2008–2009, pendientes), importados de forma idempotente con `herramientas/importar_lvm.py`.
 
 ## 11. Evaluación experimental
 
@@ -370,8 +390,10 @@ Indicadores:
 - [ ] Importar los históricos `.lvm` de nivel y presión
 - [ ] Altivar 11 de presión con consigna AI1 (con el responsable) y nueva prueba del lazo
 - [ ] Casos de evaluación de presión
-- [ ] Módulo de temperatura (INDUCONTROL TEMPERATURA)
-- [ ] Orquestación multiagente sobre los tres equipos
+- [x] Módulo de temperatura: HMI y SCADA recuperados, conector Modbus, ingestor, MCP, Grafana, lienzo e históricos `.lvm`
+- [ ] Temperatura: reparar el relé de estado sólido, contrastar la escala con termómetro y casos de evaluación
+- [ ] Caudal: resolver el conflicto de IP `.10` (segmento aparte o enlace 1 del CP243-1)
+- [ ] Orquestación multiagente sobre los cuatro equipos
 - [ ] Rangos operativos validados por el laboratorio
 - [ ] Campaña de evaluación y cálculo de indicadores
 

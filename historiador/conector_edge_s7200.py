@@ -1,8 +1,11 @@
 """
 Conector edge SOLO LECTURA: PLC S7-200 (CP243-1) -> MQTT (UNS).  v3.2
 
-Se ejecuta en la laptop con IP 192.168.114.10, cliente autorizado del enlace 1
+Requiere que el equipo que lo ejecuta tenga la IP 192.168.114.10, unico cliente autorizado del enlace 1
 (TSAP 11.00) del CP243-1; la PC del laboratorio (.70, LabVIEW + PC Access) conserva el enlace 0.
+Desde el 23-oct-2026 la laptop de tesis usa 192.168.114.12 porque el PLC Twido del modulo de temperatura
+ocupa la .10: para leer caudal hace falta un segmento de red aparte (laptop con .10 en esa red) o
+reconfigurar el enlace 1 del CP243-1 (pendiente de decision; ver red_laboratorio_plc.md).
 
 Mapa de variables tomado del proyecto oficial de PC Access (OPC_caudal.pca, Inducontrol)
 y de la tabla del lazo PID identificada por exploracion (VB159, 36 bytes).

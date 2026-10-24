@@ -133,7 +133,7 @@ cFP-2200 192.168.114.8 (NI-PSP)
       │  DataSocket ActiveX, solo lectura
       ▼
 VM Windows 7 192.168.114.30 (VirtualBox) ── conector_edge_cfp2200.py v0.3 (Python 3.7.9 32 bits)
-      │  MQTT → Mosquitto de la laptop 192.168.114.10:1883
+      │  MQTT → Mosquitto de la laptop 192.168.114.12:1883
       ▼
 ingestor-presion (Docker, VAR_PREFIX=presion-mcp09/) → TimescaleDB → servidor_mcp_presion.py · Grafana · lienzo
 ```
@@ -156,7 +156,7 @@ New-NetFirewallRule -DisplayName "Mosquitto 1883" -Protocol TCP -LocalPort 1883 
 ```
 
 Mosquitto debe tener `listener 1883 0.0.0.0` y `allow_anonymous true`. Prueba desde la VM:
-`python -c "import socket;socket.create_connection(('192.168.114.10',1883),3);print('MQTT OK')"`.
+`python -c "import socket;socket.create_connection(('192.168.114.12',1883),3);print('MQTT OK')"`.
 
 ## 7. Hallazgo: el Altivar 11 no obedece al PID
 

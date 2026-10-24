@@ -51,7 +51,7 @@ El proyecto diseña e implementa una arquitectura en capas que:
 | Dashboard Grafana | ✅ | ✅ | ✅ `presion_mcp09.json` | ✅ `temperatura_mct09.json` |
 | Servidor MCP | ✅ + grafo de conocimiento | ✅ `servidor_mcp_nivel.py` | ✅ `servidor_mcp_presion.py` v1.0 + grafo | ✅ `servidor_mcp_temperatura.py` v1.0 + grafo |
 | Lienzo visual con agente | ✅ (Gemini) | ✅ | ✅ | ✅ |
-| Observación | — | Funciona en manual (HMI/SCADA no operativos) | ⚠️ El Altivar 11 ignora la consigna del PID (lazo abierto) | HMI y SCADA recuperados el 23-oct; ⚠️ relé de estado sólido de la resistencia en revisión |
+| Observación | — | Funciona en manual (HMI/SCADA no operativos) | ✅ Lazo cerrado el 24-oct (Altivar `2C/tEr/10U`, AIO In3 en voltios) | HMI y SCADA recuperados el 23-oct; ⚠️ relé de estado sólido de la resistencia en revisión |
 
 ## 3. Arquitectura
 

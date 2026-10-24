@@ -52,8 +52,8 @@ Al entrar agua al tanque cerrado T2 el aire se comprime y la presión sube. La *
 
 | Modo | Selector | Qué hace el programa | Velocidad de la bomba |
 |---|---|---|---|
-| **LOCAL** (manual) | `SEL_MANUAL` = 1 | ARRANQUE MANUAL enciende *SISTEMA FUNCIONANDO*, habilita el variador (`ACT_VARIADOR`) y abre la válvula a **5 V (50 %)** | La fija la **perilla frontal del Altivar** (salida AO0 = 0 V) |
-| **REMOTO** (automático) | `SEL_AUTO` = 1 | Espera INICIO del supervisor (SCADA PC o HMI), que fija SP, Kp, Ti, Td y apertura de válvula. El PID escribe su salida 0–10 V en AO0 | **Debería** seguir al PID, pero hoy el Altivar la ignora (ver §7) |
+| **LOCAL** (manual) | `SEL_MANUAL` = 1 | ARRANQUE MANUAL enciende *SISTEMA FUNCIONANDO*, habilita el variador (`ACT_VARIADOR`) y abre la válvula a **5 V (50 %)** | La fija la **perilla CONTROL MANUAL** del tablero: el cFP la lee en AIO In3 y la copia a AO0 → AI1 (funciona desde el 24-oct-2026, ver §7) |
+| **REMOTO** (automático) | `SEL_AUTO` = 1 | Espera INICIO del supervisor (SCADA PC o HMI), que fija SP, Kp, Ti, Td y apertura de válvula. El PID escribe su salida 0–10 V en AO0 | Sigue al PID (lazo cerrado desde el 24-oct-2026, ver §7) |
 
 ## 3. Comunicación: por qué es distinto a caudal y nivel
 
@@ -89,7 +89,7 @@ Variables compartidas del programa (`DATOS_PAC`, `pid`) y canales crudos FieldPo
 | `presion/transmisor_ma` | `DATOS_PAC/TRANS_PRESION` | mA | confirmado | **El programa publica la corriente en A** (0,004 = 4 mA), no en psi |
 | `presion/psi` | `DATOS_PAC/TRANS_PRESION` | psi | **confirmado** | `(mA − 4) / 16 × 87`, misma escala que la HMI (§5) |
 | `presion/ai0_ma` | `FP/3AIO/00` | mA | confirmado | Canal crudo AIO-610 Input 0 (respaldo independiente del programa) |
-| `bomba/potenciometro_ma` | `DATOS_PAC/POTENCIOMETRO` | mA | hipótesis | AIO-610 Input 3: ~0 con el sistema parado, ~3,05 en marcha; **no** gobierna la velocidad |
+| `bomba/potenciometro_v` | `DATOS_PAC/POTENCIOMETRO` | V | confirmado | Perilla CONTROL MANUAL (AIO-610 Input 3, 0–10 V desde el 24-oct; antes `potenciometro_ma` con la entrada mal configurada en amperios) |
 | `bomba/salida_variador` | `DATOS_PAC/VARIADOR` | V | confirmado | AO0: = salida del PID en REMOTO; 0 V en LOCAL |
 | `valvula/salida` | `DATOS_PAC/VAL_PROPOR` | V | confirmado | AO1; 1 V = 10 % de apertura. LOCAL = 5 V |
 | `estado/selector_remoto` | `DATOS_PAC/SEL_AUTO` | bool | confirmado | DI0 · selector CONTROL en REMOTO |
@@ -158,7 +158,10 @@ New-NetFirewallRule -DisplayName "Mosquitto 1883" -Protocol TCP -LocalPort 1883 
 Mosquitto debe tener `listener 1883 0.0.0.0` y `allow_anonymous true`. Prueba desde la VM:
 `python -c "import socket;socket.create_connection(('192.168.114.12',1883),3);print('MQTT OK')"`.
 
-## 7. Hallazgo: el Altivar 11 no obedece al PID
+## 7. Hallazgo y corrección: el Altivar 11 no obedecía al PID
+
+> **Resuelto el 24-oct-2026.** Ver *Corrección* al final de esta sección. Lo que sigue describe la falla tal como se observó el 21-oct.
+
 
 En las dos pruebas en REMOTO (18:52 y 19:16) el PID llevó su salida de 0 a **10 V en ~21 s** y la mantuvo saturada varios minutos, pero la presión no siguió al setpoint (quedó en ~0,1 psi con la perilla del Altivar en 0, y en ~0,7–1,0 psi cuando la perilla estaba subida). En LOCAL la bomba solo respondió a la **perilla frontal del variador** (24,2 y 30,7 Hz).
 
@@ -166,6 +169,22 @@ En las dos pruebas en REMOTO (18:52 y 19:16) el PID llevó su salida de 0 a **10
 - La **consigna de velocidad** 0–10 V del cFP (AO0) **no**: el variador está tomando la referencia de su potenciómetro frontal. El modelo `ATV11HU29M3A` (sufijo "A") trae de fábrica el control local activo; probablemente quedó así tras un reset o un reemplazo.
 - **Solución propuesta (fuera del alcance de solo lectura):** que el responsable del laboratorio configure el Altivar para tomar la consigna por **AI1 (0–10 V)** y revise el cableado de la perilla CONTROL MANUAL. En el primer arranque remoto usar setpoint bajo (~5 psi) y Ti mayor.
 - El servidor MCP detecta esta situación como **`ACTUADOR_NO_RESPONDE`** (PID ≥ 9,5 V durante ≥ 20 s, error > 2 psi y presión sin subir).
+
+### Corrección (24-oct-2026)
+
+Eran **dos fallas independientes**:
+
+| Falla | Causa | Corrección |
+|---|---|---|
+| El variador ignoraba AI1 en ambos modos | Altivar 11 gama Asia (`ATV11HU29M3A`) en **mando local de fábrica**: RUN/STOP y velocidad por su teclado | `FUn → tCC → ACt`: `LOC` → **`2C`** · `FUn → LSr`: `LOC` → **`tEr`** · `AIt`: `5U` → **`10U`** (ENT 2 s en `ACt` y `LSr`). Igual que en el módulo de temperatura |
+| La perilla CONTROL MANUAL no movía la bomba | En MAX, el canal **Input 3 del cFP-AIO-610** estaba en `0 to 0.024 Amps`; el programa copia el valor a AO0, que recibía ~0,004 V. En el respaldo original (`MOD_PRESION.iak`) ese canal está en **voltios** | Input 3 a rango de **voltios** (Remote Systems → cFP-AIO-610 @3); el cable ya estaba en V_IN (borne 7) |
+
+Pruebas del 24-oct-2026:
+
+- **REMOTO, SP 5 psi:** presión 5,43 psi, salida del PID 3,75 V → `diagnosticar_presion` = **`EN_SETPOINT`** (18:04).
+- **LOCAL:** la perilla subió la consigna 3,7 → 4,6 → 5,85 V y la presión 1 → 8,1 → 12,8 psi (18:29–18:30); parada a las 18:30:30.
+
+El conector pasó a v0.4 (`bomba/potenciometro_v` en voltios). **Copiar el `conector_edge_cfp2200.py` nuevo a la VM.**
 
 ## 8. Servidor MCP `presion-mcp09`
 
@@ -221,10 +240,10 @@ Formato de los `.lvm` históricos (8 columnas, 1 muestra/s), deducido de los val
 
 ## 11. Pendientes
 
-- [ ] **Altivar 11:** consigna por AI1 (0–10 V) con el responsable del laboratorio; luego repetir la prueba remota (SP 5 → 10 → 20 psi) y medir respuesta del lazo.
+- [x] **Altivar 11** en mando por bornes (`2C`, `tEr`, `10U`) y **Input 3 del AIO-610** en voltios (24-oct-2026): REMOTO y LOCAL funcionan
+- [ ] Prueba remota completa SP 5 → 10 → 20 psi para medir la respuesta del lazo (tiempo de subida, sobrepaso)
 - [ ] Verificar la escala con un manómetro en buen estado (2–3 puntos).
 - [ ] Confirmar presostato, switches de nivel y PARADA (NC) cuando ocurran.
-- [ ] Unidad real de `POTENCIOMETRO` y cableado de la perilla CONTROL MANUAL.
 - [ ] Importar los `.lvm` de `historico_p_pc` (2008–2009).
 - [ ] Casos de evaluación de presión en `evaluacion/reproducir_casos.py`.
 - [ ] Rango operativo validado por el responsable del laboratorio (hoy 3–40 psi del fabricante).

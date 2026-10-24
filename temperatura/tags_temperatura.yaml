@@ -106,7 +106,7 @@ hmi_y_scada:
     - "Instalado Industrial Automation OPC Servers 5.1 (CD del laboratorio, modo evaluacion: sin numero de serie)"
     - "Creado el objeto Modbus 'temp' (Modbus Ethernet, IP 192.168.114.10, Identifier 1); PollRate '0:01' (Lookout usa DIAS: '1.0' = 1 dia)"
     - "Desplegadas LIB_PC y LIB_HMI desde MCT.lvproj (el proyecto tiene desactivado el auto-despliegue)"
-    - "Altivar 11: FUn > tCC > ACt LOC -> 2C (mando por LI1) y AIt 5U -> 10U (estaba en mando local de fabrica gama A)"
+    - "Altivar 11: FUn > tCC > ACt LOC -> 2C (marcha por LI1), FUn > LSr LOC -> tEr (consigna por AI1) y AIt 5U -> 10U (estaba en mando local de fabrica gama A)"
   items_opc: "temp.N = coil N-1 (%M); temp.4000N = %MW(N-1)"
 
 pendientes:

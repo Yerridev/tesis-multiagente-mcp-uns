@@ -76,7 +76,7 @@ Mapa completo con estado *confirmado/hipótesis*: [`tags_temperatura.yaml`](tags
 | # | Hallazgo | Acción |
 |---|---|---|
 | 1 | SP, Kp, Ti, Td en 0 tras el encendido | Se cargan desde SCADA/HMI (o `diag_twido.py --arrancar-pc` en pruebas) |
-| 2 | Altivar 11 gama Asia en **mando local** de fábrica (`rdY`, solo RUN del teclado) | `FUn → tCC → ACt = 2C` (ENT 2 s) y `AIt = 10U` |
+| 2 | Altivar 11 gama Asia en **mando local** de fábrica (`rdY`, solo RUN del teclado) | `FUn → tCC → ACt = 2C` y `FUn → LSr = tEr` (ENT 2 s en ambos) y `AIt = 10U`; sin `LSr` la velocidad seguía saliendo de la perilla frontal |
 | 3 | SCADA sin datos: faltaba el OPC Server | Instalación + objeto `temp` + PollRate `0:01` + despliegue de variables |
 | 4 | Escala del SP mal supuesta (3000 = 73 °C) | Corregida en `diag_twido.py` con el diagrama del SCADA |
 | 5 | **Calentamiento con el lazo detenido y olor a quemado**: relé de estado sólido FOTEK sin disipador | ⚠️ Pendiente: revisar/reemplazar con disipador. El MCP lo detecta como `CALENTAMIENTO_SIN_ORDEN` |

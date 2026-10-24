@@ -91,7 +91,7 @@ Comunes: `listar_variables`, `obtener_lectura`, `obtener_estado_plc`, `consultar
 
 ## Próximos pasos
 
-0. **Temperatura:** reparar/reemplazar el relé de estado sólido (con disipador), contrastar la escala con termómetro, respaldar el programa real del Twido (subir, no descargar) y licencia del OPC Server. **Caudal:** decidir cómo recuperar la IP `.10`. **Presión:** aplicar el mismo cambio del Altivar (`tCC=2C`, `AIt=10U`) con autorización.
+0. **Temperatura:** reparar/reemplazar el relé de estado sólido (con disipador), contrastar la escala con termómetro, respaldar el programa real del Twido (subir, no descargar) y licencia del OPC Server. **Caudal:** decidir cómo recuperar la IP `.10`. **Presión:** ✅ resuelto el 24-oct (Altivar `tCC=2C`, `LSr=tEr`, `AIt=10U` e Input 3 del AIO-610 en voltios); falta la prueba remota completa 5 → 10 → 20 psi.
 
 1. **Presión:** consigna del Altivar por AI1 con el responsable del laboratorio; repetir la prueba remota (SP 5 → 10 → 20 psi); verificar escala con manómetro.
 2. Casos de evaluación de nivel y presión en `evaluacion/reproducir_casos.py` (caudal: 11/11).
@@ -109,4 +109,4 @@ Consultar el caudal del laboratorio, recuperar su historial reciente y resumir s
 
 - Todo el sistema es **de solo lectura**: los conectores no tienen funciones de escritura y los servidores MCP usan un rol sin permisos de escritura, en sesiones read-only.
 - El modelo de IA no puede escribir en salidas, consignas ni registros de los controladores.
-- No se modifica el programa de los controladores, la configuración del CP243-1 ni las HMI. Excepciones registradas: el 23-oct-2026 se cambió el **Altivar del módulo de temperatura** a mando por bornes (`tCC=2C`, `AIt=10U`), como lo exige el diseño original, y en la PC del laboratorio se instaló el OPC Server y se desplegaron las variables del SCADA de temperatura. En el cFP-2200 solo se restauró la configuración y el programa originales.
+- No se modifica el programa de los controladores, la configuración del CP243-1 ni las HMI. Excepciones registradas: el 23-oct-2026 se cambió el **Altivar del módulo de temperatura** a mando por bornes (`tCC=2C`, `LSr=tEr`, `AIt=10U`), como lo exige el diseño original, y en la PC del laboratorio se instaló el OPC Server y se desplegaron las variables del SCADA de temperatura. El 24-oct-2026 se hizo lo mismo con el **Altivar de presión** y se devolvió el **Input 3 del cFP-AIO-610** a voltios (configuración original de Inducontrol). En el cFP-2200 solo se restauró la configuración y el programa originales.

@@ -84,6 +84,26 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Cuarta instancia para el modulo de temperatura (PLC Twido, Modbus TCP 192.168.114.10).
+  # El conector conector_edge_twido.py corre en la laptop. Variables con prefijo "temperatura-mct09/".
+  ingestor-temperatura:
+    build: ./ingestor
+    container_name: uns-ingestor-temperatura
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      UNS_BASE: uss/campus/lab-automatizacion/sl01la07/temperatura-mct09
+      VAR_PREFIX: temperatura-mct09/
+      MQTT_CLIENT_ID: uns-ingestor-temperatura
+      DB_DSN: postgresql://${DB_USER:-uns_admin}:${DB_PASSWORD:-cambiar_esto}@timescaledb:5432/${DB_NAME:-uns}
+      TZ: America/Lima
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   grafana:
     image: grafana/grafana:11.3.0
     container_name: uns-grafana

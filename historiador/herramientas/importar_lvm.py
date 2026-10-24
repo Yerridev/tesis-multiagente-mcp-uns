@@ -15,10 +15,16 @@ Modulo de NIVEL MCN-09 (--modulo nivel): mismo formato de 8 canales, variables c
   0 setpoint (cm) | 1 nivel T2 (cm) | 2 senal de control (%) | 3 valvula (%) | 4 Kc | 5 Ti | 6 Td | 7 modo (0/1/2)
   Evidencia: el canal 1 satura en ~42 cm igual que el sensor ultrasonico hoy (~40,7 cm) y la escala del HMI es 0-35 cm.
 
+Modulo de TEMPERATURA MCT-09 (--modulo temperatura): 9 canales, variables con prefijo 'temperatura-mct09/':
+  0 setpoint (C) | 1 T tanque principal (C) | 2 T tanque enfriador (C) | 3 senal de control PWM (%)
+  4 Kp | 5 Ti | 6 Td | 7 controlador (0 = HMI, 1 = PC) | 8 variador (%)
+  Evidencia: pantalla REGISTRO DE INDICADORES del manual (Inducontrol, 2009) y valores de fabrica Kp 5000, Ti 10, Td 10;
+  resolucion 0,0244 C/cuenta = 100/4095 (misma escala que el conector).
+
 Uso:
     pip install "psycopg[binary]"
     python importar_lvm.py "Y:\\Downloads\\TODO-CAUDAL-PC-XP" --dsn postgresql://uns_admin:cambiar_esto@localhost:5432/uns
-    python importar_lvm.py CARPETA_NIVEL --modulo nivel --dsn ...
+    python importar_lvm.py CARPETA_NIVEL --modulo nivel          # la clave se toma del .env
     python importar_lvm.py CARPETA --solo-revisar        # no escribe; muestra lo que importaria
 """
 import argparse
@@ -47,7 +53,18 @@ CANALES_NIVEL = [
     ("nivel-mcn09/pid/td", None),
     ("nivel-mcn09/estado/modo_lvm", None),
 ]
-MODULOS = {"caudal": CANALES_CAUDAL, "nivel": CANALES_NIVEL}
+CANALES_TEMPERATURA = [
+    ("temperatura-mct09/pid/setpoint_c", "C"),
+    ("temperatura-mct09/temperatura/principal_c", "C"),   # mismos nombres que el dato en vivo (fuente='uns')
+    ("temperatura-mct09/temperatura/enfriador_c", "C"),
+    ("temperatura-mct09/pid/salida_pct", "%"),
+    ("temperatura-mct09/pid/kp", None),
+    ("temperatura-mct09/pid/ti", None),
+    ("temperatura-mct09/pid/td", None),
+    ("temperatura-mct09/estado/modo_lvm", None),
+    ("temperatura-mct09/bomba/consigna_pct", "%"),
+]
+MODULOS = {"caudal": CANALES_CAUDAL, "nivel": CANALES_NIVEL, "temperatura": CANALES_TEMPERATURA}
 CANALES = CANALES_CAUDAL   # se reemplaza en main() segun --modulo
 
 
@@ -138,10 +155,24 @@ def parsear_lvm(ruta: Path):
     return filas, None
 
 
+def _dsn_desde_env() -> str:
+    """Arma el DSN con DB_USER, DB_PASSWORD y DB_NAME del .env del historiador (carpeta padre de herramientas/)."""
+    cfg = {}
+    env = Path(__file__).resolve().parent.parent / ".env"
+    if env.exists():
+        for linea in env.read_text(encoding="utf-8", errors="replace").splitlines():
+            if "=" in linea and not linea.lstrip().startswith("#"):
+                k, v = linea.split("=", 1)
+                cfg[k.strip()] = v.strip().strip('"').strip("'")
+    return (f"postgresql://{cfg.get('DB_USER', 'uns_admin')}:{cfg.get('DB_PASSWORD', 'cambiar_esto')}"
+            f"@localhost:5432/{cfg.get('DB_NAME', 'uns')}")
+
+
 def main():
     p = argparse.ArgumentParser(description="Importador de historicos .lvm a TimescaleDB")
     p.add_argument("carpeta", help="Carpeta raiz; se buscan .lvm en todas las subcarpetas")
-    p.add_argument("--dsn", default="postgresql://uns_admin:cambiar_esto@localhost:5432/uns")
+    p.add_argument("--dsn", default=None,
+                   help="Si se omite, se arma con DB_USER/DB_PASSWORD/DB_NAME del .env del historiador")
     p.add_argument("--solo-revisar", action="store_true", help="No escribe en la base")
     p.add_argument("--modulo", choices=sorted(MODULOS), default="caudal", help="Mapa de canales a usar")
     a = p.parse_args()
@@ -155,8 +186,15 @@ def main():
 
     con = None
     if not a.solo_revisar:
-        import psycopg
-        con = psycopg.connect(a.dsn)
+        try:
+            import psycopg
+        except ImportError:
+            sys.exit('Falta psycopg: pip install "psycopg[binary]"')
+        try:
+            con = psycopg.connect(a.dsn or _dsn_desde_env(), connect_timeout=5)
+        except psycopg.OperationalError as e:
+            sys.exit(f"No se pudo conectar a TimescaleDB ({str(e).strip()[:160]}). "
+                     "Revisa que Docker este corriendo y la clave DB_PASSWORD del .env (o pasa --dsn).")
 
     total_filas = total_nuevas = omitidos = 0
     for ruta in archivos:

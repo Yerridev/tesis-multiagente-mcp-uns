@@ -148,6 +148,55 @@
         "¿Que paso en la prueba manual de las 18:26?",
         "¿Que equipos influyen sobre la presion del tanque T2?"
       ]
+    },
+    {
+      "id": "temperatura-mct09",
+      "alias": "temperatura",
+      "nombre": "Control de temperatura",
+      "codigo": "MCT-09/001",
+      "proceso": "Temperatura",
+      "fabricante": "Inducontrol",
+      "plc": "Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT",
+      "ip": "192.168.114.10",
+      "protocolo": "Modbus TCP 502 (unit id 1), solo lectura",
+      "uns_base": "uss/campus/lab-automatizacion/sl01la07/temperatura-mct09",
+      "prefijo_db": "temperatura-mct09/",
+      "mcp_script": "servidor_mcp_temperatura.py",
+      "mcp_modulo": "servidor_mcp_temperatura",
+      "diagnostico": "diagnosticar_temperatura",
+      "grafo": "grafo_mct09.json",
+      "principal": { "variable": "temperatura/principal_c", "nombre": "Temperatura T2", "unidad": "C", "decimales": 1, "min": 0, "max": 60, "aviso": 50, "alarma": 60 },
+      "secundario": { "variable": "pid/setpoint_c", "nombre": "Setpoint", "unidad": "C", "decimales": 1 },
+      "marcha": "estado/sistema_funcionando",
+      "velocidad": { "variable": "bomba/consigna_pct", "factor_pct": 1 },
+      "flujo": { "variable": "bomba/consigna_pct", "factor": 1 },
+      "tendencia": {
+        "ejes": [ { "nombre": "C", "min": 0, "max": 60 }, { "nombre": "%", "min": 0, "max": 100 } ],
+        "series": [
+          { "v": "pid/setpoint_c", "nombre": "Setpoint", "eje": 0, "paso": true, "color": "--c-sp" },
+          { "v": "temperatura/principal_c", "nombre": "T principal (PV)", "eje": 0, "color": "--c-pv", "grueso": true },
+          { "v": "temperatura/enfriador_c", "nombre": "T enfriador", "eje": 0, "color": "--c-q" },
+          { "v": "pid/salida_pct", "nombre": "Salida PID %", "eje": 1, "color": "--c-var" }
+        ],
+        "lineas": [ { "eje": 0, "valor": 50, "nombre": "Limite de trabajo 50 C" } ]
+      },
+      "kpis": [
+        { "k": "setpoint_c", "n": "Setpoint", "u": "C", "d": 1 },
+        { "k": "temperatura_c", "n": "Temperatura", "u": "C", "d": 1 },
+        { "k": "error_c", "n": "Error", "u": "C", "d": 1 },
+        { "k": "salida_pid_pct", "n": "Salida PID", "u": "%", "d": 0 }
+      ],
+      "eventos": {
+        "estado/sistema_funcionando": [ "arranque", "Lazo arranca", "parada", "Lazo se detiene" ],
+        "estado/selector_remoto": [ "modo", "Pasa a PC (remoto)", "modo", "Sale de PC" ],
+        "falla/nivel_principal": [ "alarma", "Falla de nivel en el tanque principal", "modo", "Nivel del tanque principal normal" ],
+        "estado/enfriador_on": [ "modo", "Enfriador encendido", "modo", "Enfriador apagado" ]
+      },
+      "sugerencias": [
+        "¿Que esta pasando ahora con la temperatura del tanque principal?",
+        "¿Por que se calento el agua el 23-oct con el lazo detenido?",
+        "Compara el calentamiento de hoy con la prueba del SCADA del 24-jul-2010"
+      ]
     }
   ]
 }

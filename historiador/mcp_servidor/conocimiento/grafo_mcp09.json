@@ -15,15 +15,15 @@
     "pac": { "tipo": "control", "nombre": "PAC NI Compact FieldPoint cFP-2200 (192.168.114.8)", "variables": [] },
     "selector": { "tipo": "mando", "nombre": "Selector CONTROL LOCAL - REMOTO", "variables": ["estado/selector_remoto", "estado/selector_local"] },
     "pulsadores": { "tipo": "mando", "nombre": "Pulsadores ARRANQUE / PARADA MANUAL", "variables": ["estado/pulsador_arranque", "estado/pulsador_parada"] },
-    "potenciometro_variador": { "tipo": "mando", "nombre": "Perilla frontal del Altivar 11", "variables": [] },
+    "potenciometro_variador": { "tipo": "mando", "nombre": "Perilla CONTROL MANUAL del tablero (via cFP)", "variables": ["bomba/potenciometro_v"] },
     "supervisor": { "tipo": "mando", "nombre": "Supervisor: SCADA PRESION.exe (PC .80) o HMI TPC-2106T", "variables": ["pid/setpoint_pc", "pid/setpoint_hmi", "pid/valvula_pc"] }
   },
   "relaciones": [
     { "de": "tanque_t1", "rel": "alimenta", "a": "bomba", "nota": "La bomba aspira de T1" },
     { "de": "interruptores_nivel_t1", "rel": "protege", "a": "bomba", "nota": "Nivel bajo de T1: protege la bomba de trabajar en seco (logica sin confirmar)" },
     { "de": "variador", "rel": "acciona", "a": "bomba" },
-    { "de": "potenciometro_variador", "rel": "fija_velocidad", "a": "variador", "nota": "21-oct-2026: el Altivar toma la velocidad de su perilla frontal, NO de la salida 0-10 V del cFP" },
-    { "de": "pid", "rel": "controla", "a": "variador", "nota": "En REMOTO la salida del PID (0-10 V, AO0) es la consigna de velocidad; hoy el variador no la obedece" },
+    { "de": "potenciometro_variador", "rel": "fija_velocidad", "a": "variador", "nota": "En LOCAL el cFP copia la perilla (AIO In3, 0-10 V) a AO0 -> AI1 del Altivar. Hasta el 24-oct-2026 no funcionaba: In3 en amperios y Altivar en mando local (corregido: In3 en voltios; tCC=2C, LSr=tEr, AIt=10U)" },
+    { "de": "pid", "rel": "controla", "a": "variador", "nota": "En REMOTO la salida del PID (0-10 V, AO0) es la consigna de velocidad. Lazo cerrado desde el 24-oct-2026 (SP 5 psi -> 5,4 psi, EN_SETPOINT); el 21-oct el variador no la obedecia" },
     { "de": "bomba", "rel": "presuriza", "a": "tanque_t2", "nota": "Al entrar agua al tanque cerrado se comprime el aire" },
     { "de": "valvula", "rel": "despresuriza", "a": "tanque_t2", "nota": "Salida de T2 hacia T1; mas apertura = menos presion (perturbacion)" },
     { "de": "tanque_t2", "rel": "descarga_en", "a": "tanque_t1" },

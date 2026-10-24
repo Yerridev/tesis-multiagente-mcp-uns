@@ -1,5 +1,9 @@
 """
-Conector edge SOLO LECTURA: cFP-2200 (modulo de presion MCP-09/001) -> MQTT (UNS).  v0.3
+Conector edge SOLO LECTURA: cFP-2200 (modulo de presion MCP-09/001) -> MQTT (UNS).  v0.4
+
+Cambios v0.4 (24-oct-2026): la entrada AIO-610 Input 3 (perilla CONTROL MANUAL del tablero) se reconfiguro de
+'0 to 0.024 Amps' a voltios, como en la configuracion original de Inducontrol (MOD_PRESION.iak). Ahora
+POTENCIOMETRO llega en V: se publica como 'bomba/potenciometro_v' (antes 'bomba/potenciometro_ma', x1000).
 
 Cambios v0.3 (21-oct-2026, tras un cierre 'Python has stopped working' en la VM):
   - La reconexion de una variable caida se limita a una vez cada 15 s (antes: cada segundo, creando un
@@ -27,8 +31,9 @@ cuando el transmisor marcaba ~4.148 y ~4.170 mA -> la escala del programa origin
     psi = (mA - 4) / 16 * 87   (0-6 bar)
 Confirmado contra la HMI (no contra manometro: el manometro del modulo esta averiado).
 En reposo el transmisor marca 4.02-4.035 mA (~0.1-0.2 psi de offset de cero).
-En modo MANUAL el programa NO escribe la velocidad (AO0 = 0 V); la valvula queda en 5 V (50 %) y el
-variador Altivar 11 obedece su propia perilla frontal (version ...M3A, control local).
+En modo MANUAL el programa copia la perilla CONTROL MANUAL (AIO In3) a AO0 -> AI1 del Altivar; la valvula queda
+en 5 V (50 %). Hasta el 24-oct-2026 no funcionaba: In3 estaba configurada en amperios (AO0 recibia ~0,004 V) y
+el Altivar 11 (gama Asia ...M3A) estaba en mando local de fabrica. Corregido: Altivar tCC=2C, LSr=tEr, AIt=10U.
 
 No contiene ninguna funcion de escritura: DataSocket se abre solo en modo lectura (2 = ReadAutoUpdate).
 
@@ -81,8 +86,8 @@ TAGS = [
      "estado": "confirmado", "desc": "Presion de T2: (mA-4)/16*87, misma escala que la HMI del programa original (validado 21-oct-2026)"},
     {"n": "AI0", "url": "FP/3AIO/00", "conv": a_ma, "topic": "presion/ai0_ma", "unidad": "mA",
      "estado": "confirmado", "desc": "Canal crudo AIO-610 Input 0 (respaldo independiente del programa)"},
-    {"n": "POTENCIOMETRO", "url": "DATOS_PAC/POTENCIOMETRO", "conv": a_ma, "topic": "bomba/potenciometro_ma", "unidad": "mA",
-     "estado": "hipotesis", "desc": "Entrada AIO-610 Input 3 (potenciometro); ~0 con sistema parado, ~3.05 en marcha; no gobierna la velocidad en manual"},
+    {"n": "POTENCIOMETRO", "url": "DATOS_PAC/POTENCIOMETRO", "conv": lambda x: round(x, 3), "topic": "bomba/potenciometro_v", "unidad": "V",
+     "estado": "confirmado", "desc": "Perilla CONTROL MANUAL del tablero (AIO-610 Input 3, 0-10 V); en LOCAL el programa la copia a la consigna del variador (AO0)"},
     {"n": "VARIADOR", "url": "DATOS_PAC/VARIADOR", "conv": lambda x: round(x, 3), "topic": "bomba/salida_variador", "unidad": "V",
      "estado": "confirmado", "desc": "Consigna 0-10 V al variador Altivar 11 (AIO-610 Output 0); = salida del PID en REMOTO, 0 en LOCAL"},
     {"n": "VAL_PROPOR", "url": "DATOS_PAC/VAL_PROPOR", "conv": lambda x: round(x, 3), "topic": "valvula/salida", "unidad": "V",

@@ -72,9 +72,10 @@ Contexto del proceso: la bomba (variador Altivar 11) lleva agua del tanque T1 al
 el aire se comprime y la presion sube. La valvula proporcional (0-10 V) descarga T2 hacia T1 y actua como
 perturbacion. El transmisor 4-20 mA da 'presion/psi' = (mA-4)/16 x 87 (misma escala que la HMI; el manometro
 del modulo esta averiado). Rango de trabajo del manual: 3-40 psi.
-Modos: LOCAL = ARRANQUE/PARADA con pulsadores, valvula al 50 % y velocidad fijada en el variador; REMOTO = PID del cFP
-con setpoint, Kp, Ti, Td y valvula desde el SCADA de la PC o la HMI. Hallazgo del 21-oct-2026: el Altivar 11 toma la
-velocidad de su perilla frontal y NO obedece la salida 0-10 V del PID.
+Modos: LOCAL = ARRANQUE/PARADA con pulsadores, valvula al 50 % y velocidad con la perilla CONTROL MANUAL del tablero
+(el cFP la copia a la consigna 0-10 V del variador); REMOTO = PID del cFP con setpoint, Kp, Ti, Td y valvula desde el
+SCADA de la PC o la HMI. Desde el 24-oct-2026 el Altivar 11 obedece la consigna 0-10 V en ambos modos (antes estaba en
+mando local de fabrica y el lazo quedaba abierto; los datos del 21-oct reflejan esa falla).
 Para preguntas de que esta pasando o por que, usa primero diagnosticar_presion; consultar_grafo describe los
 equipos y sus relaciones causales."""
 
@@ -495,8 +496,8 @@ def diagnosticar_presion(momento: str | None = None) -> dict:
         return fin("MANUAL_EN_MARCHA",
                    f"Modo LOCAL en marcha: presion {psi:.2f} psi ({tend['tendencia'].lower()}"
                    + (f", {pend:+.2f} psi/min" if pend is not None else "") + "). La valvula queda al 50 % y la "
-                   "velocidad la fija la perilla frontal del variador; el PID no actua.",
-                   "Para subir la presion aumentar la velocidad en el variador; para control automatico usar REMOTO.")
+                   "velocidad la fija la perilla CONTROL MANUAL del tablero; el PID no actua.",
+                   "Para subir la presion girar la perilla CONTROL MANUAL; para control automatico usar REMOTO.")
     # --- REMOTO en marcha ---
     if sp is None:
         return fin("REMOTO_SIN_SETPOINT", "REMOTO en marcha pero el supervisor no fijo un setpoint (0 o sin valor).",
@@ -506,10 +507,10 @@ def diagnosticar_presion(momento: str | None = None) -> dict:
         return fin("ACTUADOR_NO_RESPONDE",
                    f"El PID pide la velocidad maxima ({cv:.1f} V) desde hace {sat_s:.0f} s, pero la presion sigue en "
                    f"{psi:.2f} psi frente a un setpoint de {sp:.1f} psi y no sube. El lazo esta abierto: el variador no "
-                   "obedece la consigna analogica (el 21-oct-2026 se comprobo que el Altivar 11 toma la velocidad de su "
-                   "perilla frontal), o la bomba no impulsa agua (aire, T1 vacio, valvula de salida muy abierta).",
-                   "Detener la prueba y que el responsable revise la configuracion de consigna del Altivar 11 (entrada "
-                   "AI1 0-10 V). Al reintentar, usar un setpoint bajo y Ti mayor para evitar la saturacion.")
+                   "obedece la consigna analogica (falla del 21-oct-2026: Altivar 11 en mando local, corregida el 24-oct con "
+                   "tCC=2C, LSr=tEr, AIt=10U), o la bomba no impulsa agua (aire, T1 vacio, valvula de salida muy abierta).",
+                   "Detener la prueba; revisar en el Altivar que el display muestre Hz (no rdY) y que tCC, LSr y AIt sigan "
+                   "en 2C, tEr y 10U. Al reintentar, usar un setpoint bajo y Ti mayor para evitar la saturacion.")
     if abs(err) <= TOLERANCIA_SP_PSI:
         return fin("EN_SETPOINT", f"Presion {psi:.2f} psi en el setpoint {sp:.1f} psi (error {err:+.2f} psi).",
                    "Sin accion.")

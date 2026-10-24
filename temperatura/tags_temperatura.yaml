@@ -1,0 +1,116 @@
+# Diccionario de tags - Modulo Control de Temperatura MCT-09/001 (Inducontrol)
+# PLC: Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT | IP 192.168.114.10 | Modbus TCP 502 (unit id 1)
+# Acceso: SOLO LECTURA (el conector no usa funciones de escritura Modbus)
+# Estado: v0.1 (23-oct-2026) - programa Twido1.xtwd + diagrama scada_mct_04.vi + planos/manual + lecturas en vivo
+#   confirmado = visto en vivo y coherente con el programa, el SCADA y/o el manual
+#   hipotesis  = deducido (programa o SCADA), falta prueba dirigida
+# Fuente unica en el codigo: historiador/conector_edge_twido.py. Este archivo es documentacion.
+
+plc:
+  id: mct09
+  ip: 192.168.114.10            # fija en la configuracion del PLC (no se cambia; ver red_laboratorio_plc.md)
+  protocolo: Modbus TCP, puerto 502, unit id 1
+  direccionamiento: "%MWi = holding register i ; %Mi = coil i (base 0)"
+  funciones_probadas: {FC01: "coils, hasta 48 por peticion (64 rechazado)", FC03: holding registers}
+  conexiones: "el PLC atiende pocas conexiones Modbus simultaneas; ya hay una permanente del OPC Server de la PC .100"
+  poll_s: 1.0
+  uns_base: uss/campus/lab-automatizacion/sl01la07/temperatura-mct09
+  prefijo_db: temperatura-mct09/
+
+proceso:
+  tanque_principal: {nombre_manual: T2 (inferior), capacidad_l: 125, material: acero AISI 316, actuador: resistencia calefactora (PWM por rele de estado solido)}
+  tanque_enfriador: {nombre_manual: T1 (superior), capacidad_l: 125, material: acero AISI 316, actuador: serpentin + enfriador (rele R_02)}
+  circulacion: bomba Pentax Ultra U5 120/3T (1,2 HP) + variador Altivar 11 ATV11HU29M3A (consigna AI1 0-10 V desde el PLC)
+  sensores_temperatura: 2x Danfoss MBT 5252 Pt100 con transmisor 4-20 mA (IN0 = principal, IN1 = enfriador del 2o TWDAMM3HT)
+  interruptores_nivel: 4x Kobold NKP (alto y bajo en cada tanque)
+  rele_resistencia: FOTEK SSR-25DA-H (entrada 3-32 VDC desde Q0.0.1; montado SIN disipador)
+  rango_operacion_c: [15, 50]    # manual MCT-09/001, apendice A2 y seccion 3.2.2
+  tablero: [piloto SISTEMA ENERGIZADO, piloto SISTEMA FUNCIONANDO, piloto RESISTENCIA FUNCIONANDO,
+            4 pilotos ALARMA NIVEL ALTO/BAJO (principal y enfriador), pulsador HABILITAR ENFRIADOR,
+            pulsador DESHABILITAR ENFRIADOR (NC), selector CONTROLADOR HMI-0-PC, paro de emergencia]
+
+escalas:
+  temperatura: "C = raw * 100 / 4095  (4-20 mA -> 0..4095 -> 0..100 C)"
+  fuente_escala: "SCADA original (SP_OPC = SP_C * 4095/100), resolucion de los .lvm historicos (0,0244 C/cuenta), agua a ~16-20 C"
+  validacion_pendiente: "contrastar con termometro en T2 (falta)"
+  setpoint: "mismas cuentas que la temperatura: SP_raw = SP_C * 4095/100 (NO la escala 0-10000 del bloque PID)"
+  variador: "% = raw / 40.96 (SCADA: VAR_OPC = % * 40.96); 4095 = 10 V = HSP 50 Hz con AIt=10U"
+  salida_pid: "0..10000 = 0..100 % de ciclo de trabajo del PWM (observado 10000 con error grande y 0 con lazo detenido)"
+  ruido: "+-1 C (~+-40 cuentas) con la bomba en marcha (variador); se publica media movil de 10 s en los topics en C"
+
+tags:
+  # ---------------- Proceso (holding registers) ----------------
+  temperatura/principal_raw: {addr: "%MW0", estado: confirmado, nota: "copia de %IW0.2.0 (PV del PID); sin filtro"}
+  temperatura/principal_c:   {addr: "%MW0", unidad: C, estado: confirmado, nota: "media movil 10 s; escala pendiente de termometro"}
+  temperatura/enfriador_raw: {addr: "%MW1", estado: confirmado, nota: "copia de %IW0.2.1"}
+  temperatura/enfriador_c:   {addr: "%MW1", unidad: C, estado: confirmado}
+  bomba/consigna_raw:        {addr: "%MW10", estado: confirmado, nota: "copiado a %QW0.2.0 -> AI1 del ATV11"}
+  bomba/consigna_pct:        {addr: "%MW10", unidad: "%", estado: confirmado, nota: "probado 23-oct: 819 = 20 %, 2048 = 50 %"}
+
+  # ---------------- Lazo PID 0 ----------------
+  pid/setpoint_raw: {addr: "%MW100", estado: confirmado, nota: "lo escribe el SCADA/HMI; volatil (0 tras apagar el PLC)"}
+  pid/setpoint_c:   {addr: "%MW100", unidad: C, estado: confirmado, nota: "escala del SCADA original"}
+  pid/kp:           {addr: "%MW101", estado: confirmado, nota: "valor de fabrica 5000; unidades internas Twido (hipotesis: Kp x100)"}
+  pid/ti:           {addr: "%MW102", estado: confirmado, nota: "fabrica 10; hipotesis: decimas de segundo"}
+  pid/td:           {addr: "%MW103", estado: confirmado, nota: "fabrica 10; hipotesis: decimas de segundo"}
+  pid/salida_pct:   {addr: "%MW110", unidad: "%", estado: confirmado, nota: "salida numerica del PID / 100; modula PWM en %Q0.0.1"}
+
+  # ---------------- Entradas digitales (copias %I0.0.x -> %Mx) ----------------
+  estado/selector_remoto:        {addr: "%M0", estado: confirmado, nota: "selector CONTROLADOR en PC (I0.0.0)"}
+  estado/selector_local:         {addr: "%M1", estado: confirmado, nota: "selector CONTROLADOR en HMI (I0.0.1); posicion 0 = M0 y M1 en 0"}
+  enfriador/pulsador_habilitar:  {addr: "%M2", estado: confirmado, nota: "I0.0.2 (pulso)"}
+  enfriador/pulsador_deshabilitar: {addr: "%M3", estado: confirmado, nota: "I0.0.3, contacto NC: 1 en reposo"}
+  nivel/principal_alto:          {addr: "%M4", estado: confirmado, nota: "I0.0.4; 1 = nivel alto activado (bloquea el lazo)"}
+  nivel/principal_bajo_ok:       {addr: "%M5", estado: confirmado, nota: "I0.0.5; 1 = hay agua sobre el nivel bajo"}
+  nivel/enfriador_alto:          {addr: "%M6", estado: confirmado, nota: "I0.0.6"}
+  nivel/enfriador_bajo_ok:       {addr: "%M7", estado: confirmado, nota: "I0.0.7; 1 = hay agua"}
+
+  # ---------------- Salidas y estado (bits internos que el programa copia a %Q) ----------------
+  estado/sistema_funcionando: {addr: "%M12", estado: confirmado, nota: "-> Q0.0.2 piloto SISTEMA FUNCIONANDO"}
+  estado/bomba_marcha:        {addr: "%M13", estado: confirmado, nota: "-> Q0.0.3 -> LI1 del ATV11 (requiere tCC=2C)"}
+  estado/resistencia_on:      {addr: "%M14", estado: confirmado, nota: "copia de Q0.0.1 (PWM); es la ORDEN del PLC, no prueba que circule corriente"}
+  alarma/nivel_alto_principal:  {addr: "%M15", estado: confirmado, nota: "= M4 -> piloto"}
+  alarma/nivel_bajo_principal:  {addr: "%M16", estado: confirmado, nota: "= NOT M5 -> piloto"}
+  alarma/nivel_alto_enfriador:  {addr: "%M17", estado: confirmado, nota: "= M6 -> piloto"}
+  alarma/nivel_bajo_enfriador:  {addr: "%M18", estado: confirmado, nota: "= NOT M7 -> piloto"}
+  estado/enfriador_on:        {addr: "%M19", estado: confirmado, nota: "-> Q0.0.10 rele R_02; = (M40 o M43) y M44; visto en 1 el 23-oct 22:18 (modo PC, T 21 C > SP 0)"}
+  falla/nivel_principal:      {addr: "%M20", estado: confirmado, nota: "M4 o NOT M5: detiene el lazo y borra los inicios"}
+  falla/nivel_enfriador:      {addr: "%M21", estado: confirmado, nota: "M6 o NOT M7"}
+
+  # ---------------- Mando ----------------
+  mando/inicio_remoto:  {addr: "%M30", estado: confirmado, nota: "lo escribe el SCADA (PC); debe quedar en 1 mientras corre"}
+  mando/lazo_remoto:    {addr: "%M31", estado: confirmado, nota: "lazo en marcha en modo PC"}
+  mando/inicio_local:   {addr: "%M32", estado: confirmado, nota: "lo escribe el SCADA en nombre de la HMI"}
+  mando/lazo_local:     {addr: "%M33", estado: confirmado, nota: "lazo en marcha en modo HMI"}
+  enfriador/habilitado_local: {addr: "%M40", estado: hipotesis, nota: "enclavamiento por pulsadores en modo HMI"}
+  enfriador/habilita_pc:      {addr: "%M41", estado: hipotesis, nota: "lo escribe el SCADA (000042); NO esta en el respaldo Twido1.xtwd"}
+  enfriador/deshabilita_pc:   {addr: "%M42", estado: hipotesis, nota: "lo escribe el SCADA (000043); NO esta en el respaldo"}
+  enfriador/permiso_remoto:   {addr: "%M43", estado: hipotesis, nota: "M0 y sin fallas (programa del respaldo)"}
+  enfriador/t_mayor_sp:       {addr: "%M44", estado: confirmado, nota: "%MW0 > %MW100 durante %TM0; visto en 1 el 23-oct"}
+
+no_publicar:
+  "%MW20, %MW21, %MW23": "copias de MW0, MW1, MW10 (sirven para verificar que el programa corre)"
+  "%M60": "flanco de inicio general (dura un ciclo)"
+
+logica_de_arranque:
+  - "Selector en PC (M0) o HMI (M1)"
+  - "Sin falla de nivel: M20 = M21 = 0 (agua entre el nivel bajo y el alto en ambos tanques)"
+  - "Flanco 0->1 en M30 (PC) o M32 (HMI) y el bit se mantiene en 1"
+  - "Lazo en marcha (M31/M33): PID 0, M12 SISTEMA FUNCIONANDO, M13 bomba"
+
+hmi_y_scada:
+  estado: "OPERATIVOS desde el 23-oct-2026"
+  cadena: "HMI TPC .101 -> variables compartidas LIB_HMI/LIB_PC en la PC .100 -> MOD_TEMP.exe -> DataSocket opc:// ->
+    Industrial Automation OPC Servers 5.1 (objeto Modbus 'temp', IP .10) -> Twido"
+  correcciones_23oct:
+    - "Instalado Industrial Automation OPC Servers 5.1 (CD del laboratorio, modo evaluacion: sin numero de serie)"
+    - "Creado el objeto Modbus 'temp' (Modbus Ethernet, IP 192.168.114.10, Identifier 1); PollRate '0:01' (Lookout usa DIAS: '1.0' = 1 dia)"
+    - "Desplegadas LIB_PC y LIB_HMI desde MCT.lvproj (el proyecto tiene desactivado el auto-despliegue)"
+    - "Altivar 11: FUn > tCC > ACt LOC -> 2C (mando por LI1) y AIt 5U -> 10U (estaba en mando local de fabrica gama A)"
+  items_opc: "temp.N = coil N-1 (%M); temp.4000N = %MW(N-1)"
+
+pendientes:
+  - "Revisar/reemplazar el rele de estado solido FOTEK (sin disipador; T2 se calento sin orden del PLC y hubo olor a quemado)"
+  - "Validar la escala con termometro"
+  - "Licencia del OPC Server (evaluacion)"
+  - "Respaldar el programa REAL del Twido con TwidoSuite (subir, no descargar): el respaldo de 2009 no tiene M41/M42"

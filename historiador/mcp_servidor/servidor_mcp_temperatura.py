@@ -472,7 +472,7 @@ def diagnosticar_temperatura(momento: str | None = None) -> dict:
     if marcha and _b(u, "estado/bomba_marcha") and bomba is not None and bomba <= 0:
         sec.append({"hallazgo": "BOMBA_EN_CERO", "detalle": "Lazo en marcha con la consigna de la bomba en 0 %: el agua "
                     "no recircula y el sensor de control puede no ver el calor de la resistencia."})
-    if err is not None and err < -TOLERANCIA_SP_C and not _b(u, "estado/enfriador_on"):
+    if marcha and err is not None and err < -TOLERANCIA_SP_C and not _b(u, "estado/enfriador_on"):
         sec.append({"hallazgo": "ENFRIADOR_INACTIVO", "detalle": "La temperatura supera el setpoint y el enfriador no "
                     "esta en marcha (hay que habilitarlo con el pulsador HABILITAR ENFRIADOR o desde el SCADA)."})
     if t is not None and RANGO_TRABAJO_C[1] < t <= LIMITE_ALARMA_C:

@@ -389,7 +389,7 @@ Indicadores:
 - [ ] Calibración del nivel y confirmación de variables en hipótesis
 - [ ] Importar los históricos `.lvm` de nivel y presión
 - [ ] Altivar 11 de presión con consigna AI1 (con el responsable) y nueva prueba del lazo
-- [ ] Casos de evaluación de presión
+- [x] Casos de evaluación de presión (P1–P10) y temperatura (T1–T2)
 - [x] Módulo de temperatura: HMI y SCADA recuperados, conector Modbus, ingestor, MCP, Grafana, lienzo e históricos `.lvm`
 - [ ] Temperatura: reparar el relé de estado sólido, contrastar la escala con termómetro y casos de evaluación
 - [ ] Caudal: resolver el conflicto de IP `.10` (segmento aparte o enlace 1 del CP243-1)

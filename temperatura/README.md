@@ -102,4 +102,4 @@ Mapa completo con estado *confirmado/hipótesis*: [`tags_temperatura.yaml`](tags
 2. Contrastar la escala con termómetro.
 3. Respaldar el programa real del Twido (subir, **no** descargar).
 4. Licencia del OPC Server o alternativa.
-5. Casos de evaluación de temperatura en `evaluacion/reproducir_casos.py`.
+5. Más casos de evaluación de temperatura (hoy T1 `LAZO_SIN_PARAMETROS` y T2 `SISTEMA_DETENIDO`); faltan los de calentamiento, cuando el relé esté reparado.

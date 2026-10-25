@@ -245,7 +245,7 @@ Formato de los `.lvm` históricos (8 columnas, 1 muestra/s), deducido de los val
 - [ ] Verificar la escala con un manómetro en buen estado (2–3 puntos).
 - [ ] Confirmar presostato, switches de nivel y PARADA (NC) cuando ocurran.
 - [ ] Importar los `.lvm` de `historico_p_pc` (2008–2009).
-- [ ] Casos de evaluación de presión en `evaluacion/reproducir_casos.py`.
+- [x] Casos de evaluación de presión en `evaluacion/reproducir_casos.py`: P1–P10 (21 y 24-oct) + P11 no puntuado (desfase de escala del PID ~10 %)
 - [ ] Rango operativo validado por el responsable del laboratorio (hoy 3–40 psi del fabricante).
 - [ ] Revisar `conector_cfp2200_fallas.log` si el conector vuelve a cerrarse.
 - [ ] Dejar el switch CONS. OUT del cFP en OFF y desconectar el cable null-modem.

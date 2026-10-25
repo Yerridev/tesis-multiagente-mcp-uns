@@ -30,7 +30,7 @@ servidor_mcp.py · _nivel · _presion · _temperatura + grafos de conocimiento  
 Lienzo multi-equipo (React + agente Gemini) · Claude Desktop                                  ✅
                                       ▼
 Orquestación multiagente (consulta, diagnóstico, coordinador)                                 ⏳ siguiente fase
-Evaluación experimental                                                                        🟡 caudal 11/11 casos; faltan nivel y presión
+Evaluación experimental                                                                        🟡 23 casos: caudal 11, presión 10 (+1 no puntuado), temperatura 2; falta nivel
 ```
 
 Arranque: `historiador/INICIAR_TODO.bat` (v2) funciona con cualquier subconjunto de equipos encendidos.
@@ -94,7 +94,7 @@ Comunes: `listar_variables`, `obtener_lectura`, `obtener_estado_plc`, `consultar
 0. **Temperatura:** reparar/reemplazar el relé de estado sólido (con disipador), contrastar la escala con termómetro, respaldar el programa real del Twido (subir, no descargar) y licencia del OPC Server. **Caudal:** decidir cómo recuperar la IP `.10`. **Presión:** ✅ resuelto el 24-oct (Altivar `tCC=2C`, `LSr=tEr`, `AIt=10U` e Input 3 del AIO-610 en voltios); falta la prueba remota completa 5 → 10 → 20 psi.
 
 1. **Presión:** consigna del Altivar por AI1 con el responsable del laboratorio; repetir la prueba remota (SP 5 → 10 → 20 psi); verificar escala con manómetro.
-2. Casos de evaluación de nivel y presión en `evaluacion/reproducir_casos.py` (caudal: 11/11).
+2. Casos de evaluación de nivel en `evaluacion/reproducir_casos.py` (caudal 11, presión 10 y temperatura 2 ya incluidos; correr `EVALUAR_CASOS.bat`).
 3. Importar los `.lvm` históricos de nivel (2008–2012) y presión (2008–2009).
 4. Obtener del responsable del laboratorio los **rangos operativos validados** (caudal 0–140 L/min provisional; presión 3–40 psi del fabricante).
 5. Ampliar a multiagente (consulta, diagnóstico, reporte, coordinador) sobre los tres equipos.

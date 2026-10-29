@@ -149,7 +149,8 @@ async def responder(config: str, pregunta: str, llm: ClienteLLM, pool: PoolMCP, 
             texto = await agente_equipo(llm, pool, traza, elegidos[0], pregunta)
             ruta = [f"agente_{elegidos[0]}"]
         else:
-            tareas = {a: f"{pregunta}\n\n(Responde solo sobre tu equipo; otros agentes cubren los demas.)"
+            tareas = {a: f"{pregunta}\n\n(Responde solo sobre tu equipo, {pool.por_alias[a]['id']}, y solo en el "
+                         f"momento que la pregunta le asigna a tu equipo; otros agentes cubren los demas.)"
                       for a in elegidos}
             informes_l = await asyncio.gather(*(agente_equipo(llm, pool, traza, a, t) for a, t in tareas.items()))
             texto = await _sintetizar(llm, traza, pregunta, dict(zip(elegidos, informes_l)))

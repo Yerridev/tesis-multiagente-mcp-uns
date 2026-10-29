@@ -49,3 +49,13 @@ Salida en `logs\experimento\<fecha>\`: `resultados.jsonl`, `trazas\*.json` (cada
 - Los módulos no se probaron al mismo tiempo: las preguntas de tipo 3 combinan momentos de días distintos.
 - Las preguntas de nivel solo son de tipo 1 (no hay casos de diagnóstico verificados de nivel).
 - El nivel gratuito de Gemini limita peticiones por minuto y por día: `rpm` en `modelos.json` espacia las peticiones y la corrida se puede reanudar.
+
+## Ajustes tras el piloto del 29-oct (openrouter, L04/D17/P01, A–D)
+
+Se aplican a todas las configuraciones y se reportan como parte del método (no se usan las 3 preguntas piloto para concluir):
+
+1. **Puntuación por momento (tipos 2 y 3):** si la respuesta trae varias entradas de un equipo, se puntúa la del momento que la pregunta asigna a ese equipo (resolución de minuto). Antes se tomaba la última y C/P01 se marcaba incorrecta aunque el diagnóstico pedido era correcto.
+2. **C, varios equipos:** cada agente responde solo en el momento asignado a su equipo (en el piloto, los agentes diagnosticaron los tres momentos en su propio equipo).
+3. **Contexto común:** las consultas de historial usan una ventana de al menos ±30 s (en el piloto, D/L04 consultó 1 s, obtuvo 0 muestras y el coordinador dio "sin datos" pese a que el especialista de diagnóstico sí tenía la evidencia).
+
+Hallazgo que se mantiene como resultado de D: el coordinador sin herramientas no puede resolver evidencia contradictoria entre especialistas.

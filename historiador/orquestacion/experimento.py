@@ -163,16 +163,22 @@ def fundamentacion(respuesta: str, pregunta: str, evidencia: list[str]) -> dict:
             "pct": round(100 * (total - len(sin)) / total, 1) if total else 100.0}
 
 
-def _diag_por_equipo(js: dict | None, reg: dict) -> dict:
-    out = {}
+def _diag_por_equipo(js: dict | None, reg: dict, momentos: dict | None = None) -> dict:
+    """Diagnostico por equipo. Si la pregunta fija el momento de cada equipo, se puntua la entrada de ESE momento
+    (a la resolucion del minuto); si no hay una entrada con ese momento, la ultima del equipo."""
+    out, exactos = {}, {}
     for item in (js or {}).get("equipos", []) or []:
         if not isinstance(item, dict):
             continue
         eq = str(item.get("equipo", "")).lower()
         alias = next((a for a, e in reg.items() if eq in (a, e["id"]) or eq.startswith(a)), None)
         if alias and item.get("diagnostico"):
-            out[alias] = str(item["diagnostico"]).strip().upper()
-    return out
+            d = str(item["diagnostico"]).strip().upper()
+            out[alias] = d
+            esperado = (momentos or {}).get(alias)
+            if esperado and str(item.get("momento", ""))[:16] == esperado[:16]:
+                exactos[alias] = d
+    return {**out, **exactos}
 
 
 def puntuar(q: dict, r: dict, verdad1: dict, reg: dict) -> dict:
@@ -193,7 +199,8 @@ def puntuar(q: dict, r: dict, verdad1: dict, reg: dict) -> dict:
         tolerante = estricto or any(abs(x - v) <= q["tolerancia"] for x in _numeros(texto))
         return {**p, "evaluable": True, "verdad": v, "correcto": estricto, "correcto_tolerante": tolerante,
                 "fraccion": 1.0 if estricto else 0.0}
-    obtenidos = _diag_por_equipo(js, reg)
+    momentos = q.get("momentos") or ({q["equipo"]: q["momento"]} if q.get("momento") else {})
+    obtenidos = _diag_por_equipo(js, reg, momentos)
     aciertos = {a: obtenidos.get(a) == d for a, d in q["esperado"].items()}
     tolerantes = {a: aciertos[a] or (d in texto.upper()) for a, d in q["esperado"].items()}
     return {**p, "evaluable": True, "verdad": q["esperado"], "obtenido": obtenidos,

@@ -37,12 +37,14 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MCP_DIR = Path(os.getenv("MCP_DIR", Path(__file__).resolve().parents[2] / "mcp_servidor"))
 CONOCIMIENTO = MCP_DIR / "conocimiento"
 REGISTRO = CONOCIMIENTO / "equipos.json"
-PROVEEDOR = os.getenv("LLM_PROVEEDOR", "anthropic").strip().lower()   # anthropic | gemini | openai (compatible)
+PROVEEDOR = os.getenv("LLM_PROVEEDOR", "anthropic").strip().lower()   # anthropic | gemini | openrouter | openai (compatible)
 PROVEEDORES = {
     "anthropic": {"clave": "ANTHROPIC_API_KEY", "modelo": os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5"), "url": None,
                   "nombre": "Anthropic"},
     "gemini": {"clave": "GEMINI_API_KEY", "modelo": os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
                "url": "https://generativelanguage.googleapis.com/v1beta/openai/", "nombre": "Google Gemini"},
+    "openrouter": {"clave": "OPENROUTER_API_KEY", "modelo": os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+                   "url": "https://openrouter.ai/api/v1", "nombre": "OpenRouter"},
     "openai": {"clave": "LLM_API_KEY", "modelo": os.getenv("LLM_MODELO", ""), "url": os.getenv("LLM_BASE_URL"),
                "nombre": "API compatible con OpenAI"},
 }
@@ -594,7 +596,8 @@ async def agente(req: Request):
                     cliente = AsyncOpenAI(api_key=os.getenv(CFG["clave"]), base_url=CFG["url"])
                     herramientas = [{"type": "function", "function": {
                         "name": nombre_llm(a, t), "description": descripcion(a, t)[:1000],
-                        "parameters": _esquema_compatible(t.input_schema)}} for a, t in tools]
+                        "parameters": _esquema_compatible(t.input_schema) if PROVEEDOR == "gemini"
+                        else t.input_schema}} for a, t in tools]
                     msgs = [{"role": "system", "content": sistema}] + [dict(m) for m in historial_chat]
                     for _ in range(10):
                         resp = await cliente.chat.completions.create(model=MODELO, messages=msgs, tools=herramientas,

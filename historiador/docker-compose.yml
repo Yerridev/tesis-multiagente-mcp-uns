@@ -112,7 +112,8 @@ services:
       - timescaledb
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin1234}
+      GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION: "true"   # lab local: evita bloqueo por intentos fallidos
       GF_USERS_DEFAULT_THEME: dark
       DB_USER: ${DB_USER:-uns_admin}
       DB_PASSWORD: ${DB_PASSWORD:-cambiar_esto}
@@ -137,11 +138,16 @@ services:
       MQTT_HOST: ${MQTT_HOST:-host.docker.internal}
       MQTT_PORT: ${MQTT_PORT:-1883}
       UNS_BASE: ${UNS_BASE:-uss/campus/lab-automatizacion/sl01la07/caudal-mcc09}
-      LLM_PROVEEDOR: ${LLM_PROVEEDOR:-gemini}          # gemini | anthropic | openai (compatible)
+      LLM_PROVEEDOR: ${LLM_PROVEEDOR:-openrouter}       # openrouter | gemini | anthropic | openai (compatible)
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-5-5}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODELO: ${LLM_MODELO:-}
       TZ: America/Lima
     ports:
       - "127.0.0.1:8765:8080"   # solo en la laptop (8080 lo usa otro programa)

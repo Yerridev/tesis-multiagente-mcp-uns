@@ -148,7 +148,7 @@ export default function AgentePanel({ habilitado, modelo, equipo, sugerencias }:
       </div>
       <form className="agente-entrada" onSubmit={(e) => { e.preventDefault(); enviar(texto); }}>
         <textarea rows={2} value={texto} disabled={!habilitado}
-          placeholder={habilitado ? 'Pregunta al agente… (Enter para enviar)' : 'Configura la clave del modelo (GEMINI_API_KEY o ANTHROPIC_API_KEY) en el .env'}
+          placeholder={habilitado ? 'Pregunta al agente… (Enter para enviar)' : 'Configura la clave del proveedor (OPENROUTER_API_KEY, GEMINI_API_KEY o ANTHROPIC_API_KEY) en el .env'}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto); } }} />
         <button type="submit" disabled={!habilitado || ocupado || !texto.trim()} aria-label="Enviar"><IcoEnviar /></button>

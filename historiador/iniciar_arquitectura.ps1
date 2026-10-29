@@ -58,8 +58,13 @@ if (-not $Cfg.ContainsKey("LLM_PROVEEDOR")) {
 }
 if (-not $Cfg.ContainsKey("GEMINI_API_KEY")) { Add-Content -Encoding UTF8 ".env" "GEMINI_API_KEY="; $Cfg["GEMINI_API_KEY"] = "" }
 $Prov = $Cfg["LLM_PROVEEDOR"]
-$ClaveLlm = if ($Prov -eq "anthropic") { "ANTHROPIC_API_KEY" } elseif ($Prov -eq "gemini") { "GEMINI_API_KEY" } else { "LLM_API_KEY" }
-if ($Cfg[$ClaveLlm]) { Ok "Agente del lienzo: proveedor $Prov, clave $ClaveLlm configurada" }
+$ClaveLlm = switch ($Prov) {
+    "anthropic"  { "ANTHROPIC_API_KEY" }
+    "gemini"     { "GEMINI_API_KEY" }
+    "openrouter" { "OPENROUTER_API_KEY" }
+    default      { "LLM_API_KEY" }
+}
+if ($Cfg[$ClaveLlm]) { Ok "Agente del lienzo: proveedor $Prov, clave $ClaveLlm configurada" + $(if ($Cfg["OPENROUTER_MODEL"] -and $Prov -eq "openrouter") { " (modelo $($Cfg["OPENROUTER_MODEL"]))" } else { "" }) }
 else { Aviso "Agente del lienzo: proveedor $Prov sin clave ($ClaveLlm vacia en el .env); el lienzo funciona sin chat" }
 
 # ---------------------------------------------------------------- 2. Red y equipos

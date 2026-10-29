@@ -1,0 +1,43 @@
+{
+  "_nota": "Perfiles de modelo para el experimento. Todos por la API compatible con OpenAI. 'rpm' = peticiones por minuto maximas (limite del nivel gratuito); confirma los nombres de modelo vigentes en Google AI Studio / ollama list.",
+  "perfiles": {
+    "gemini-flash": {
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "clave_env": "GEMINI_API_KEY",
+      "modelo_env": "GEMINI_MODEL",
+      "modelo": "gemini-3.8-flash",
+      "rpm": 9,
+      "temperatura": 0.0,
+      "max_tokens": 2048,
+      "esquema_gemini": true
+    },
+    "gemini-flash-lite": {
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "clave_env": "GEMINI_API_KEY",
+      "modelo_env": "GEMINI_MODEL_LITE",
+      "modelo": "gemini-3.8-flash-lite",
+      "rpm": 14,
+      "temperatura": 0.0,
+      "max_tokens": 2048,
+      "esquema_gemini": true
+    },
+    "ollama": {
+      "base_url": "http://localhost:11434/v1",
+      "clave_env": null,
+      "modelo_env": "OLLAMA_MODEL",
+      "modelo": "qwen3:8b",
+      "temperatura": 0.0,
+      "max_tokens": 2048,
+      "timeout_s": 300
+    },
+    "claude": {
+      "base_url": "https://api.anthropic.com/v1/",
+      "clave_env": "ANTHROPIC_API_KEY",
+      "modelo_env": "CLAUDE_MODEL",
+      "modelo": "claude-sonnet-5-5",
+      "rpm": 40,
+      "temperatura": 0.0,
+      "max_tokens": 2048
+    }
+  }
+}

@@ -295,7 +295,7 @@ python conector_edge_twido.py                        # temperatura (Twido 192.16
 | `comparar_con_historico_lvm` | Desempeño actual vs SCADA original |
 | `consultar_grafo` | Grafo de conocimiento del equipo (`conocimiento/grafo_mcc09.json`) |
 
-**Agentes:** Claude Desktop (vía `claude_desktop_config.ejemplo.json`) y un agente en el lienzo visual con **Gemini** (Google AI Studio). Estrategia: primero un agente de consulta fiable y después la coordinación multiagente (consulta, análisis y coordinador), para medir qué aporta realmente la orquestación.
+**Agentes:** Claude Desktop (vía `claude_desktop_config.ejemplo.json`) y una arquitectura multiagente en el lienzo visual. El planificador selecciona agentes de consulta, diagnóstico y reporte; cada uno recibe una lista blanca distinta de herramientas MCP. Un coordinador final, sin acceso a herramientas, sintetiza únicamente la evidencia producida por los especialistas. La ruta anterior de agente único se conserva para permitir la comparación experimental.
 
 Caso de uso de referencia:
 
@@ -393,7 +393,7 @@ Indicadores:
 - [x] Módulo de temperatura: HMI y SCADA recuperados, conector Modbus, ingestor, MCP, Grafana, lienzo e históricos `.lvm`
 - [ ] Temperatura: reparar el relé de estado sólido, contrastar la escala con termómetro y casos de evaluación
 - [ ] Caudal: resolver el conflicto de IP `.10` (segmento aparte o enlace 1 del CP243-1)
-- [ ] Orquestación multiagente sobre los cuatro equipos
+- [x] Orquestación multiagente v1 sobre los cuatro equipos (consulta, diagnóstico, reporte y coordinador)
 - [ ] Rangos operativos validados por el laboratorio
 - [ ] Campaña de evaluación y cálculo de indicadores
 

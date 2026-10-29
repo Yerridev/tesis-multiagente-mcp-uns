@@ -6,6 +6,7 @@ import type { Arista } from '../types';
 
 interface Paso {
   id: string;
+  agente?: string;
   nombre: string; // nombre de la herramienta sin prefijo
   alias: string;  // equipo al que consulta (caudal, nivel...)
   equipo?: string;
@@ -72,7 +73,10 @@ export default function AgentePanel({ habilitado, modelo, equipo, sugerencias }:
         case 'herramienta': {
           const entrada = (ev.entrada ?? {}) as Record<string, unknown>;
           const [alias, nombre] = String(ev.nombre).includes('__') ? String(ev.nombre).split('__', 2) : ['', String(ev.nombre)];
-          actualizar((t) => ({ ...t, pasos: [...(t.pasos ?? []), { id: String(ev.id), nombre, alias, equipo: ev.equipo as string, entrada }] }));
+          actualizar((t) => ({ ...t, pasos: [...(t.pasos ?? []), {
+            id: String(ev.id), agente: String(ev.agente ?? ''), nombre, alias,
+            equipo: ev.equipo as string, entrada,
+          }] }));
           if (equipo && ev.equipo === equipo) {
             const vars = [
               ...(Array.isArray(entrada.variables) ? (entrada.variables as string[]) : []),
@@ -129,6 +133,7 @@ export default function AgentePanel({ habilitado, modelo, equipo, sugerencias }:
                 {t.pasos.map((p) => (
                   <span key={p.id} className={`paso ${p.ms === undefined ? 'corriendo' : ''} ${p.error ? 'err' : ''}`}
                     title={JSON.stringify(p.entrada)}>
+                    {p.agente && <b className="paso-eq">{p.agente}</b>}
                     {p.alias && <b className="paso-eq">{p.alias}</b>}
                     <code>{p.nombre}</code>
                     {p.resumen && <em>{p.resumen}</em>}
@@ -153,7 +158,7 @@ export default function AgentePanel({ habilitado, modelo, equipo, sugerencias }:
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto); } }} />
         <button type="submit" disabled={!habilitado || ocupado || !texto.trim()} aria-label="Enviar"><IcoEnviar /></button>
       </form>
-      <div className="agente-pie">{modelo} · MCP de todos los equipos · solo lectura</div>
+      <div className="agente-pie">{modelo} · coordinador + agentes especializados · MCP · solo lectura</div>
     </div>
   );
 }

@@ -6,8 +6,8 @@ Lienzo vivo multi-equipo del laboratorio USS - backend (FastAPI).  v2.0
 - Vista de planta (/api/planta): resumen de todos los equipos para la pantalla de inicio.
 - Rutas por equipo (/api/e/{id}/...): grafo (lectura/edicion con respaldo), estado y diagnostico en vivo o en un
   momento pasado, historial, eventos y WebSocket del UNS.
-- Agente: un solo chat que abre como cliente MCP (stdio) los servidores de TODOS los equipos registrados; las
-  herramientas llevan el prefijo del equipo (caudal__..., nivel__...) para que el modelo coordine entre ellos.
+- Multiagente: consulta, diagnostico y reporte trabajan con listas blancas MCP; un coordinador sin herramientas
+  sintetiza sus evidencias. La ruta /api/agente anterior se conserva como compatibilidad.
 Ninguna ruta escribe en los PLC ni en la base de datos (rol mcp_lector, sesiones read-only).
 """
 from __future__ import annotations
@@ -30,6 +30,8 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
+
+from agentes import AGENTES, herramientas_del_rol, planificar
 
 DB_DSN = os.getenv("DB_DSN", "postgresql://mcp_lector:lector_cambiar@localhost:5432/uns")
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
@@ -626,6 +628,160 @@ async def agente(req: Request):
         except BaseException as e:  # noqa: BLE001  (los grupos de excepciones de anyio esconden la causa real)
             causa = _causa(e)
             print(f"[agente] error: {causa!r}", flush=True)
+            yield _sse({"tipo": "error", "detalle": _mensaje_error(causa)})
+
+    return StreamingResponse(flujo(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ----------------------------------------------------------------------------- orquestación multiagente
+@app.post("/api/multiagente")
+async def multiagente(req: Request):
+    """Especialistas con herramientas restringidas + coordinador sin herramientas."""
+    cuerpo = await req.json()
+    equipo_ctx = cuerpo.get("equipo") or None
+    historial = [m for m in cuerpo.get("mensajes", []) if m.get("role") in ("user", "assistant")
+                 and isinstance(m.get("content"), str) and m["content"].strip()][-12:]
+    if not historial or historial[-1]["role"] != "user":
+        raise HTTPException(400, "El ultimo mensaje debe ser del usuario")
+    if not os.getenv(CFG["clave"]):
+        raise HTTPException(503, f"Falta {CFG['clave']} en el archivo .env del historiador")
+    pregunta = historial[-1]["content"]
+    plan = planificar(pregunta, equipo_ctx)
+    por_alias = {e["alias"]: e for e in REG["equipos"] if e["id"] in MODULOS}
+
+    async def flujo():
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+        try:
+            async with AsyncExitStack() as pila:
+                sesiones, todas, instrucciones = {}, [], []
+                for alias, e in por_alias.items():
+                    params = StdioServerParameters(command=sys.executable, args=[str(MCP_DIR / e["mcp_script"])],
+                                                   env={**os.environ, "MCP_DSN": DB_DSN})
+                    lectura, escritura = await pila.enter_async_context(stdio_client(params))
+                    sesion = await pila.enter_async_context(ClientSession(lectura, escritura))
+                    init = await sesion.initialize()
+                    sesiones[alias] = sesion
+                    todas += [(alias, t) for t in (await sesion.list_tools()).tools]
+                    instrucciones.append(f"### {e['nombre']} {e['codigo']}\n{init.instructions or ''}")
+                yield _sse({"tipo": "orquestacion", "fase": "plan", "plan": plan,
+                            "agentes": [AGENTES[r].nombre for r in plan] + [AGENTES["coordinador"].nombre]})
+
+                async def herramienta(uid, nombre, entrada, rol_id):
+                    alias, _, metodo = nombre.partition("__")
+                    if alias not in sesiones or not metodo:
+                        return ({"tipo": "resultado", "id": uid, "nombre": nombre, "agente": rol_id,
+                                 "ms": 0, "error": True, "datos": None}, f"Herramienta desconocida: {nombre}")
+                    t0 = asyncio.get_running_loop().time()
+                    res = await sesiones[alias].call_tool(metodo, entrada)
+                    texto = "".join(getattr(c, "text", "") for c in res.content)
+                    ms = round((asyncio.get_running_loop().time() - t0) * 1000)
+                    try:
+                        datos = json.loads(texto)
+                    except json.JSONDecodeError:
+                        datos = None
+                    return ({"tipo": "resultado", "id": uid, "nombre": nombre, "agente": rol_id,
+                             "equipo": por_alias[alias]["id"], "ms": ms,
+                             "error": bool(res.is_error), "datos": datos}, texto)
+
+                async def especialista(rol_id: str):
+                    rol = AGENTES[rol_id]
+                    permitidas = herramientas_del_rol(rol, todas)
+                    sistema = ("\n\n".join(instrucciones) + "\n\n" + _sistema_extra(equipo_ctx) +
+                               f"\n\nActuas como {rol.nombre}. Objetivo: {rol.objetivo}\n{rol.instrucciones}")
+                    eventos, texto_final = [], ""
+                    if PROVEEDOR == "anthropic":
+                        import anthropic
+                        cliente = anthropic.AsyncAnthropic()
+                        defs = [{"name": f"{a}__{t.name}",
+                                 "description": f"[{por_alias[a]['nombre']}] {t.description or ''}",
+                                 "input_schema": t.input_schema} for a, t in permitidas]
+                        msgs = [{"role": "user", "content": pregunta}]
+                        for _ in range(8):
+                            resp = await cliente.messages.create(model=MODELO, max_tokens=1400, system=sistema,
+                                                                 tools=defs, messages=msgs)
+                            msgs.append({"role": "assistant", "content": [_bloque(b) for b in resp.content
+                                                                          if b.type in ("text", "tool_use")]})
+                            texto_final = "\n".join(b.text for b in resp.content if b.type == "text")
+                            usos = [b for b in resp.content if b.type == "tool_use"]
+                            if not usos:
+                                break
+                            resultados = []
+                            for uso in usos:
+                                eventos.append({"tipo": "herramienta", "id": uso.id, "nombre": uso.name,
+                                                "entrada": uso.input, "agente": rol_id,
+                                                "equipo": por_alias.get(uso.name.partition("__")[0], {}).get("id")})
+                                evento, texto = await herramienta(uso.id, uso.name, uso.input, rol_id)
+                                eventos.append(evento)
+                                resultados.append({"type": "tool_result", "tool_use_id": uso.id,
+                                                   "content": texto[:60000], "is_error": evento["error"]})
+                            msgs.append({"role": "user", "content": resultados})
+                        return texto_final, eventos
+
+                    from openai import AsyncOpenAI
+                    cliente = AsyncOpenAI(api_key=os.getenv(CFG["clave"]), base_url=CFG["url"])
+                    defs = [{"type": "function", "function": {
+                        "name": f"{a}__{t.name}", "description": f"[{por_alias[a]['nombre']}] {t.description or ''}"[:1000],
+                        "parameters": _esquema_compatible(t.input_schema) if PROVEEDOR == "gemini" else t.input_schema}}
+                        for a, t in permitidas]
+                    msgs = [{"role": "system", "content": sistema}, {"role": "user", "content": pregunta}]
+                    for _ in range(8):
+                        resp = await cliente.chat.completions.create(model=MODELO, messages=msgs, tools=defs,
+                                                                     tool_choice="auto")
+                        mensaje = resp.choices[0].message
+                        llamadas, texto_final = mensaje.tool_calls or [], mensaje.content or ""
+                        msgs.append({"role": "assistant", "content": texto_final, **({"tool_calls": [
+                            {"id": c.id, "type": "function",
+                             "function": {"name": c.function.name, "arguments": c.function.arguments or "{}"}}
+                            for c in llamadas]} if llamadas else {})})
+                        if not llamadas:
+                            break
+                        for llamada in llamadas:
+                            try:
+                                entrada = json.loads(llamada.function.arguments or "{}") or {}
+                            except json.JSONDecodeError:
+                                entrada = {}
+                            entrada = {k: v for k, v in entrada.items() if v is not None}
+                            eventos.append({"tipo": "herramienta", "id": llamada.id,
+                                            "nombre": llamada.function.name, "entrada": entrada, "agente": rol_id,
+                                            "equipo": por_alias.get(llamada.function.name.partition("__")[0], {}).get("id")})
+                            evento, texto = await herramienta(llamada.id, llamada.function.name, entrada, rol_id)
+                            eventos.append(evento)
+                            msgs.append({"role": "tool", "tool_call_id": llamada.id, "content": texto[:60000]})
+                    return texto_final, eventos
+
+                evidencia = []
+                for rol_id in plan:
+                    yield _sse({"tipo": "orquestacion", "fase": "inicio_agente", "agente": rol_id,
+                                "nombre": AGENTES[rol_id].nombre})
+                    texto, eventos = await especialista(rol_id)
+                    for evento in eventos:
+                        yield _sse(evento)
+                    evidencia.append(f"## {AGENTES[rol_id].nombre}\n{texto or 'Sin respuesta textual.'}")
+                    yield _sse({"tipo": "orquestacion", "fase": "fin_agente", "agente": rol_id})
+
+                coordinador = AGENTES["coordinador"]
+                sistema = _sistema_extra(equipo_ctx) + f"\n\nActuas como {coordinador.nombre}. {coordinador.instrucciones}"
+                entrada = f"Pregunta:\n{pregunta}\n\nEvidencia:\n" + "\n\n".join(evidencia)
+                if PROVEEDOR == "anthropic":
+                    import anthropic
+                    final = await anthropic.AsyncAnthropic().messages.create(
+                        model=MODELO, max_tokens=1800, system=sistema,
+                        messages=[{"role": "user", "content": entrada}])
+                    respuesta = "\n".join(b.text for b in final.content if b.type == "text")
+                else:
+                    from openai import AsyncOpenAI
+                    final = await AsyncOpenAI(api_key=os.getenv(CFG["clave"]), base_url=CFG["url"]).chat.completions.create(
+                        model=MODELO, messages=[{"role": "system", "content": sistema},
+                                               {"role": "user", "content": entrada}])
+                    respuesta = final.choices[0].message.content or ""
+                yield _sse({"tipo": "texto", "delta": respuesta})
+                yield _sse({"tipo": "orquestacion", "fase": "fin", "plan": plan})
+                yield _sse({"tipo": "fin"})
+        except BaseException as e:  # noqa: BLE001
+            causa = _causa(e)
+            print(f"[multiagente] error: {causa!r}", flush=True)
             yield _sse({"tipo": "error", "detalle": _mensaje_error(causa)})
 
     return StreamingResponse(flujo(), media_type="text/event-stream",

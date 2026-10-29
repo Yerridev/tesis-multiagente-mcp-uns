@@ -29,7 +29,7 @@ servidor_mcp.py · _nivel · _presion · _temperatura + grafos de conocimiento  
                                       ▼
 Lienzo multi-equipo (React + agente Gemini) · Claude Desktop                                  ✅
                                       ▼
-Orquestación multiagente (consulta, diagnóstico, coordinador)                                 ⏳ siguiente fase
+Orquestación multiagente (consulta, diagnóstico, reporte y coordinador)                        ✅ v1 en el lienzo
 Evaluación experimental                                                                        🟡 caudal 11/11 casos; faltan nivel y presión
 ```
 
@@ -97,7 +97,7 @@ Comunes: `listar_variables`, `obtener_lectura`, `obtener_estado_plc`, `consultar
 2. Casos de evaluación de nivel y presión en `evaluacion/reproducir_casos.py` (caudal: 11/11).
 3. Importar los `.lvm` históricos de nivel (2008–2012) y presión (2008–2009).
 4. Obtener del responsable del laboratorio los **rangos operativos validados** (caudal 0–140 L/min provisional; presión 3–40 psi del fabricante).
-5. Ampliar a multiagente (consulta, diagnóstico, reporte, coordinador) sobre los tres equipos.
+5. Evaluar la orquestación multiagente v1 (consulta, diagnóstico, reporte y coordinador) frente al agente único.
 6. Siguiente equipo: módulo de temperatura (INDUCONTROL TEMPERATURA).
 7. Evaluación: 20–30 preguntas con respuesta verificada, agente con y sin knowledge graph; métricas de exactitud, latencia, integridad de datos y tasa de errores.
 

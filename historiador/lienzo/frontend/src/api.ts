@@ -58,7 +58,7 @@ export function apiEquipo(id: string) {
   };
 }
 
-/** Lee un stream SSE de POST /api/agente y entrega cada evento JSON.
+/** Lee un stream SSE del coordinador multiagente y entrega cada evento JSON.
  *  'equipo' = equipo que el usuario esta viendo (null = vista general: el agente coordina todos). */
 export async function conversar(
   mensajes: { role: 'user' | 'assistant'; content: string }[],
@@ -66,7 +66,7 @@ export async function conversar(
   alEvento: (ev: Record<string, unknown>) => void,
   senal?: AbortSignal,
 ) {
-  const r = await fetch('/api/agente', {
+  const r = await fetch('/api/multiagente', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mensajes, equipo }),

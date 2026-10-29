@@ -7,21 +7,42 @@ Las tres configuraciones del experimento (misma pregunta, mismo modelo, mismos s
   C  Hibrido: enrutamiento por reglas (workflow, sin LLM). Si la pregunta nombra un solo equipo, responde su
      agente directamente; si nombra varios (o ninguno), los agentes trabajan en paralelo y el coordinador
      sintetiza. Tambien pasa por el verificador.
+  D  Multiagente por ROLES (diseno del lienzo, lienzo/backend/agentes.py): un planificador por reglas elige
+     especialistas funcionales (consulta, diagnostico, reporte), cada uno con una lista blanca de herramientas
+     de TODOS los equipos; se ejecutan en serie y un coordinador sin herramientas sintetiza la evidencia.
+     Tambien pasa por el verificador (salvo --sin-verificador).
 
 El verificador se puede desactivar (verificar=False) para medir su efecto (ablacion).
 """
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import json
 import re
+import sys
 import time
 import unicodedata
+from pathlib import Path
 
 from .agentes import (CONTEXTO, FORMATO, Traza, agente_equipo, bucle_herramientas, extraer_json,
                       sistema_unico)
 from .llm import ClienteLLM
 from .mcp_pool import PoolMCP
+
+_ROLES_PATH = Path(__file__).resolve().parents[1] / "lienzo" / "backend" / "agentes.py"
+_roles = None
+
+
+def roles():
+    """Carga los roles del lienzo (mismo codigo que usa /api/multiagente) sin duplicarlos."""
+    global _roles
+    if _roles is None:
+        spec = importlib.util.spec_from_file_location("agentes_roles_lienzo", _ROLES_PATH)
+        _roles = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = _roles  # necesario para los dataclass del modulo
+        spec.loader.exec_module(_roles)
+    return _roles
 
 # Palabras con las que el enrutador por reglas reconoce cada equipo (sin tildes, en minusculas)
 PALABRAS = {
@@ -103,7 +124,7 @@ async def _verificar(llm: ClienteLLM, traza: Traza, pregunta: str, borrador: str
 
 
 async def responder(config: str, pregunta: str, llm: ClienteLLM, pool: PoolMCP, verificar: bool = True) -> dict:
-    """Responde una pregunta con la configuracion A, B o C. Devuelve respuesta, ruta seguida y traza."""
+    """Responde una pregunta con la configuracion A, B, C o D. Devuelve respuesta, ruta seguida y traza."""
     traza = Traza()
     t0 = time.perf_counter()
     ruta: list[str] = []
@@ -133,6 +154,33 @@ async def responder(config: str, pregunta: str, llm: ClienteLLM, pool: PoolMCP, 
             informes_l = await asyncio.gather(*(agente_equipo(llm, pool, traza, a, t) for a, t in tareas.items()))
             texto = await _sintetizar(llm, traza, pregunta, dict(zip(elegidos, informes_l)))
             ruta = [f"agente_{a}" for a in elegidos] + ["sintesis"]
+        if verificar:
+            texto = await _verificar(llm, traza, pregunta, texto)
+            ruta.append("verificador")
+    elif config == "D":
+        R = roles()
+        plan = R.planificar(pregunta, None)
+        traza.paso("planificador_roles", "reglas", plan)
+        lista = _lista_equipos(pool)
+        instr = "\n\n".join(f"### {pool.por_alias[a]['nombre']} (herramientas '{a}__')\n{pool.instrucciones[a]}"
+                            for a in pool.por_alias)
+        evidencia = []
+        for rol_id in plan:
+            rol = R.AGENTES[rol_id]
+            permitidas = [h for a in pool.por_alias for h in pool.herramientas(a, llm.esquema_gemini)
+                          if rol.permite(h["function"]["name"].partition("__")[2])]
+            sistema = (f"{CONTEXTO}\n\nEquipos integrados (cada herramienta lleva el prefijo de su equipo):\n{lista}"
+                       f"\n\n{instr}\n\nActuas como {rol.nombre}. Objetivo: {rol.objetivo}\n{rol.instrucciones}")
+            texto_rol = await bucle_herramientas(llm, pool, traza, f"rol_{rol_id}", sistema, pregunta, permitidas, 8)
+            evidencia.append(f"## {rol.nombre}\n{texto_rol or 'Sin respuesta textual.'}")
+            ruta.append(f"rol_{rol_id}")
+        coord = R.AGENTES["coordinador"]
+        sistema = f"{CONTEXTO}\n\nActuas como {coord.nombre}. {coord.instrucciones}\n\n{FORMATO}"
+        m = await llm.chat([{"role": "system", "content": sistema},
+                            {"role": "user", "content": f"Pregunta:\n{pregunta}\n\nEvidencia:\n" + "\n\n".join(evidencia)}],
+                           traza.uso, "coordinador_roles")
+        texto = m.content or ""
+        ruta.append("coordinador_roles")
         if verificar:
             texto = await _verificar(llm, traza, pregunta, texto)
             ruta.append("verificador")

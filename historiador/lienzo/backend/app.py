@@ -674,8 +674,11 @@ async def multiagente(req: Request):
                         return ({"tipo": "resultado", "id": uid, "nombre": nombre, "agente": rol_id,
                                  "ms": 0, "error": True, "datos": None}, f"Herramienta desconocida: {nombre}")
                     t0 = asyncio.get_running_loop().time()
-                    res = await sesiones[alias].call_tool(metodo, entrada)
-                    texto = "".join(getattr(c, "text", "") for c in res.content)
+                    try:
+                        res = await sesiones[alias].call_tool(metodo, entrada)
+                        texto, es_error = "".join(getattr(c, "text", "") for c in res.content), bool(res.is_error)
+                    except Exception as e:  # noqa: BLE001 - una herramienta caida no tumba toda la respuesta
+                        texto, es_error = f"Error al ejecutar {nombre}: {_causa(e)!r}", True
                     ms = round((asyncio.get_running_loop().time() - t0) * 1000)
                     try:
                         datos = json.loads(texto)
@@ -683,7 +686,7 @@ async def multiagente(req: Request):
                         datos = None
                     return ({"tipo": "resultado", "id": uid, "nombre": nombre, "agente": rol_id,
                              "equipo": por_alias[alias]["id"], "ms": ms,
-                             "error": bool(res.is_error), "datos": datos}, texto)
+                             "error": es_error, "datos": datos}, texto)
 
                 async def especialista(rol_id: str):
                     rol = AGENTES[rol_id]

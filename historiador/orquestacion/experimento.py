@@ -8,7 +8,7 @@ Uso (desde historiador/, con Docker corriendo):
   python -m orquestacion.experimento --continuar logs/experimento/20261029_1530         # reanuda una corrida
   python -m orquestacion.experimento --resumen logs/experimento/20261029_1530           # solo rehace el resumen
 
-Opciones: --configs A,B,C   --repeticiones 1   --sin-verificador (B y C sin verificador: ablacion)
+Opciones: --configs A,B,C,D   --repeticiones 1   --sin-verificador (B, C y D sin verificador: ablacion)
           --preguntas L01,D17 | tipo:2   --timeout 420
 
 Salida en logs/experimento/<fecha>/: resultados.jsonl (una fila por corrida), trazas/*.json (pasos y salidas de
@@ -233,7 +233,7 @@ async def correr(args, preguntas: list[dict], dsn: str, salida: Path) -> None:
                     continue
                 for rep in range(1, args.repeticiones + 1):
                     for config in configs:
-                        etiqueta = config + ("-sv" if args.sin_verificador and config in "BC" else "")
+                        etiqueta = config + ("-sv" if args.sin_verificador and config in "BCD" else "")
                         fila = {"modelo": modelo, "modelo_nombre": llm.modelo, "config": etiqueta, "pregunta": q["id"],
                                 "tipo": q["tipo"], "rep": rep}
                         if _clave(fila) in hechas:
@@ -306,7 +306,8 @@ def resumir(salida: Path) -> None:
             "peticiones_media", "tokens_media", "latencia_mediana_s", "latencia_tipo3_s"]
     md = [f"# Resultados del experimento ({salida.name})", "",
           "A = agente unico · B = coordinador LLM + agentes de equipo + verificador · C = enrutador por reglas + "
-          "agentes de equipo + verificador · -sv = sin verificador", "",
+          "agentes de equipo + verificador · D = roles del lienzo (consulta, diagnostico, reporte) + coordinador + "
+          "verificador · -sv = sin verificador", "",
           "| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
     md += ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in filas_res]
     fallos = [f for f in filas if "error" in f or not f.get("puntuacion", {}).get("correcto", True)]

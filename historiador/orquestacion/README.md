@@ -7,15 +7,16 @@ Implementa y compara tres arquitecturas sobre los **mismos 4 servidores MCP** (p
 | **A** | Agente único: un LLM con las 28 herramientas (hasta 10 rondas). Línea base | 2–6 |
 | **B** | Multiagente centralizado: **coordinador LLM** planifica (JSON), agentes de equipo en paralelo (solo sus 7 herramientas, hasta 6 rondas), síntesis y **verificador** | 5–12 |
 | **C** | Híbrido: **enrutador por reglas** (workflow, sin LLM). Un equipo → su agente responde; varios → agentes en paralelo + síntesis. Con verificador | 3–10 |
+| **D** | Multiagente **por roles** (diseño del lienzo, `lienzo/backend/agentes.py`): planificador por reglas → especialistas consulta / diagnóstico / reporte en serie, cada uno con lista blanca de herramientas de todos los equipos → coordinador sin herramientas. Con verificador | 4–20 |
 
-`--sin-verificador` ejecuta B y C sin verificador (configuraciones `B-sv`, `C-sv`) para medir su efecto.
+`--sin-verificador` ejecuta B, C y D sin verificador (configuraciones `B-sv`, `C-sv`, `D-sv`) para medir su efecto.
 
 ## Archivos
 
 | Archivo | Qué hace |
 |---|---|
 | `llm.py` | Cliente común (API compatible con OpenAI), ritmo máximo por minuto, reintentos ante 429/5xx, conteo de peticiones y tokens |
-| `modelos.json` | Perfiles: `gemini-flash`, `gemini-flash-lite`, `ollama`, `claude` (nombre de modelo sobrescribible desde el `.env`) |
+| `modelos.json` | Perfiles: `gemini-flash`, `gemini-flash-lite`, `ollama`, `openrouter` (`OPENROUTER_MODEL`, por defecto `openai/gpt-4o-mini`), `claude` (nombre de modelo sobrescribible desde el `.env`) |
 | `mcp_pool.py` | Abre los servidores MCP reales de `equipos.json` y expone sus herramientas por equipo |
 | `agentes.py` | Bucle de herramientas, prompts comunes, agente de equipo, formato final obligatorio (bloque `json`) |
 | `orquestador.py` | Configuraciones A, B y C, coordinador, enrutador, síntesis y verificador |
@@ -26,7 +27,7 @@ Implementa y compara tres arquitecturas sobre los **mismos 4 servidores MCP** (p
 
 ```powershell
 EXPERIMENTO.bat --solo-verdad                                   # 1) revisa la verdad de campo, sin LLM
-EXPERIMENTO.bat --modelos gemini-flash --preguntas L04,D17,P01  # 2) prueba corta (~3 preguntas x 3 configs)
+EXPERIMENTO.bat --modelos openrouter --configs A,B,C,D --preguntas L04,D17,P01  # 2) prueba corta (3 preguntas x 4 configs)
 EXPERIMENTO.bat --modelos gemini-flash,gemini-flash-lite        # 3) experimento completo
 EXPERIMENTO.bat --continuar logs\experimento\20261029_1530      # reanuda si se corta (limites del nivel gratuito)
 EXPERIMENTO.bat --resumen   logs\experimento\20261029_1530      # rehace el resumen

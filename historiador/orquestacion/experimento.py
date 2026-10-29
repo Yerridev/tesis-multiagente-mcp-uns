@@ -163,6 +163,11 @@ def fundamentacion(respuesta: str, pregunta: str, evidencia: list[str]) -> dict:
             "pct": round(100 * (total - len(sin)) / total, 1) if total else 100.0}
 
 
+def _alias(eq, reg: dict) -> str | None:
+    eq = str(eq or "").lower()
+    return next((a for a, e in reg.items() if eq in (a, e["id"]) or eq.startswith(a)), None)
+
+
 def _diag_por_equipo(js: dict | None, reg: dict, momentos: dict | None = None) -> dict:
     """Diagnostico por equipo. Si la pregunta fija el momento de cada equipo, se puntua la entrada de ESE momento
     (a la resolucion del minuto); si no hay una entrada con ese momento, la ultima del equipo."""
@@ -189,12 +194,13 @@ def puntuar(q: dict, r: dict, verdad1: dict, reg: dict) -> dict:
         v = verdad1.get(q["id"], {}).get("valor")
         if v is None:
             return {**p, "evaluable": False}
-        corto = q["variable"]
-        valores = {}
-        for item in (js or {}).get("equipos", []) or []:
-            if isinstance(item, dict) and isinstance(item.get("valores"), dict):
-                valores.update(item["valores"])
-        cand = [x for k, x in valores.items() if isinstance(x, (int, float)) and str(k).endswith(corto)]
+        # El nombre de la clave lo elige el modelo ('caudal/setpoint', 'setpoint_c'...): se puntuan los numeros
+        # del bloque json del equipo preguntado (o de todos si no lo identifica), no el nombre de la clave.
+        items = [i for i in (js or {}).get("equipos", []) or [] if isinstance(i, dict)
+                 and isinstance(i.get("valores"), dict)]
+        del_equipo = [i for i in items if _alias(i.get("equipo"), reg) == q["equipo"]]
+        cand = [x for i in (del_equipo or items) for x in i["valores"].values()
+                if isinstance(x, (int, float)) and not isinstance(x, bool)]
         estricto = any(abs(x - v) <= q["tolerancia"] for x in cand)
         tolerante = estricto or any(abs(x - v) <= q["tolerancia"] for x in _numeros(texto))
         return {**p, "evaluable": True, "verdad": v, "correcto": estricto, "correcto_tolerante": tolerante,
@@ -209,6 +215,11 @@ def puntuar(q: dict, r: dict, verdad1: dict, reg: dict) -> dict:
 
 
 # ----------------------------------------------------------------------------- corrida
+def _sin_saldo(e: Exception) -> bool:
+    t = str(e).lower()
+    return getattr(e, "status_code", None) == 402 or "credits" in t or "insufficient_quota" in t
+
+
 def _clave(f: dict) -> tuple:
     return (f["modelo"], f["config"], f["pregunta"], f["rep"])
 
@@ -224,10 +235,12 @@ async def correr(args, preguntas: list[dict], dsn: str, salida: Path) -> None:
     (salida / "trazas").mkdir(parents=True, exist_ok=True)
     archivo = salida / "resultados.jsonl"
     hechas = set()
-    if archivo.exists():
-        for linea in archivo.read_text(encoding="utf-8").splitlines():
-            if linea.strip():
-                hechas.add(_clave(json.loads(linea)))
+    if archivo.exists():  # --continuar: se conservan las corridas validas y se repiten las que dieron error
+        validas = [x for x in (json.loads(l) for l in archivo.read_text(encoding="utf-8").splitlines() if l.strip())
+                   if "error" not in x]
+        archivo.write_text("".join(json.dumps(x, ensure_ascii=False, default=str) + "\n" for x in validas),
+                           encoding="utf-8")
+        hechas = {_clave(x) for x in validas}
     configs = args.configs.split(",")
     total = len(args.modelos.split(",")) * len(configs) * len(preguntas) * args.repeticiones
     n = len(hechas)
@@ -263,6 +276,10 @@ async def correr(args, preguntas: list[dict], dsn: str, salida: Path) -> None:
                                 json.dumps({"pregunta": q, **r}, ensure_ascii=False, indent=1, default=str),
                                 encoding="utf-8")
                         except Exception as e:  # noqa: BLE001
+                            if _sin_saldo(e):  # no es un resultado del experimento: se detiene sin registrar
+                                print(f"\n[DETENIDO] El proveedor rechazo la peticion por saldo o limite de gasto: {e}"[:400])
+                                print(f"Recarga y repite con:  EXPERIMENTO.bat ... --continuar {salida}")
+                                return
                             fila.update({"error": f"{type(e).__name__}: {e}"[:500],
                                          "latencia_s": round(time.perf_counter() - t0, 2)})
                         with archivo.open("a", encoding="utf-8") as f:

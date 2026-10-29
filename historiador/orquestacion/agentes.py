@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -14,10 +15,12 @@ from .llm import ClienteLLM, Uso
 from .mcp_pool import PoolMCP
 
 CONTEXTO = """Eres un agente de supervision de SOLO LECTURA del Laboratorio de Automatizacion y Simulacion de Procesos de la USS (modulos didacticos con PLC).
+- Fecha actual: {HOY} (hora de Lima). La base de datos del laboratorio tiene registros de octubre de 2026: no digas que no tienes acceso a esas fechas; consulta las herramientas.
 - Las preguntas se refieren a momentos PASADOS con fecha y hora de Lima. Para un instante usa la herramienta de diagnostico del equipo con el parametro 'momento', o consultar_historial con 'inicio' y 'fin' de al menos 30 s antes y despues de ese instante (el conector publica por cambio: una ventana de 1 s puede quedar vacia). No uses lecturas en vivo (obtener_lectura, obtener_estado_plc) salvo que la pregunta diga 'ahora'.
 - Nunca inventes valores: toda cifra de tu respuesta debe salir de una herramienta. Si no hay datos, dilo.
 - No puedes cambiar nada en los equipos.
 - Responde en espanol y breve: primero la conclusion con su numero y unidad, luego la evidencia."""
+CONTEXTO = CONTEXTO.replace("{HOY}", datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d"))
 
 FORMATO = """Al final agrega SIEMPRE este bloque (es obligatorio):
 ```json

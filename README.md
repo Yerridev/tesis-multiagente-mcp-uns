@@ -1,4 +1,4 @@
-# mcp-multiagent-uns-tesis
+# tesis-mcp-multiagent-uns
 
 Bosquejo funcional: ASP.NET Core 10 + SignalR y React + TypeScript + Vite. Presenta telemetría simulada de caudal, nivel y presión. No escribe en ningún PLC.
 

@@ -1,0 +1,20 @@
+services:
+  backend:
+    environment:
+      ControlTemperatura__Modo: Real
+      ControlTemperatura__HabilitadoEscritura: "true"
+      CONTROL_TEMPERATURA_REAL: "1"
+  connector-temperatura:
+    build:
+      context: .
+      dockerfile: Dockerfile.control-temperatura
+    container_name: mcp-connector-temperatura
+    environment:
+      CONTROL_TEMPERATURA_REAL: "1"
+    networks:
+      - control_net
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: [core, edge]

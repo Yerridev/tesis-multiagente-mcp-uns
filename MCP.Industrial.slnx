@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/MCP.Industrial.Api.csproj" />
+  </Folder>
+</Solution>

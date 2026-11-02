@@ -1,0 +1,17 @@
+# =====================================================================
+#  Ingestor de telemetría (misma imagen para otros módulos vía INGESTOR_EQUIPO)
+#  Solo suscribe MQTT y escribe en TimescaleDB. Nunca publica comandos.
+# =====================================================================
+FROM python:3.12-slim
+LABEL org.opencontainers.image.title="mcp-industrial-ingestor"
+RUN useradd -m -u 10001 -s /usr/sbin/nologin appuser
+WORKDIR /app
+COPY ingestor/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY ingestor/ingestor_nivel.py .
+USER appuser
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8099
+HEALTHCHECK --interval=15s --timeout=4s --start-period=15s --retries=5 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8099/healthz', timeout=3).status==200 else 1)"
+CMD ["sh", "-c", "python ingestor_nivel.py"]

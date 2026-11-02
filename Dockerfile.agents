@@ -1,0 +1,29 @@
+# =====================================================================
+#  Agents: el backend en modo AGENTS_ONLY=1.
+#  Misma base de código con extracción mínima: esta instancia NO registra
+#  el servicio de control ni sus endpoints (sin MQTT de control, sin órdenes).
+#  El LLM conserva únicamente herramientas de lectura.
+# =====================================================================
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY backend/MCP.Industrial.Api.csproj backend/
+RUN dotnet restore backend/MCP.Industrial.Api.csproj
+COPY backend/ backend/
+RUN dotnet publish backend/MCP.Industrial.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+LABEL org.opencontainers.image.title="mcp-industrial-agents"
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd -m -u 10001 -s /usr/sbin/nologin appuser
+WORKDIR /app
+COPY --from=build /app/publish .
+USER appuser
+ENV ASPNETCORE_URLS=http://+:8080 \
+    AGENTS_ONLY=1 \
+    DOTNET_EnableDiagnostics=0
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=4s --start-period=20s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:8080/health/live >/dev/null || exit 1
+ENTRYPOINT ["dotnet", "MCP.Industrial.Api.dll"]

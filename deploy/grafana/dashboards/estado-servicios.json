@@ -1,0 +1,41 @@
+{
+  "title": "Estado de servicios",
+  "uid": "estado-servicios",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["mcp", "servicios"],
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Mediciones por minuto (todas las señales)",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT time_bucket('1 minute', m.ts) AS time, count(*) AS mediciones FROM mediciones m GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Última medición registrada",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 60 } ] } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(ts))) AS segundos_desde_ultima FROM mediciones",
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

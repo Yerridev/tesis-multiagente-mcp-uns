@@ -1,0 +1,29 @@
+# ===== Secretos (NUNCA subir) =====
+.env
+.env.*
+!.env.example
+deploy/secrets/*
+!deploy/secrets/README.md
+**/.env
+
+# ===== Entornos y caches =====
+.venv/
+venv/
+**/.venv/
+**/__pycache__/
+*.pyc
+**/node_modules/
+**/dist/
+bin/
+obj/
+.vs/
+.idea/
+**/.idea/
+
+# ===== Logs y datos generados =====
+**/logs/
+*.log
+backend/auditoria/*.jsonl
+
+# Cache incremental de TypeScript
+*.tsbuildinfo

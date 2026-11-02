@@ -1,0 +1,5 @@
+FROM python:3.12-alpine
+WORKDIR /app
+RUN pip install --no-cache-dir pymodbus==3.11.4 paho-mqtt==2.1.0
+COPY conectores/conector_control_temperatura.py /app/conector_control_temperatura.py
+CMD ["python", "-u", "/app/conector_control_temperatura.py", "--plc", "192.168.114.10", "--broker", "mosquitto", "--habilitado-real"]

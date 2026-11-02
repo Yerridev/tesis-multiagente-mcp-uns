@@ -1,0 +1,26 @@
+services:
+  backend:
+    environment:
+      Control__Modo: Real
+      Control__HabilitadoEscritura: "true"
+      Control__TimeoutSegundos: "30"
+      Control__ExpiracionSegundos: "40"
+      CONTROL_REAL: "1"
+      ControlTemperatura__Modo: Real
+      ControlTemperatura__HabilitadoEscritura: "true"
+      CONTROL_TEMPERATURA_REAL: "1"
+
+  connector-nivel:
+    environment:
+      CONECTOR_MODO: real
+      CONTROL_REAL: "1"
+    command:
+      - python
+      - conector_control_nivel.py
+      - --modo
+      - real
+      - --broker
+      - mosquitto
+      - --plc
+      - 192.168.114.9
+      - --habilitado-real

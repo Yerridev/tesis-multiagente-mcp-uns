@@ -1,0 +1,23 @@
+# =====================================================================
+#  Conector de CONTROL del módulo de nivel (DRY-RUN por defecto).
+#  Conserva todas las protecciones: triple gate, allowlist NO_VERIFICADAS,
+#  bloqueo de O:0/O:1/I:/S:*, selector REMOTO, telemetría fresca, pulso.
+#  NUNCA escribe durante build, startup o healthcheck.
+# =====================================================================
+FROM python:3.12-slim
+LABEL org.opencontainers.image.title="mcp-industrial-connector-nivel"
+RUN useradd -m -u 10001 -s /usr/sbin/nologin appuser
+WORKDIR /app
+# pycomm3 solo se usa en modo real (import diferido); se incluye para no
+# redefinir la imagen cuando se reactive la campaña de laboratorio.
+RUN pip install --no-cache-dir paho-mqtt==2.1.0 pycomm3==1.2.16
+COPY conectores/conector_control_nivel.py .
+USER appuser
+ENV PYTHONUNBUFFERED=1 \
+    CONECTOR_MODO=dry-run \
+    CONECTOR_SALUD_PUERTO=8098
+EXPOSE 8098
+HEALTHCHECK --interval=15s --timeout=4s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8098/healthz', timeout=3).status==200 else 1)"
+# Sin CONTROL_REAL y con --modo $CONECTOR_MODO (dry-run por defecto).
+CMD ["sh", "-c", "python conector_control_nivel.py --modo \"${CONECTOR_MODO:-dry-run}\" --broker \"${MQTT_HOST:-mosquitto}\" --plc \"${PLC_NIVEL_IP:-192.168.114.9}\""]

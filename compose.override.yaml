@@ -1,0 +1,49 @@
+# =====================================================================
+#  Override de DESARROLLO / LABORATORIO (se aplica automágicamente).
+#  Relaja la autenticación de Mosquitto y publica puertos SOLO para el lab:
+#   - 1883 en todas las interfaces: necesario para los conectores edge que
+#     corren en la PC (y la VM de presión) hasta migrarlos a usuarios MQTT.
+#   - backend y grafana SOLO en loopback (127.0.0.1) — nunca a la LAN.
+#  Para un despliegue de producción: no usar este archivo
+#  (docker compose -f compose.yaml ...) y generar passwd/acl (deploy/mosquitto).
+# =====================================================================
+services:
+  mosquitto:
+    volumes:
+      - ./deploy/mosquitto/mosquitto-dev.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    # Sin publicar 1883: el servicio Windows de la tesis ya lo usa en el host.
+    # El contenedor mirror-tesis espeja el UNS del broker Windows hacia este broker.
+
+  # Espejo UNIDIRECCIONAL (Windows → Docker) del UNS del laboratorio:
+  # los conectores edge que publican en el broker Windows de la tesis alimentan
+  # al backend/ingestores de este stack sin tocar la configuración de la tesis.
+  mirror-tesis:
+    image: python:3.12-slim
+    container_name: mcp-mirror-tesis
+    volumes:
+      - ./deploy/mosquitto/mirror.py:/app/mirror.py:ro
+    command: sh -c "pip install -q --no-cache-dir paho-mqtt==2.1.0 && exec python /app/mirror.py"
+    environment:
+      ORIGEN_HOST: host.docker.internal
+      ORIGEN_PUERTO: "1883"
+      DESTINO_HOST: mosquitto
+      DESTINO_PUERTO: "1883"
+      TOPICO: uss/campus/lab-automatizacion/sl01la07/#
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - application_net
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    profiles: [core, simulation, monitoring, edge]
+
+  backend:
+    ports:
+      - "127.0.0.1:${BACKEND_DEBUG_PORT:-5295}:8080"
+
+  grafana:
+    ports:
+      - "127.0.0.1:3000:3000"

@@ -1,0 +1,42 @@
+{
+  "title": "Nivel MCN-09",
+  "uid": "nivel-mcn09",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["mcp", "nivel", "mcn09"],
+  "refresh": "10s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Nivel del tanque T2 (cm)",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "cm" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT m.ts AS time, m.valor FROM mediciones m JOIN senales s ON s.id = m.senal_id JOIN equipos e ON e.id = s.equipo_id WHERE e.equipo = 'nivel-mcn09' AND s.nombre = 'nivel/cm' AND m.ts > now() - interval '6 hours' ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Último nivel",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "cm" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT m.valor FROM mediciones m JOIN senales s ON s.id = m.senal_id JOIN equipos e ON e.id = s.equipo_id WHERE e.equipo = 'nivel-mcn09' AND s.nombre = 'nivel/cm' ORDER BY m.ts DESC LIMIT 1",
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

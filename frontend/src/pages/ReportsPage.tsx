@@ -13,7 +13,7 @@ interface Stat {
   min: number;
   avg: number;
   max: number;
-  current: number;
+  current: number | null;
 }
 
 export function ReportsPage() {

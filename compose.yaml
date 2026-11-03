@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 #  MCP-INDUSTRIAL-NET Â· Docker Compose (base = perfil de producciÃ³n)
 #  Reglas: control DRY-RUN Â· sin secretos en la imagen Â· sin PLC como
 #  requisito de arranque Â· Mosquitto/Postgres/MCP no publicados a la LAN.
@@ -45,7 +45,11 @@ services:
       Mqtt__CaudalControlHost: host.docker.internal
       Mqtt__CaudalControlPort: "1883"
       Control__Modo: ${CONTROL_MODO:-DryRun}
-      Control__HabilitadoEscritura: "false"   # DRY-RUN obligatorio
+      Control__HabilitadoEscritura: ${CONTROL_HABILITADOESCRITURA:-false}
+      CONTROL_REAL: ${CONTROL_REAL:-0}
+      # Operacion degradada: 1 = permite expedir ordenes con el sensor de nivel saturado
+      # (el nivel no es medible). La orden queda marcada en la auditoria. 0 = bloquea (seguro).
+      CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO: ${CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO:-0}
       Control__AuditoriaRuta: /data/auditoria
       ControlCaudal__Modo: Real
       ControlCaudal__HabilitadoEscritura: "true"
@@ -59,6 +63,9 @@ services:
       ControlPresion__TimeoutSegundos: "12"
       ControlPresion__ExpiracionSegundos: "20"
       CONTROL_PRESION_REAL: "1"
+      ControlTemperatura__Modo: Real
+      ControlTemperatura__HabilitadoEscritura: "true"
+      CONTROL_TEMPERATURA_REAL: "1"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
       Health__DatabaseEnabled: "true"
@@ -89,11 +96,11 @@ services:
     networks:
       - application_net
       - control_net
-    # Publicacion SOLO en la tarjeta del laboratorio (192.168.114.70) para que
+    # Publicacion SOLO en la tarjeta del laboratorio (192.168.114.100) para que
     # los conectores edge de la VM de presion (192.168.114.80) publiquen aqui.
     # No se publica en la Wi-Fi ni en loopback: el stackDocker sigue siendo interno.
     ports:
-      - "192.168.114.70:1884:1883"
+      - "192.168.114.100:1884:1883"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 1883 || exit 1"]
@@ -216,9 +223,12 @@ services:
     container_name: mcp-connector-nivel
     environment:
       CONECTOR_MODO: ${CONECTOR_MODO:-dry-run}
+      CONTROL_REAL: ${CONTROL_REAL:-0}
+      CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO: ${CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO:-0}
       MQTT_HOST: mosquitto
       PLC_NIVEL_IP: ${PLC_NIVEL_IP:-192.168.114.9}
       CONECTOR_SALUD_PUERTO: "8098"
+    command: ["sh", "-c", "python conector_control_nivel.py --modo \"$${CONECTOR_MODO:-dry-run}\" --broker \"$${MQTT_HOST:-mosquitto}\" --plc \"$${PLC_NIVEL_IP:-192.168.114.9}\" --habilitado-real"]
       # CONTROL_REAL queda AUSENTE a propÃ³sito. Sin --habilitado-real el modo real rechaza.
     networks:
       - control_net

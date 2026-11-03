@@ -15,6 +15,13 @@
    fechas de creación/expiración y queda en auditoría JSONL append-only.
 6. **Confirmación real**: `CONFIRMADO` exige una lectura posterior coincidente; la entrega
    MQTT nunca cierra una orden.
+7. **Calidad del dato antes que dato** (2026-11-03): el sensor de nivel puede quedar
+   saturado o muerto (`N7:4` < 300 cuentas), y entonces el valor en cm que ve el lazo es el
+   *tope de la escala* (≈40,9 cm), no una medida. El backend marca la calidad del dato
+   (`EquipmentState.Calidad`), **no publica ese valor como vigente**, no lo mete en el
+   historial ni lo anuncia al agente; y el preflight rechaza toda orden salvo `Detener`
+   (`NIVEL_SENSOR_FUERA_DE_RANGO` / `NIVEL_CALIDAD_DESCONOCIDA`). Mismo bloqueo en el
+   conector. Arrancar la bomba con el PV sin medida es exactamente lo que no debe permitirse.
 
 ## 2. Papel del agente de IA (limitado por diseño)
 

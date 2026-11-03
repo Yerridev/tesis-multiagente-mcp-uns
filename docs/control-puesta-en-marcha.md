@@ -34,14 +34,20 @@ confirma. Ver `01-auditoria-control-remoto.md` §7.
 **Motivos:** `RANGO_INVALIDO`, `PERMISO_INSUFICIENTE`, `SIN_AUTENTICACION`, `PLC_DESCONECTADO`,
 `SELECTOR_NO_REMOTO`, `NIVEL_BAJO_T1`, `DUPLICADA`, `VENCIDA`, `SIN_CONFIRMACION`,
 `MQTT_NO_DISPONIBLE`, `DIRECCION_PROHIBIDA`, `NO_VERIFICADAS`, `REAL_NO_ARMADO`,
-`EQUIPO_INVALIDO`, `UNIDAD_INVALIDA`, `TELEMETRIA_VENCIDA`, `CONFIRMACION_NO_COINCIDE`.
+`EQUIPO_INVALIDO`, `UNIDAD_INVALIDA`, `TELEMETRIA_VENCIDA`, `CONFIRMACION_NO_COINCIDE`,
+`NIVEL_SENSOR_FUERA_DE_RANGO`, `NIVEL_CALIDAD_DESCONOCIDA`.
 
 **Reglas duras:**
 - Jamás se escriben salidas `O:0/*`, `O:1/*`, ni entradas `I:*`/`S:*` (guard en backend y conector).
 - Preflight (ambos modos): MQTT disponible + telemetría fresca (≤30 s) + PLC conectado +
   selector REMOTO; `Iniciar` additionally exige sin alarma de nivel bajo de T1.
+- **Calidad del dato de nivel**: si el sensor ultrasónico está saturado (`N7:4` < 300 cuentas,
+  valor en cm = tope de escala ≈40,9 cm, NO una medida) o su calidad aún es desconocida, se
+  rechaza toda orden salvo `Detener` (dirección segura) con `NIVEL_SENSOR_FUERA_DE_RANGO` /
+  `NIVEL_CALIDAD_DESCONOCIDA`. Mismo bloqueo en el conector (2ª capa).
 - Setpoint exige unidad `cm`; el equipo debe ser exactamente `nivel-mcn09`.
-- El conector revalida con su propia suscripción a `funcional/#` (PLC, selector, frescura).
+- El conector revalida con su propia suscripción a `funcional/#` (PLC, selector, frescura,
+  saturación del sensor de nivel).
 
 ## 2. Triple gate del modo REAL
 
@@ -119,7 +125,7 @@ cd tests\MCP.Industrial.Api.Tests
 dotnet test
 ```
 
-Cubren (25 pruebas, `dotnet test` en verde): usuario inexistente · viewer sin permiso ·
+Cubren (35 pruebas, `dotnet test` en verde): usuario inexistente · viewer sin permiso ·
 operador con setpoint · setpoint válido/fuera de rango/unidad incorrecta · equipo inválido ·
 duplicada · vencida · PLC desconectado · MQTT desconectado · telemetría vencida ·
 selector LOCAL/REMOTO · nivel bajo de T1 · allowlist sin O:0/O:1 y todas NO_VERIFICADAS ·

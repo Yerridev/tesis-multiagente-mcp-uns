@@ -70,7 +70,7 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
       const ctx: CtxLienzo = {
         equipoId: config.id,
         eq,
-        valor: eq.value,
+        valor: eq.value ?? 0,
         tsActual: eq.timestamp,
         historico: false,
         fresco: !stale,

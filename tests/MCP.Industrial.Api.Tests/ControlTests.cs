@@ -38,6 +38,10 @@ public class ControlTests
         if (fuenteControl is not null)
             n.Aplicar($"{NivelState.Base}/funcional/estado/fuente_control", fuenteControl);
         if (nivelBajo) n.Aplicar($"{NivelState.Base}/funcional/estado/alarma_nivel_bajo_tanque1", "true");
+        // Telemetría sana del sensor de nivel: N7:4 en media escala (no saturado) y el flag
+        // explícito en false. El conector edge publica ambos siempre.
+        n.Aplicar($"{NivelState.Base}/funcional/nivel/raw", "{\"value\":16548,\"unit\":\"cuentas\"}");
+        n.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":false}");
         return n;
     }
 
@@ -420,6 +424,211 @@ public class ControlTests
         var res = await svc.EnviarAsync(sol, "u", "operador", default);
         Assert.Equal(400, res.CodigoHttp);
         Assert.Equal(Motivos.EquipoInvalido, res.Orden!.Motivo);
+    }
+
+    /* -------------------------------------------------- sensor de nivel saturado */
+    /// <summary>
+    /// Sensor ultrasónico saturado o muerto: N7:4 queda pegado en el piso de la escala y el
+    /// valor en cm es el tope de saturación (≈40,9 cm), NO una medida. Con el PV del lazo sin
+    /// medida no se autoriza arrancar ni mover el proceso; solo Detener (dirección segura).
+    /// </summary>
+    [Fact]
+    public async Task Sensor_de_nivel_fuera_de_rango_bloquea_la_orden()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(new SolicitudComando("Iniciar", null, null, null, "nivel-mcn09"),
+            "u", "operador", default);
+
+        Assert.Equal(409, res.CodigoHttp);
+        Assert.Equal(Motivos.NivelSensorFueraDeRango, res.Orden!.Motivo);
+        Assert.Equal(EstadoComando.Rechazado, res.Orden.Estado);
+        Assert.Empty(bus.Publicados);   // no se publica ninguna orden al MQTT
+    }
+
+    [Fact]
+    public async Task Sensor_de_nivel_fuera_de_rango_bloquea_tambien_el_setpoint()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(Setpoint(20), "u", "supervisor", default);
+
+        Assert.Equal(409, res.CodigoHttp);
+        Assert.Equal(Motivos.NivelSensorFueraDeRango, res.Orden!.Motivo);
+        Assert.Empty(bus.Publicados);
+    }
+
+    [Fact]
+    public async Task Detener_si_se_permite_con_el_sensor_de_nivel_fuera_de_rango()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(new SolicitudComando("Detener", null, null, null, "nivel-mcn09"),
+            "u", "operador", default);
+
+        Assert.Equal(202, res.CodigoHttp);
+        Assert.Single(bus.Publicados);
+    }
+
+    [Fact]
+    public async Task Sensor_de_nivel_en_rango_no_bloquea_la_orden()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":false}");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(Setpoint(20), "u", "supervisor", default);
+
+        Assert.Equal(202, res.CodigoHttp);
+        Assert.Single(bus.Publicados);
+    }
+
+    /// <summary>Sin la lectura primaria del sensor no se conoce la calidad: fail-closed.</summary>
+    [Fact]
+    public async Task Calidad_de_nivel_desconocida_bloquea_la_orden()
+    {
+        var nivel = new NivelState { MqttConectado = true };
+        nivel.Aplicar($"{NivelState.Base}/funcional/plc/conexion", "CONECTADO");
+        nivel.Aplicar($"{NivelState.Base}/funcional/estado/selector_remoto", "true");
+        nivel.Aplicar($"{NivelState.Base}/funcional/estado/fuente_control", "PC");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(Setpoint(20), "u", "supervisor", default);
+
+        Assert.Equal(409, res.CodigoHttp);
+        Assert.Equal(Motivos.NivelCalidadDesconocida, res.Orden!.Motivo);
+        Assert.Empty(bus.Publicados);
+    }
+
+    /// <summary>
+    /// Operación degradada autorizada (CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO=1): la orden
+    /// sale, pero queda marcada para que la auditoría delata el bypass del guard.
+    /// </summary>
+    [Fact]
+    public async Task Override_de_calidad_permite_la_orden_pero_la_marca()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        var (svc, bus, _) = Crear(nivel, op => op.PermitirSensorFueraDeRango = true);
+
+        // Con el sensor saturado la consigna en cm no significa nada: se rechaza
+        // aunque el override este activo (si no, la perilla de la web se desincroniza).
+        var setpoint = await svc.EnviarAsync(Setpoint(20), "u", "supervisor", default);
+        Assert.Equal(409, setpoint.CodigoHttp);
+        Assert.Equal(Motivos.NivelSensorFueraDeRango, setpoint.Orden!.Motivo);
+        Assert.Empty(bus.Publicados);
+    }
+
+    /// <summary>Sin override, el mismo caso se rechaza (el default es bloquear).</summary>
+    [Fact]
+    public async Task Sin_override_el_sensor_fuera_de_rango_sigue_bloqueando()
+    {
+        var nivel = Nivel();
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        var (svc, bus, _) = Crear(nivel);
+
+        var res = await svc.EnviarAsync(Setpoint(20), "u", "supervisor", default);
+
+        Assert.Equal(409, res.CodigoHttp);
+        Assert.Equal(Motivos.NivelSensorFueraDeRango, res.Orden!.Motivo);
+        Assert.Empty(bus.Publicados);
+    }
+
+    /* -------------------------------------------------- el dato saturado no llega al historial */
+    /// <summary>
+    /// El backend no debe convertir el artefacto de saturación (≈40,7 cm) en una medida:
+    /// el nivel no se escribe en el historial ni se publica como valor vigente.
+    /// </summary>
+    [Fact]
+    public void Nivel_saturado_no_alimenta_el_historial_ni_el_valor_vigente()
+    {
+        var nivel = new NivelState { MqttConectado = true };
+        nivel.Aplicar($"{NivelState.Base}/funcional/plc/conexion", "CONECTADO");
+        nivel.Aplicar($"{NivelState.Base}/funcional/estado/selector_remoto", "true");
+        nivel.Aplicar($"{NivelState.Base}/funcional/estado/fuente_control", "PC");
+        // lectura válida: tanque vacío (N7:4 ≈ 16548 → 0 cm)
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/raw", "{\"value\":16548,\"unit\":\"cuentas\"}");
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/cm", "{\"value\":-0.5,\"unit\":\"cm\"}");
+
+        var plant = new PlantState(nivel);
+        plant.AplicarNivel(nivel);
+
+        Assert.Single(plant.GetHistory(PlantState.NivelId, 100));
+        Assert.Equal(-0.5, plant.Get(PlantState.NivelId)!.Value ?? 0, 2);
+        Assert.True(plant.Get(PlantState.NivelId)!.Medible);
+
+        // el sensor se satura: llega el artefacto de 40,7 cm
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/raw", "{\"value\":56,\"unit\":\"cuentas\"}");
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/cm", "{\"value\":40.7,\"unit\":\"cm\"}");
+        plant.AplicarNivel(nivel);
+
+        var equipo = plant.Get(PlantState.NivelId)!;
+        Assert.Equal(CalidadDato.SensorFueraDeRango, equipo.Calidad);
+        Assert.False(equipo.Medible);
+        Assert.False(equipo.Alarm);
+        Assert.NotEqual(40.7, plant.Get(PlantState.NivelId)!.Value ?? 0);   // el artefacto de saturación NO pasa a valor vigente
+        // el historial NO se alimenta con el valor saturado
+        Assert.Single(plant.GetHistory(PlantState.NivelId, 100));
+        Assert.Null(plant.Get(PlantState.NivelId)!.Value);
+        // el detalle de la API no expone nivel ni porcentaje medibles
+        var detalle = plant.GetLevel();
+        Assert.Null(detalle.Level);
+        Assert.Null(detalle.Percent);
+        Assert.Equal(CalidadDato.SensorFueraDeRango, detalle.Calidad);
+    }
+
+    /// <summary>
+    /// Carrera de orden de llegada: nivel/cm puede llegar ANTES que nivel/raw y que el flag.
+    /// Mientras no se conozca la calidad, el valor en cm no se acepta (fail-closed).
+    /// </summary>
+    [Fact]
+    public void Nivel_que_llega_antes_de_conocer_la_calidad_no_se_acepta()
+    {
+        var nivel = new NivelState { MqttConectado = true };
+        nivel.Aplicar($"{NivelState.Base}/funcional/plc/conexion", "CONECTADO");
+        // llega primero el cm saturado, sin raw ni flag
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/cm", "{\"value\":40.7,\"unit\":\"cm\"}");
+
+        var plant = new PlantState(nivel);
+        plant.AplicarNivel(nivel);
+
+        Assert.Equal(CalidadDato.SinCalidad, plant.Get(PlantState.NivelId)!.Calidad);
+        Assert.False(plant.Get(PlantState.NivelId)!.Medible);
+        Assert.NotEqual(40.7, plant.Get(PlantState.NivelId)!.Value);
+        Assert.Empty(plant.GetHistory(PlantState.NivelId, 100));
+
+        // al llegar el dato primario se detecta la saturación (raw < 300 cuentas)
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/raw", "{\"value\":56,\"unit\":\"cuentas\"}");
+        plant.AplicarNivel(nivel);
+
+        Assert.Equal(CalidadDato.SensorFueraDeRango, plant.Get(PlantState.NivelId)!.Calidad);
+        Assert.NotEqual(40.7, plant.Get(PlantState.NivelId)!.Value);
+        Assert.Empty(plant.GetHistory(PlantState.NivelId, 100));
+    }
+
+    /// <summary>El prompt del LLM no debe afirmar un nivel que el sensor no mide.</summary>
+    [Fact]
+    public void El_contexto_del_agente_no_anuncia_un_nivel_no_medible()
+    {
+        var nivel = new NivelState { MqttConectado = true };
+        nivel.Aplicar($"{NivelState.Base}/funcional/plc/conexion", "CONECTADO");
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/fuera_rango_sensor", "{\"value\":true}");
+        nivel.Aplicar($"{NivelState.Base}/funcional/nivel/cm", "{\"value\":40.7,\"unit\":\"cm\"}");
+
+        var plant = new PlantState(nivel);
+        plant.AplicarNivel(nivel);
+
+        var contexto = plant.BuildSystemContext();
+        Assert.Contains("MEDIDA NO VÁLIDA", contexto);
+        Assert.Contains("SENSOR DE NIVEL FUERA DE RANGO", contexto);
+        Assert.DoesNotContain("nivel = 40.7 cm", contexto);
     }
 
     /* -------------------------------------------------- notas de cobertura (Fase 8) */

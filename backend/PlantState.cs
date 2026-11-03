@@ -6,15 +6,34 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace MCP.Industrial.Api;
 
+/// <summary>
+/// Calidad del dato de proceso. Una medida saturada NO es una medida: el sensor
+/// ultrasónico del MCN-09 entrega ~0 cuentas cuando se satura o muere, y la escala
+/// lineal lo traduce a ~40,9 cm (el tope del rango calibrado). Sin esta marca, ese
+/// artefacto se propagaría como si fuera un nivel real.
+/// </summary>
+public static class CalidadDato
+{
+    public const string Buena = "buena";
+    /// <summary>Sensor de nivel fuera de rango (saturado): el valor en cm no es medible.</summary>
+    public const string SensorFueraDeRango = "sensor_fuera_de_rango";
+    /// <summary>Todavía no se conoce la calidad del dato: el valor en cm no se acepta.</summary>
+    public const string SinCalidad = "sin_calidad";
+}
+
 /// <summary>Estado de supervisión de un equipo. Solo lectura: nunca escribe al PLC.</summary>
-public record EquipmentState(string Id, string Name, string Controller, string Ip, string Variable, double Value, string Unit, double Setpoint, DateTimeOffset Timestamp)
+public record EquipmentState(string Id, string Name, string Controller, string Ip, string Variable, double? Value, string Unit, double Setpoint, DateTimeOffset Timestamp, string Calidad = CalidadDato.Buena)
 {
     public string Status => DateTimeOffset.Now - Timestamp <= TimeSpan.FromSeconds(15) ? "ONLINE" : "OFFLINE";
-    public double Deviation => Math.Round(Value - Setpoint, 2);
+    /// <summary>El valor solo es utilizable si la calidad del dato es buena.</summary>
+    public bool Medible => Calidad == CalidadDato.Buena && Value is not null;
+    public double Deviation => Value is double v ? Math.Round(v - Setpoint, 2) : 0;
     // Sin dato fresco no se evalúa alarma: jamás se reporta una alarma sobre telemetría vieja o inexistente.
-    public bool Alarm => Setpoint != 0
+    public bool Alarm => Medible
+        && Value is double valor
+        && Setpoint != 0
         && DateTimeOffset.Now - Timestamp <= TimeSpan.FromSeconds(15)
-        && Math.Abs(Value - Setpoint) > Math.Max(1e-6, Math.Abs(Setpoint) * PlantState.Tolerance);
+        && Math.Abs(valor - Setpoint) > Math.Max(1e-6, Math.Abs(Setpoint) * PlantState.Tolerance);
 }
 
 public record HistorySample(string Id, string Variable, string Unit, double Value, DateTimeOffset Ts);
@@ -43,7 +62,9 @@ public record LevelDetail(
     bool? LowAlarm,
     bool? ValvulaAbriendo,
     bool? ValvulaCerrando,
-    DateTimeOffset? Timestamp);
+    DateTimeOffset? Timestamp,
+    /// <summary>Calidad del dato de nivel: con sensor saturado el valor en cm no es medible.</summary>
+    string Calidad = CalidadDato.Buena);
 
 public record AgentTool(string Name, string Server, string Description);
 public record AgentCall(string Name, bool Ok, long Ms, string Result);
@@ -99,6 +120,11 @@ public sealed class PlantState
         EquipmentState? eq;
         lock (_sync) eq = _items.GetValueOrDefault(NivelId);
 
+        /* Sensor saturado: el valor en cm es un artefacto de la escala (≈40,9 cm con el
+           sensor muerto). Se expone SIN nivel, no como un nivel falso. */
+        var saturado = n.SensorSaturado;
+        var medible = !saturado && n.CalidadConocida;
+
         return new LevelDetail(
             EquipmentId: NivelId,
             Name: "Tanque MCN-09",
@@ -106,11 +132,11 @@ public sealed class PlantState
             PlcIp: eq?.Ip ?? "192.168.114.9",
             PlcStatus: n.MqttConectado && n.plcConectado ? "ONLINE" : "OFFLINE",
             Mode: n.Modo(),
-            Level: n.Numero("nivel/cm"),
+            Level: medible ? n.Numero("nivel/cm") : null,
             Unit: "cm",
             Setpoint: null,                       // no hay consigna en cm confirmada en el conector
             TankHeight: n.AlturaTanqueCm,          // 60 cm publicados en descriptivo/equipo
-            Percent: n.Numero("nivel/pct"),
+            Percent: medible ? n.Numero("nivel/pct") : null,
             PumpOn: n.Bool("estado/bomba_marcha"),
             VfdHz: n.Numero("bomba/frecuencia_estimada_hz"),
             VfdPercent: n.VfdPercent(),
@@ -119,10 +145,17 @@ public sealed class PlantState
             LowAlarm: null,
             ValvulaAbriendo: n.Bool("valvula/abriendo"),
             ValvulaCerrando: n.Bool("valvula/cerrando"),
-            Timestamp: n.UltimoMensaje);
+            Timestamp: n.UltimoMensaje,
+            Calidad: saturado ? CalidadDato.SensorFueraDeRango
+                    : (n.CalidadConocida ? CalidadDato.Buena : CalidadDato.SinCalidad));
     }
 
-    /// <summary>Aplica la lectura REAL del PLC (vía MQTT) al equipo de nivel y a su historial.</summary>
+    /// <summary>
+    /// Aplica la lectura REAL del PLC (vía MQTT) al equipo de nivel y a su historial.
+    /// Si el sensor ultrasónico está SATURADO (fuera de rango), el valor en cm es un
+    /// artefacto de la escala —≈40,9 cm con el sensor muerto— y NO una medida: en ese
+    /// caso no se actualiza el valor ni se alimenta el historial; solo se marca la calidad.
+    /// </summary>
     public void AplicarNivel(NivelState n)
     {
         var ts = n.UltimoMensaje;
@@ -131,12 +164,31 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(NivelId, out var cur)) return;
+
+            if (n.SensorSaturado)
+            {
+                // El valor en cm no es una medida: se anula (null) y no se alimenta el
+                // historial. Mostrar el último valor conocido haría creer que es el nivel
+                // actual; mostrar 0 sería todavía peor (parece una medida válida).
+                _items[NivelId] = cur with { Value = null, Timestamp = ts.Value, Calidad = CalidadDato.SensorFueraDeRango };
+                return;                               // el historial NO se alimenta con valores falsos
+            }
+
+            if (!n.CalidadConocida)
+            {
+                // Aún no se conoce la calidad del dato (falta el raw y el flag): no se
+                // acepta el valor en cm. Fail-closed: es preferible no mostrar nivel
+                // antes que mostrar el artefacto de saturación.
+                _items[NivelId] = cur with { Value = null, Timestamp = ts.Value, Calidad = CalidadDato.SinCalidad };
+                return;
+            }
+
             var valor = cm is null ? cur.Value : Math.Round(cm.Value, 2);
-            _items[NivelId] = cur with { Value = valor, Timestamp = ts.Value };
+            _items[NivelId] = cur with { Value = valor, Timestamp = ts.Value, Calidad = CalidadDato.Buena };
             if (cm is not null && _ultimoPushNivel != ts)
             {
                 _ultimoPushNivel = ts;
-                Push(NivelId, cur.Variable, cur.Unit, valor, ts.Value);
+                Push(NivelId, cur.Variable, cur.Unit, valor ?? 0, ts.Value);
             }
         }
     }
@@ -152,7 +204,7 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(CaudalId, out var cur)) return;
-            var valor = pv ?? med ?? cur.Value;
+            var valor = pv ?? med ?? cur.Value ?? 0;
             var consigna = sp ?? cur.Setpoint;
             _items[CaudalId] = cur with
             {
@@ -178,7 +230,7 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(PresionId, out var cur)) return;
-            var valor = psi ?? cur.Value;
+            var valor = psi ?? cur.Value ?? 0;
             var consigna = sp ?? cur.Setpoint;
             _items[PresionId] = cur with
             {
@@ -204,7 +256,7 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(TemperaturaId, out var cur)) return;
-            var valor = principal ?? cur.Value;
+            var valor = principal ?? cur.Value ?? 0;
             var consigna = setpoint ?? cur.Setpoint;
             _items[TemperaturaId] = cur with
             {
@@ -285,10 +337,16 @@ public sealed class PlantState
                 var tags = new List<string>();
                 if (level.HighAlarm == true) tags.Add("nivel alto");
                 if (level.LowAlarm == true) tags.Add("nivel bajo");
-                reply = alarms.Length == 0 && tags.Count == 0
-                    ? "Sin alarmas activas. Todos los equipos operan dentro de la banda de ±12 % de su consigna y el tanque no reporta nivel alto ni bajo."
-                    : $"Alarmas activas: {(alarms.Length == 0 ? "ninguna en equipo" : string.Join("; ", alarms))}{(tags.Count > 0 ? "; tanque: " + string.Join(", ", tags) : "")}.";
-                return $"{alarms.Length} equipos + {tags.Count} de tanque";
+                var noMedibles = GetAll().Where(e => !e.Medible)
+                    .Select(e => $"{e.Name} (sensor fuera de rango)").ToArray();
+                reply = noMedibles.Length > 0
+                    ? $"ATENCIÓN: hay {noMedibles.Length} equipo(s) con medida no válida por saturación del sensor: {string.Join("; ", noMedibles)}. " +
+                      "El valor mostrado en cm es un artefacto de la escala, NO el nivel real: verifica el sensor y el nivel físico antes de operar. " +
+                      (alarms.Length == 0 && tags.Count == 0 ? "Sin alarmas activas." : $"Alarmas activas: {(alarms.Length == 0 ? "ninguna en equipo" : string.Join("; ", alarms))}{(tags.Count > 0 ? "; tanque: " + string.Join(", ", tags) : "")}.")
+                    : alarms.Length == 0 && tags.Count == 0
+                        ? "Sin alarmas activas. Todos los equipos operan dentro de la banda de ±12 % de su consigna y el tanque no reporta nivel alto ni bajo."
+                        : $"Alarmas activas: {(alarms.Length == 0 ? "ninguna en equipo" : string.Join("; ", alarms))}{(tags.Count > 0 ? "; tanque: " + string.Join(", ", tags) : "")}.";
+                return $"{alarms.Length} equipos + {tags.Count} de tanque + {noMedibles.Length} no medibles";
             }));
         }
         else if (Rx(norm, @"plc|micrologix|114\.9|comunic"))
@@ -296,8 +354,11 @@ public sealed class PlantState
             calls.Add(Call("estado_plc", () =>
             {
                 var level = GetLevel();
-                reply = $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp:HH:mm:ss}, nivel {level.Level} {level.Unit} (consigna {level.Setpoint} {level.Unit}, {level.Percent} % del tanque).";
-                return $"{level.PlcStatus} · {level.Timestamp:HH:mm:ss}";
+                reply = level.Calidad != CalidadDato.Buena
+                    ? $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp:HH:mm:ss}. " +
+                      "SENSOR DE NIVEL FUERA DE RANGO: el nivel no es medible (el valor en cm es saturación de la escala); revisa el sensor y el nivel físico antes de controlar."
+                    : $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp:HH:mm:ss}, nivel {level.Level} {level.Unit} (consigna {level.Setpoint} {level.Unit}, {level.Percent} % del tanque).";
+                return $"{level.PlcStatus} · {level.Timestamp:HH:mm:ss} · calidad {level.Calidad}";
             }));
         }
         else if (Rx(norm, @"equipo|caudal|nivel|presi|temp|valor|módulo|modulo"))
@@ -307,7 +368,9 @@ public sealed class PlantState
             {
                 calls.Add(Call("estado_planta", () =>
                 {
-                    reply = string.Join(" · ", GetAll().Select(e => $"{e.Variable} {e.Value} {e.Unit} (consigna {e.Setpoint}, {e.Status})"));
+                    reply = string.Join(" · ", GetAll().Select(e => e.Medible
+                        ? $"{e.Variable} {e.Value} {e.Unit} (consigna {e.Setpoint}, {e.Status})"
+                        : $"{e.Variable} NO MEDIBLE (sensor fuera de rango; el valor en {e.Unit} sería saturación de la escala)"));
                     return $"{GetAll().Count} equipos";
                 }));
             }
@@ -316,8 +379,11 @@ public sealed class PlantState
                 calls.Add(Call("leer_equipo", () =>
                 {
                     var live = Get(target.Id) ?? target;
-                    reply = $"{live.Name} · {live.Controller} ({live.Ip}): {live.Variable} {live.Value} {live.Unit}, consigna {live.Setpoint} {live.Unit}, desviación {live.Deviation:+0.##;-0.##} {live.Unit}, alarma {(live.Alarm ? "ACTIVA" : "sin actividad")}, estado {live.Status}.";
-                    return $"{live.Value} {live.Unit} · {live.Status}";
+                    reply = !live.Medible
+                        ? $"{live.Name} · {live.Controller} ({live.Ip}): {live.Variable} NO MEDIBLE (sensor fuera de rango). " +
+                          $"El valor publicado ({live.Value} {live.Unit}) es saturación de la escala, no el nivel real; verifica el sensor y el nivel físico. Estado {live.Status}."
+                        : $"{live.Name} · {live.Controller} ({live.Ip}): {live.Variable} {live.Value} {live.Unit}, consigna {live.Setpoint} {live.Unit}, desviación {live.Deviation:+0.##;-0.##} {live.Unit}, alarma {(live.Alarm ? "ACTIVA" : "sin actividad")}, estado {live.Status}.";
+                    return live.Medible ? $"{live.Value} {live.Unit} · {live.Status}" : $"no medible · {live.Status}";
                 }));
             }
         }
@@ -326,8 +392,14 @@ public sealed class PlantState
             calls.Add(Call("estado_planta", () =>
             {
                 var all = GetAll();
-                reply = $"Planta con {all.Count} equipos: {string.Join(" · ", all.Select(e => $"{e.Variable} {e.Value} {e.Unit}"))}. " +
-                        "Puedo detallar un equipo, alarmas, historial o el PLC 192.168.114.9.";
+                var noMedibles = all.Where(e => !e.Medible).Select(e => e.Name).ToArray();
+                reply = $"Planta con {all.Count} equipos: {string.Join(" · ", all.Select(e => e.Medible
+                    ? $"{e.Variable} {e.Value} {e.Unit}"
+                    : $"{e.Variable} NO MEDIBLE (sensor fuera de rango)"))}. " +
+                    (noMedibles.Length > 0
+                        ? $"Atención: {string.Join(", ", noMedibles)} con medida no válida: el valor en cm es el tope de saturación de la escala, no el nivel real. "
+                        : "") +
+                    "Puedo detallar un equipo, alarmas, historial o el PLC 192.168.114.9.";
                 return $"{all.Count} equipos";
             }));
         }
@@ -361,11 +433,31 @@ public sealed class PlantState
         sb.AppendLine("Datos en vivo:");
         foreach (var e in GetAll())
         {
+            if (!e.Medible)
+            {
+                sb.AppendLine($"- {e.Name} [{e.Id}] · {e.Controller} ({e.Ip}): MEDIDA NO VÁLIDA (sensor fuera de rango). " +
+                              $"El valor publicado ({e.Value} {e.Unit}) es el tope de saturación de la escala, NO el nivel real. " +
+                              "No lo reportes como un nivel ni lo compares con una consigna: dilo así, sin inventar.");
+                continue;
+            }
             sb.AppendLine($"- {e.Name} [{e.Id}] · {e.Controller} ({e.Ip}): {e.Variable} = {e.Value} {e.Unit}, consigna {e.Setpoint} {e.Unit}, desviación {e.Deviation} {e.Unit}, estado {e.Status}, alarma {(e.Alarm ? "ACTIVA" : "sin alarma")}, última lectura {e.Timestamp:HH:mm:ss}.");
         }
 
         var l = GetLevel();
-        sb.AppendLine(
+        if (l.Calidad == CalidadDato.SensorFueraDeRango)
+        {
+            sb.AppendLine($"- Tanque MCN-09: SENSOR DE NIVEL FUERA DE RANGO (saturado). El nivel NO es medible; " +
+                          "el valor en cm que aparece en la interfaz es un artefacto de la escala. " +
+                          "Informa de la falla del sensor y de que el nivel debe verificarse físicamente; no informes un nivel.");
+        }
+        else if (l.Calidad == CalidadDato.SinCalidad)
+        {
+            sb.AppendLine("- Tanque MCN-09: calidad del dato de nivel aún no conocida (falta la lectura primaria del sensor). " +
+                          "No hay nivel medible en este momento.");
+        }
+        else
+        {
+            sb.AppendLine(
             l.Level is null
                 ? $"- Tanque MCN-09: sin lecturas reales del PLC ({l.PlcStatus}). Altura del tanque {l.TankHeight ?? 0} {l.Unit}."
                 : $"- Tanque MCN-09: nivel {l.Level} {l.Unit}" +
@@ -374,6 +466,7 @@ public sealed class PlantState
                   $", modo {l.Mode ?? "sin datos"}, bomba {(l.PumpOn is null ? "sin datos" : l.PumpOn.Value ? "encendida" : "apagada")}" +
                   (l.VfdHz is null ? "" : $" a {l.VfdHz} Hz") +
                   $", válvula {(l.ValveOpen is null ? "sin datos" : $"{l.ValveOpen} %")}, PLC {l.PlcIp} {l.PlcStatus}.");
+        }
         sb.AppendLine($"- Historial en memoria: {HistorySummary()}");
         sb.AppendLine("Los datos provienen del backend de supervisión: historial en memoria y telemetría en vivo cuando el equipo reporta. Todo es de solo lectura: no se envían órdenes al PLC.");
         return sb.ToString();

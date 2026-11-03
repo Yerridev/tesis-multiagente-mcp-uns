@@ -466,6 +466,12 @@ class Conector:
                 anterior = plc.read(direccion)
                 self.log("REAL", f"write {direccion} = {valor_codificado} "
                                 f"(anterior={anterior.value} modo_escritura={modo_escritura})")
+                if tipo_cmd == "Iniciar" and es_bit and int(valor_codificado) == 1:
+                    # Rung 0005/0006: INICIO_PC necesita el flanco OSR B3:0/14, que solo
+                    # nace con una TRANSICION 0->1 de START_PC. Si el bit ya estaba en 1
+                    # no hay flanco y el sistema no arranca: se baja primero a 0.
+                    plc.write((direccion, 0))
+                    time.sleep(0.3)
                 plc.write((direccion, valor_codificado))
                 if es_bit and modo_escritura == "pulso":
                     # pulso: nunca mantener un bit activo si el ladder lo exige asi

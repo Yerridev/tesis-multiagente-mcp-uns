@@ -20,10 +20,19 @@ export function isAlarm(value: number, setpoint: number, tolerance = 0.12): bool
   return Math.abs(value - setpoint) > Math.max(1e-6, Math.abs(setpoint) * tolerance);
 }
 
+/**
+ * El valor de un equipo solo es utilizable si la calidad del dato es buena.
+ * Con el sensor de nivel saturado el backend publica 'sensor_fuera_de_rango' y el
+ * valor en cm es el tope de la escala (artefacto), no una medida real.
+ */
+export function valorMedible(calidad?: string | null): boolean {
+  return (calidad ?? 'buena') === 'buena';
+}
+
 /** Banda del tanque: alarma alta/baja al ±15 % de la consigna (misma regla que el backend).
  *  Sin consigna real (setpoint ≤ 0) no se evalúa: nunca se inventa una alarma. */
-export function levelAlarms(level: number, setpoint: number) {
-  if (!(setpoint > 0)) return { high: false, low: false };
+export function levelAlarms(level: number | null, setpoint: number) {
+  if (level == null || !(setpoint > 0)) return { high: false, low: false };
   return { high: level >= setpoint * 1.15, low: level <= setpoint * 0.85 };
 }
 

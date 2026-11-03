@@ -45,7 +45,7 @@ export interface EstadoControlDatos {
   realArmado: boolean;
   motivosReal: string[];
   configuracion: { modo: string; habilitadoEscritura: boolean; controlReal: string | null; timeoutSegundos: number; expiracionSegundos: number };
-  proceso: { simulador: boolean; plc: string; selector: string | null; nivelBajoT1: boolean | null; mqttNivel: boolean; fuenteControl?: string | null };
+  proceso: { simulador: boolean; plc: string; selector: string | null; nivelBajoT1: boolean | null; mqttNivel: boolean; fuenteControl?: string | null; sensorSaturado?: boolean; overrideCalidad?: boolean };
   telemetria?: { ultimo: string | null; edadSegundos: number | null; fresca: boolean; maxSegundos: number };
   pendientes: number;
 }

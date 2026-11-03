@@ -4,6 +4,7 @@ import type { CaudalSenales, ControlOrden, Equipment, HistorySample, LinkState, 
 import { api } from '../services/api';
 import { listarOrdenes } from '../services/control';
 import { createConnection } from '../services/signalr';
+import { valorMedible } from '../utils/format';
 
 const HISTORY_LIMIT = 600;
 const HEALTH_MS = 30000;
@@ -94,10 +95,13 @@ export function PlantProvider({ children }: { children: ReactNode }) {
       setEquipment(items);
       setHistory((prev) => {
         const next = prev.slice();
-        for (const item of items) {
+for (const item of items) {
           const seen = lastTs.current[item.id];
           if (seen && seen >= item.timestamp) continue;
           lastTs.current[item.id] = item.timestamp;
+          /* Un dato no medible (sensor fuera de rango) NO entra al historial: meter un 0
+             o un valor de relleno pintaría una curva plana que parece una medida real. */
+          if (!valorMedible(item.calidad) || item.value == null) continue;
           next.push({
             id: item.id,
             variable: item.variable,

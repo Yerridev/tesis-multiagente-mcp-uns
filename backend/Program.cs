@@ -38,8 +38,16 @@ if (!agentsOnly)
         ExpiracionSegundos = int.TryParse(builder.Configuration["Control:ExpiracionSegundos"], out var es) ? es : 15,
         VentanaDuplicadosSegundos = int.TryParse(builder.Configuration["Control:VentanaDuplicadosSegundos"], out var vs) ? vs : 30,
         TopicoBase = builder.Configuration["Control:TopicoBase"] ?? (NivelState.Base + "/control"),
-        AuditoriaRuta = builder.Configuration["Control:AuditoriaRuta"],
+AuditoriaRuta = builder.Configuration["Control:AuditoriaRuta"],
     };
+    /* Operación degradada: permite expedir órdenes con el sensor de nivel saturado.
+       Por defecto está DESHABILITADO. La variable de entorno tiene prioridad porque es la
+       decisión operativa del laboratorio; queda registrada en la auditoría de cada orden. */
+    if (bool.TryParse(builder.Configuration["Control:PermitirSensorFueraDeRango"], out var psfr)) ctrl.PermitirSensorFueraDeRango = psfr;
+    var envSfr = builder.Configuration["CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO"]
+                 ?? Environment.GetEnvironmentVariable("CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO");
+    if (!string.IsNullOrWhiteSpace(envSfr))
+        ctrl.PermitirSensorFueraDeRango = envSfr.Trim() == "1" || envSfr.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
     foreach (var u in builder.Configuration.GetSection("Control:Usuarios").GetChildren())
         ctrl.Usuarios[u.Key] = u.Value ?? "viewer";
     builder.Services.AddSingleton(ctrl);

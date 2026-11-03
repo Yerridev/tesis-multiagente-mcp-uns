@@ -27,3 +27,8 @@ backend/auditoria/*.jsonl
 
 # Cache incremental de TypeScript
 *.tsbuildinfo
+
+# ===== Copias locales de respaldo (pueden contener secretos) =====
+_antes_restauracion_*/
+.commitmsg.txt
+subir-github.bat

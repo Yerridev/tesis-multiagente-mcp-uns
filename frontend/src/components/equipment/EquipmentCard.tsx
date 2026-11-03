@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { Equipment, SeriesPoint } from '../../types';
-import { ageSeconds, clamp, formatAge, isStale, moduleMeta, num, timeOnly } from '../../utils/format';
+import { ageSeconds, clamp, formatAge, isStale, moduleMeta, num, timeOnly, valorMedible } from '../../utils/format';
 import { Sparkline } from '../charts/Sparkline';
 import { IconFlow, IconGauge, IconTank, IconThermometer } from '../common/Icons';
 
@@ -26,12 +26,14 @@ export function EquipmentCard({ equipment, now, points, action }: Props) {
   const offline = equipment.status !== 'ONLINE';
   const alarm = equipment.alarm && !offline;
   const sinConsigna = !(equipment.setpoint > 0);
-  /* Sin comunicación no se presentan valores: «Sin datos» en lugar de un número viejo */
-  const hasData = !offline && Number.isFinite(equipment.value);
-  const sinDatoAlarma = sinConsigna || offline;
+  /* Sensor saturado: el valor publicado es el tope de la escala, no una medida */
+  const medible = valorMedible(equipment.calidad);
+  /* Sin comunicación (o sin medida válida) no se presentan valores: «Sin datos» en lugar de un número viejo */
+  const hasData = !offline && medible && Number.isFinite(equipment.value);
+  const sinDatoAlarma = sinConsigna || offline || !medible;
 
-  const scaleMax = Math.max(equipment.setpoint * 1.5, equipment.value, 1);
-  const width = clamp((equipment.value / scaleMax) * 100);
+  const scaleMax = Math.max(equipment.setpoint * 1.5, equipment.value ?? 0, 1);
+  const width = clamp(((equipment.value ?? 0) / scaleMax) * 100);
   const marker = clamp((equipment.setpoint / scaleMax) * 100);
 
   return (
@@ -47,9 +49,9 @@ export function EquipmentCard({ equipment, now, points, action }: Props) {
           <h3>{meta.short}</h3>
           <small>{equipment.id}</small>
         </div>
-        <span className={`pill ${offline ? 'pill-err' : 'pill-ok'}`}>
+        <span className={`pill ${offline ? 'pill-err' : medible ? 'pill-ok' : 'pill-warn'}`}>
           <i />
-          {equipment.status}
+          {offline ? equipment.status : medible ? equipment.status : 'SIN MEDIDA'}
         </span>
       </div>
 

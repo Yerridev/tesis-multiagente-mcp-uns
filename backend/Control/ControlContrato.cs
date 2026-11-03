@@ -8,9 +8,15 @@ public enum TipoComando
     Reiniciar,
     Setpoint,
     ParametroPid,
-    AbrirValvula,
+AbrirValvula,
     CerrarValvula,
     AjustarValvula,
+    /// <summary>
+    /// Referencia directa del variador (0-32000). Es una orden MANUAL, no de lazo:
+    /// escribe N7:0, que es la palabra que el rung 0014 copia a la salida analógica O:1.0.
+    /// Se usa cuando el PID no puede gobernador (p. ej. sensor de nivel saturado).
+    /// </summary>
+    PotenciaVariador,
 }
 
 /// <summary>Ciclo de vida de una orden.
@@ -56,8 +62,19 @@ public static class Motivos
     public const string EquipoInvalido = "EQUIPO_INVALIDO";
     /// <summary>Setpoint exige unidad "cm".</summary>
     public const string UnidadInvalida = "UNIDAD_INVALIDA";
-    /// <summary>Sin telemetrÃ­a fresca del conector edge no se expide ninguna orden.</summary>
+/// <summary>Sin telemetrÃ­a fresca del conector edge no se expide ninguna orden.</summary>
     public const string TelemetriaVencida = "TELEMETRIA_VENCIDA";
+    /// <summary>
+    /// El sensor de nivel está saturado o fuera de rango: el valor en cm es el tope de la
+    /// escala (artefacto), no una medida. Con el PV del lazo sin medida no se autoriza
+    /// ninguna orden salvo Detener (dirección segura).
+    /// </summary>
+    public const string NivelSensorFueraDeRango = "NIVEL_SENSOR_FUERA_DE_RANGO";
+    /// <summary>
+    /// Todavía no se conoce la calidad del dato de nivel (falta la lectura primaria del
+    /// sensor). Fail-closed: sin calidad conocida no se autoriza mover el proceso.
+    /// </summary>
+    public const string NivelCalidadDesconocida = "NIVEL_CALIDAD_DESCONOCIDA";
     /// <summary>El conector confirmÃ³ con una lectura posterior distinta del valor esperado.</summary>
     public const string ConfirmacionNoCoincide = "CONFIRMACION_NO_COINCIDE";
     /// <summary>La direcciÃ³n no estÃ¡ en la allowlist / es de salida / no estÃ¡ verificada (niveles del conector).</summary>
@@ -87,6 +104,11 @@ public static class ControlContrato
     public const double TdMax = 60;
     public const double AperturaMin = 0;
     public const double AperturaMax = 100;  // %
+
+    /// <summary>Referencia mínima del variador (cuentas escritas en N7:0).</summary>
+    public const double PotenciaVariadorMin = 0;
+    /// <summary>Referencia máxima del variador (cuentas escritas en N7:0).</summary>
+    public const double PotenciaVariadorMax = 32000;
 
     /// <summary>Equipo exacto admitido por el contrato (no se aceptan direcciones ni ids arbitrarios).</summary>
     public const string Equipo = "nivel-mcn09";
@@ -170,8 +192,11 @@ public static class ControlContrato
                 // Sin valor propio (ParametroPid se valida con ValidarPid).
                 return null;
 
-            case TipoComando.Setpoint:
+case TipoComando.Setpoint:
                 return Rango(valor, SetpointMin, SetpointMax);
+
+            case TipoComando.PotenciaVariador:
+                return Rango(valor, PotenciaVariadorMin, PotenciaVariadorMax);
 
             default:
                 return Motivos.TipoDesconocido;

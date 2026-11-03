@@ -47,7 +47,7 @@ Perfiles: `core` · `simulation` · `monitoring` · `edge`.
 | — | `docker compose --profile simulation up -d` | ✅ 8 contenedores + mirror |
 | — | `docker compose ps` | ✅ todos `healthy` |
 | — | `docker compose logs` | ✅ sin errores activos (transitorios documentados abajo) |
-| — | `dotnet test` | ✅ 25/25 |
+| — | `dotnet test` | ✅ 35/35 |
 | 1 | Servicios saludables | ✅ healthchecks OK (frontend/backend/mosquitto/db/ingestor/connector/mcp/agents) |
 | 2 | Frontend abre | ✅ `http://localhost:8080` HTTP 200 (SPA) |
 | 3 | REST vía Nginx | ✅ `/api/equipment` → 4 equipos |

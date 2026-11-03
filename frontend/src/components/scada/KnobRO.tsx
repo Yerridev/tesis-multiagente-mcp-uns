@@ -9,7 +9,14 @@ export function KnobRO({ value, max, ticks, label, onCommit }: { value: number |
   const svgRef = useRef<SVGSVGElement>(null);
   const [draft, setDraft] = useState<number | null>(value);
   const [dragging, setDragging] = useState(false);
-  useEffect(() => { if (!dragging) setDraft(value); }, [value, dragging]);
+  // Sincroniza con el PLC solo cuando LLEGA una lectura nueva. Al soltar la perilla no se
+  // vuelve a pintar la lectura vieja: se mantiene el valor elegido hasta que el PLC confirme.
+  const ultimoValor = useRef<number | null>(value);
+  useEffect(() => {
+    if (value === ultimoValor.current) return;
+    ultimoValor.current = value;
+    if (!dragging) setDraft(value);
+  }, [value, dragging]);
   const SWEEP = 270;
   const toAngle = (v: number) => -SWEEP / 2 + (v / max) * SWEEP;
   const pt = (a: number, r: number): [number, number] => {

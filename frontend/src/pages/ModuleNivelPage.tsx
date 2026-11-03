@@ -5,7 +5,7 @@ import type { LevelDetail } from '../types';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { LampPanel, type LampSpec } from '../components/scada/Devices';
 import { IconBarChart, IconPanel } from '../components/common/Icons';
-import { ageSeconds, clamp, formatAge, isStale, levelAlarms, num, timeOnly } from '../utils/format';
+import { ageSeconds, clamp, formatAge, isStale, levelAlarms, num, timeOnly, valorMedible } from '../utils/format';
 
 const ID = 'nivel-mcn09';
 
@@ -44,10 +44,12 @@ export function ModuleNivelPage() {
 
   const age = ageSeconds(now, eq.timestamp);
   const stale = isStale(now, eq.timestamp, 15);
+  /* Sensor saturado: el valor en cm es el tope de la escala, no una medida */
+  const medible = valorMedible(eq.calidad) && valorMedible(detail?.calidad);
   const { high, low } = levelAlarms(eq.value, eq.setpoint);
   /* Sin consigna real no se evalúa la alarma; sin comunicación no se presentan valores */
   const sinConsigna = !(eq.setpoint > 0);
-  const sinDato = eq.status !== 'ONLINE';
+  const sinDato = eq.status !== 'ONLINE' || !medible;
   const percent = detail?.percent != null ? clamp(detail.percent) : null;
   const fillClass = percent !== null && percent >= 90 ? 'crit' : percent !== null && percent >= 70 ? 'warn' : '';
   const knobDeg = (detail?.vfdPercent ?? 0) * 2.7 - 135;

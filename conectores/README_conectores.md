@@ -5,9 +5,9 @@ Los tres equipos del laboratorio se leen desde **esta PC** (no desde la VM LAB-A
 | Conector | Equipo | Transporte | Publica en |
 |---|---|---|---|
 | `launch_nivel_edge.ps1` | MicroLogix 1100 `192.168.114.9` | pycomm3 (TCP 502) | `127.0.0.1:1883` (broker Windows) |
-| `launch_caudal_edge.ps1` | S7-200 `192.168.114.7` | snap7 ISO-TCP, **TSAP 1000** | `127.0.0.1:1883` |
-| `launch_presion_edge.ps1` | NI cFP-2200 `192.168.114.8` | **DataSocket `psp://`** | `192.168.114.70:1884` (broker Docker) |
-| `launch_presion_control.ps1` | cFP-2200 (escritura) | **DataSocket `psp://`** | `192.168.114.70:1884` |
+| `launch_caudal_edge.ps1` | S7-200 `192.168.114.7` | snap7 ISO-TCP, **IP de origen 192.168.114.70 y TSAP 1000** | `127.0.0.1:1883` |
+| `launch_presion_edge.ps1` | NI cFP-2200 `192.168.114.8` | **DataSocket `psp://`** | `192.168.114.100:1884` (broker Docker) |
+| `launch_presion_control.ps1` | cFP-2200 (escritura) | **DataSocket `psp://`** | `192.168.114.100:1884` |
 
 `mirror-tesis` copia el broker Windows (1883) al broker Docker, por eso caudal y nivel llegan igual.
 

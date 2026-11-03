@@ -4,13 +4,16 @@ export interface Equipment {
   controller: string;
   ip: string;
   variable: string;
-  value: number;
+  /** Valor vigente. null cuando el dato no es medible (sensor fuera de rango). */
+  value: number | null;
   unit: string;
   setpoint: number;
   timestamp: string;
   status: string;
   deviation: number;
   alarm: boolean;
+  /** Calidad del dato: 'buena' | 'sensor_fuera_de_rango'. Con sensor saturado el valor no es medible. */
+  calidad?: string;
 }
 
 export interface HistorySample {
@@ -36,10 +39,12 @@ export interface LevelDetail {
   pumpOn: boolean;
   vfdHz: number;
   vfdPercent: number;
-  valveOpen: number;
+valveOpen: number;
   highAlarm: boolean;
   lowAlarm: boolean;
   timestamp: string;
+  /** Calidad del dato de nivel: con sensor saturado el nivel en cm no es medible. */
+  calidad?: string;
 }
 
 export interface AgentTool {

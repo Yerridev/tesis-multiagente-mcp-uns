@@ -65,6 +65,14 @@ function bloqueosDe(datos: EstadoControlDatos | undefined, rol: string, estadoDi
     if (datos.proceso.selector && datos.proceso.selector !== 'REMOTO') b.push('Selector físico en LOCAL');
     if (!datos.proceso.fuenteControl) b.push('Sin confirmación de quién tiene el mando');
     else if (datos.proceso.fuenteControl === 'HMI') b.push('Control en HMI: mando web bloqueado');
+    /* Sensor de nivel saturado: el PV del lazo no es una medida. Con la operación
+       degradada autorizada el backend NO bloquea, pero se avisa siempre. */
+    if (datos.proceso.sensorSaturado)
+      b.push(
+        datos.proceso.overrideCalidad
+          ? 'SENSOR DE NIVEL FUERA DE RANGO — operación degradada autorizada: el nivel no es medible y la orden se registra marcada en la auditoría'
+          : 'SENSOR DE NIVEL FUERA DE RANGO — el nivel no es medible; las órdenes quedan bloqueadas',
+      );
   }
   if (rol === 'viewer') b.push('Permiso insuficiente (rol viewer)');
   if (!estadoDisponible) b.push('Sin estado del backend');
@@ -342,18 +350,23 @@ export function SetpointBoton({ max, unidad, disabled }: { max: number; unidad: 
 }
 
 /** Perilla de setpoint: envía una sola orden al soltar, después de confirmación humana. */
-export function SetpointPerilla({ actual, max = 40 }: { actual: number | null; max?: number }) {
+export function SetpointPerilla({ actual, max = 40, deshabilitado = false, motivo }: { actual: number | null; max?: number; deshabilitado?: boolean; motivo?: string }) {
   const { controlRecargar } = usePlant();
   const [aviso, setAviso] = useState<string | null>(null);
   const confirmar = async (valor: number) => {
-    setAviso('Enviando…');
+    if (deshabilitado) {
+      setAviso(motivo ?? 'Consigna no disponible');
+      return;
+    }
+    setAviso('Enviando.');
     const r = await enviarControl({ tipo: 'Setpoint', valor, unidad: 'cm' });
     controlRecargar();
     setAviso(r.ok ? `Setpoint confirmado: ${valor} cm` : (r.error ?? 'No se pudo cambiar el setpoint'));
   };
   return <div>
-    <KnobRO value={actual == null ? null : Math.max(0, Math.min(max, actual))} max={max} ticks={[0, 10, 20, 30, 40]} label="Setpoint cm" onCommit={(v) => void confirmar(v)} />
+    <KnobRO value={deshabilitado ? null : actual == null ? null : Math.max(0, Math.min(max, actual))} max={max} ticks={[0, 10, 20, 30, 40]} label="Setpoint cm" onCommit={(v) => void confirmar(v)} />
     {aviso && <small className="co-aviso">{aviso}</small>}
+    {deshabilitado && <small className="co-aviso">{motivo ?? 'Consigna deshabilitada'}</small>}
   </div>;
 }
 

@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 $env:CONTROL_PRESION_REAL = '1'
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] arrancando CONTROL presion en el HOST (REAL armado)" | Out-File -Append -FilePath $log
 while ($true) {
-    & $py -u "$dir\conector_control_presion.py" --cfp 192.168.114.8 --broker 192.168.114.70 --puerto 1884 --habilitado-real *>> $log
+    & $py -u "$dir\conector_control_presion.py" --cfp 192.168.114.8 --broker 192.168.114.100 --puerto 1884 --habilitado-real *>> $log
     "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] CONTROL presion caido; reinicio en 5 s" | Out-File -Append -FilePath $log
     Start-Sleep -Seconds 5
 }

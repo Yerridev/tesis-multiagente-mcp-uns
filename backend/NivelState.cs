@@ -197,6 +197,37 @@ public sealed class NivelState
 
     public bool plcConectado => string.Equals(PlcConexion?.Trim(), "CONECTADO", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Umbral de saturación del sensor ultrasónico en cuentas de N7:4. Mismo criterio que
+    /// el conector edge (LIMITE_SENSOR_RAW): por debajo, el sensor está saturado o muerto
+    /// y el valor en cm es el tope de la escala, no una medida.
+    /// </summary>
+    public const int LimiteSensorRaw = 300;
+
+    /// <summary>
+    /// El sensor ultrasónico está saturado o fuera de rango: N7:4 quedó pegado en el piso
+    /// de la escala (~0 cuentas) y el valor en cm es el tope del rango calibrado (≈40,9 cm),
+    /// NO una medida del nivel. Se evalúa con el flag del conector y, de forma redundante,
+    /// con el dato primario (nivel/raw) para no depender del ORDEN de llegada de los mensajes.
+    /// </summary>
+    public bool SensorSaturado
+    {
+        get
+        {
+            if (Bool("nivel/fuera_rango_sensor") == true) return true;
+            var raw = Numero("nivel/raw");
+            return raw is double r && r < LimiteSensorRaw;
+        }
+    }
+
+    /// <summary>
+    /// ¿Se conoce la calidad del dato de nivel? Exige el dato primario (nivel/raw) o el flag
+    /// explícito del conector. Mientras no se sepa, el valor en cm NO se acepta: es preferible
+    /// no mostrar nivel antes que mostrar el artefacto de saturación.
+    /// </summary>
+    public bool CalidadConocida =>
+        Numero("nivel/raw") is not null || Get("nivel/fuera_rango_sensor") is not null;
+
     /// <summary>Copia para SignalR/REST (serializable).</summary>
     public object Snapshot()
     {

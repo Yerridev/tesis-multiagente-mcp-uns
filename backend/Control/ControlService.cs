@@ -49,6 +49,11 @@ public sealed class OrdenControl
     public double? ValorLeido { get; set; }
     /// <summary>¿El conector ejecutó la escritura (solo modo real)?</summary>
     public bool? Escrito { get; set; }
+    /// <summary>
+    /// La orden se expidió con el guard de calidad del sensor de nivel anulado
+    /// (operación degradada autorizada por el laboratorio).
+    /// </summary>
+    public bool OverrideCalidad { get; set; }
 
     /// <summary>Terminal: solo se cierra con confirmación leída o con un rechazo/timeout.</summary>
     public bool EsTerminal => ControlContrato.EstadosFinales.Contains(Estado.ToString());
@@ -76,6 +81,7 @@ public sealed class OrdenControl
         escrito = Escrito,
         valorEsperado = ValorEsperado,
         valorLeido = ValorLeido,
+        overrideCalidad = OverrideCalidad,
     };
 }
 
@@ -161,6 +167,11 @@ public sealed class ControlService
                 // Propietario del mando (B3:0/3 publicado por el puente como estado/fuente_control):
                 // "PC" = control del SCADA web · "HMI" = control del HMI físico · null = sin dato
                 fuenteControl = _conectorSimulador ? "SIMULADOR" : _nivel.FuenteControl(),
+                // El sensor de nivel saturado invalida la medida del lazo (el valor en cm
+                // es el tope de saturación de la escala, no una medida real).
+                sensorSaturado = _conectorSimulador ? false : _nivel.SensorSaturado,
+                // Operación degradada autorizada: el guard de calidad está anulado.
+                overrideCalidad = _op.PermitirSensorFueraDeRango,
             },
             telemetria = new
             {
@@ -200,6 +211,7 @@ public sealed class ControlService
             Motivos.ControlEnHmi, Motivos.FuenteControlSinDato,
             Motivos.Vencida, Motivos.SinConfirmacion, Motivos.MqttNoDisponible, Motivos.DireccionProhibida, Motivos.RealNoArmado,
             Motivos.EquipoInvalido, Motivos.UnidadInvalida, Motivos.TelemetriaVencida, Motivos.ConfirmacionNoCoincide,
+Motivos.NivelSensorFueraDeRango, Motivos.NivelCalidadDesconocida,
             Motivos.DireccionNoPermitida, Motivos.DireccionNoVerificada,
         },
         salidasProhibidas = new[] { "O:0/*", "O:1/*" },
@@ -261,7 +273,13 @@ public sealed class ControlService
         if (duplicada)
             return Rechazar(orden, Motivos.Duplicada, 409);
 
-        /*5* preflight del proceso (mismo criterio en dry-run y real; el conector simulador lo saltea) */
+        /* Setpoint con el sensor de nivel saturado: la consigna en cm no significa nada
+               (el PID recorta PV y consigna al mismo valor -> error 0 -> salida 0) y la
+               perilla de la web se desincroniza. Se rechaza con el motivo claro. */
+            if (tipo == TipoComando.Setpoint && _nivel.SensorSaturado)
+                return Rechazar(orden, Motivos.NivelSensorFueraDeRango, 409);
+
+            /*5* preflight del proceso (mismo criterio en dry-run y real; el conector simulador lo saltea) */
         if (!_conectorSimulador)
         {
             if (!_nivel.MqttConectado)
@@ -273,6 +291,30 @@ public sealed class ControlService
                 : (DateTimeOffset.Now - _nivel.UltimoMensaje.Value).TotalSeconds;
             if (edad is null || edad > ControlContrato.TelemetriaMaxSegundos)
                 return Rechazar(orden, Motivos.TelemetriaVencida, 409);
+
+            /* Sensor de nivel saturado o fuera de rango: el valor en cm que ve el lazo
+               es el tope de la escala (≈40,9 cm), NO una medida. Arrancar o mover el
+               proceso sin PV confiable es exactamente lo que no se debe permitir.
+               Solo Detener se permite (dirección segura: siempre se puede parar).
+               Con CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO=1 el laboratorio puede operar
+               en modo degradado; la orden queda marcada en la auditoría. */
+            if (!_op.PermitirSensorFueraDeRango)
+            {
+                /* PotenciaVariador es una orden MANUAL explícita del operador (no un lazo
+                   automático): no se bloquea por la calidad del sensor. */
+                var manual = tipo is TipoComando.Detener or TipoComando.PotenciaVariador;
+                if (_nivel.SensorSaturado && !manual)
+                    return Rechazar(orden, Motivos.NivelSensorFueraDeRango, 409);
+
+                /* Sin calidad conocida del dato de nivel tampoco se mueve el proceso. */
+                if (!_nivel.CalidadConocida && !manual)
+                    return Rechazar(orden, Motivos.NivelCalidadDesconocida, 409);
+            }
+            else if (_nivel.SensorSaturado || !_nivel.CalidadConocida)
+            {
+                // Operación degradada autorizada: la orden sale, pero marcada.
+                orden.OverrideCalidad = true;
+            }
 
             if (!_nivel.plcConectado)
                 return Rechazar(orden, Motivos.PlcDesconectado, 409);
@@ -294,7 +336,7 @@ public sealed class ControlService
 
         /*6* publicar la orden (el backend jamás escribe al PLC) */
         _ordenes[orden.Id] = orden;
-        var cuerpo = SerializarOrden(orden);
+        var cuerpo = SerializarOrden(orden, _nivel.SensorSaturado);
         var publicado = await _transporte.Publicar($"{_op.TopicoBase}/cmd", cuerpo, ct);
         if (!publicado)
         {
@@ -316,7 +358,8 @@ public sealed class ControlService
             orden.Actualizada = _ahora();
         }
         _auditoria.Registrar("ENVIO", orden.Id, usuario, rol, orden.Estado.ToString(),
-            $"{orden.Tipo} {orden.Valor} {orden.Unidad} {orden.Parametro} modo={orden.Modo} correlacion={orden.Correlacion} comentario={orden.Comentario}");
+            $"{orden.Tipo} {orden.Valor} {orden.Unidad} {orden.Parametro} modo={orden.Modo} correlacion={orden.Correlacion} comentario={orden.Comentario}" +
+            (orden.OverrideCalidad ? " [OVERRIDE: sensor de nivel fuera de rango — operación degradada autorizada]" : ""));
         await DifundirAsync(orden);
         _log.LogInformation("Orden {Id} {Tipo} publicada ({Modo}) por {Usuario}; estado actual {Estado}",
             orden.Id, orden.Tipo, orden.Modo, usuario, orden.Estado);
@@ -358,7 +401,7 @@ public sealed class ControlService
         _ = DifundirAsync(orden);
     }
 
-    private static string SerializarOrden(OrdenControl o) => JsonSerializer.Serialize(new
+    private static string SerializarOrden(OrdenControl o, bool sensorSaturado = false) => JsonSerializer.Serialize(new
     {
         id = o.Id,
         equipo = o.Equipo,
@@ -372,9 +415,10 @@ public sealed class ControlService
         expedida = o.Expedida,
         expira = o.Expira,
         modo = o.Modo,
+        // El conector decide el modo de arranque con esto (no depende de su suscripcion).
+        sensorSaturado,
         origenOrden = new { usuario = o.Usuario, rol = o.Rol },
     });
-
     private async Task DifundirAsync(OrdenControl orden)
     {
         if (_hub is null) return;

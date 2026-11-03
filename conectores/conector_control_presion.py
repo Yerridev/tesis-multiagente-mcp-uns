@@ -16,7 +16,7 @@ Gate triple (identico al del modulo de caudal):
     3) fisico: selector de control en AUTOMATICO (DI Ch0 = SEL_AUTO) y telemetria fresca
 
 Uso (en la VM LAB-AUTOMATIZACION):
-    python conector_control_presion.py --broker 192.168.114.70 --puerto 1884 --habilitado-real
+    python conector_control_presion.py --broker 192.168.114.100 --puerto 1884 --habilitado-real
 """
 import argparse
 import json
@@ -260,7 +260,7 @@ def nuevo_cliente_mqtt(cid):
 def main():
     p = argparse.ArgumentParser(description="Control de presion (cFP-2200) por variables de red")
     p.add_argument("--cfp", default="192.168.114.8")
-    p.add_argument("--broker", default="192.168.114.70")
+    p.add_argument("--broker", default="192.168.114.100")
     p.add_argument("--puerto", type=int, default=1884)
     p.add_argument("--habilitado-real", action="store_true")
     a = p.parse_args()

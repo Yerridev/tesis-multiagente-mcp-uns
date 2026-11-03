@@ -6,7 +6,7 @@ import { Banner, ErrorBlock, LoadingBlock } from '../components/common/States';
 import { EquipmentCard } from '../components/equipment/EquipmentCard';
 import { TrendChart } from '../components/charts/TrendChart';
 import { IconAgent, IconArrow, IconDatabase, IconSignal } from '../components/common/Icons';
-import { ageSeconds, formatAge, isStale, moduleMeta, timeOnly } from '../utils/format';
+import { ageSeconds, formatAge, isStale, moduleMeta, timeOnly, valorMedible } from '../utils/format';
 
 interface Props {
   onNavigate: (route: Route) => void;
@@ -54,6 +54,18 @@ export function DashboardPage({ onNavigate }: Props) {
           {sinTelemetria
             ? 'ningún módulo está en línea; aquí aparecerán los datos en cuanto el equipo vuelva a reportar.'
             : `la última telemetría tiene ${formatAge(ageSeconds(now, lastUpdate))}.`}
+        </Banner>
+      ) : null}
+
+      {equipment.some((e) => !valorMedible(e.calidad)) ? (
+        <Banner tone="warn">
+          <b>Medida no válida:</b>{' '}
+          {equipment
+            .filter((e) => !valorMedible(e.calidad))
+            .map((e) => `${e.name} (sensor fuera de rango)`)
+            .join('; ')}
+          . El valor publicado es el tope de saturación de la escala, no la medida real: verifica el
+          sensor y el nivel físico antes de operar.
         </Banner>
       ) : null}
 

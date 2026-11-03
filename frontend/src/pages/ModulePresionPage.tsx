@@ -389,7 +389,7 @@ export function ModulePresionPage() {
                 <div className="co-list">
                   {ordenes.map((o) => (
                     <div className="co-item" key={o.id}>
-                      <span>{o.tipo}</span>
+                      <span>{o.tipo}{o.parametro ? ` ${o.parametro}` : ''}{o.valor != null ? ` = ${o.valor}${o.unidad ? ` ${o.unidad}` : ''}` : ''}</span>
                       <b className={o.estado === 'Confirmado' ? 'ok' : ['Rechazado', 'Error', 'Timeout'].includes(o.estado) ? 'err' : 'wait'}>
                         {o.estado}
                       </b>

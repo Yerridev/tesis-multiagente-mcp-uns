@@ -42,7 +42,11 @@ def main() -> None:
 
     def on_message(client, userdata, msg):
         nonlocal copiados
-        dest.publish(msg.topic, msg.payload, qos=1)
+        # retain=True: en el broker de origen los mensajes de estado/metadatos ya están
+        # retenidos. Sin re-publicar con retain, el broker destino NO los retiene y un
+        # suscriptor que se conecte después (p. ej. el backend tras un reinicio) nunca
+        # recibe p. ej. descriptive/equipo (altura del tanque, calibración).
+        dest.publish(msg.topic, msg.payload, qos=1, retain=True)
         copiados += 1
         if copiados % 100 == 0:
             log("progreso", copiados=copiados)

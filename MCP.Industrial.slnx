@@ -2,4 +2,7 @@
   <Folder Name="/backend/">
     <Project Path="backend/MCP.Industrial.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MCP.Industrial.Api.Tests/MCP.Industrial.Api.Tests.csproj" />
+  </Folder>
 </Solution>

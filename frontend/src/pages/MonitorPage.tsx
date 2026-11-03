@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { usePlant } from '../context/PlantContext';
 import { TrendChart, type ChartSeries } from '../components/charts/TrendChart';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
-import { moduleMeta, num } from '../utils/format';
+import { moduleMeta, num, valorMedible } from '../utils/format';
 
 export function MonitorPage() {
   const { equipment, historyFor, link, load, error, reload } = usePlant();
@@ -48,9 +48,12 @@ export function MonitorPage() {
         {equipment.map((item) => (
           <div className={`live-box live-${item.id.split('-')[0]}`} key={item.id}>
             <span>{moduleMeta(item.id).short}</span>
-            <b>{num(item.value, 2)}</b>
+            <b className={valorMedible(item.calidad) ? undefined : 'nodata'}>
+              {valorMedible(item.calidad) ? num(item.value, 2) : 'n/d'}
+            </b>
             <small>
               {item.unit} · consigna {num(item.setpoint, 1)} {item.unit} · {moduleMeta(item.id).label}
+              {valorMedible(item.calidad) ? '' : ' · SIN MEDIDA (sensor fuera de rango)'}
             </small>
           </div>
         ))}

@@ -49,9 +49,33 @@ class Estado:
         self.descartados = 0
         self.ultimo_mensaje = None
         self.ultimo_error = None
+        # Flag nivel/fuera_rango_sensor: True = el sensor de nivel está saturado.
+        self.sensor_saturado = False
 
 
 ESTADO = Estado()
+
+# Señales de nivel que dependen del sensor ultrasónico: si el sensor está saturado,
+# el valor en cm es el tope de la escala (artefacto), no una medida.
+SENALES_DEPENDIENTES_DE_NIVEL = ("nivel/cm", "nivel/pct")
+
+
+def marcar_mediciones_sin_medir(conn, ventana_min: int = 2) -> None:
+    """Marca como no medibles las muestras de nivel ya guardadas con calidad 'ok'.
+
+    Cubre el caso en que el aviso de saturación llega DESPUÉS de la muestra
+    (el edge publica cada señal solo cuando cambia o cada 60 s)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE mediciones SET calidad = 'sensor_fuera_de_rango'
+            WHERE calidad = 'ok'
+              AND ts >= now() - make_interval(mins => %s)
+              AND senal_id IN (SELECT id FROM senales WHERE nombre = ANY(%s))
+            """,
+            (ventana_min, list(SENALES_DEPENDIENTES_DE_NIVEL)),
+        )
+    conn.commit()
 
 
 class SaludHandler(BaseHTTPRequestHandler):
@@ -232,6 +256,23 @@ def main() -> int:
             valor = 1.0 if valor else 0.0
 
         ts = ts or datetime.now(timezone.utc)
+
+        # Flag de saturación del sensor de nivel: se guarda antes de medir.
+        if nombre == "nivel/fuera_rango_sensor":
+            saturado = bool(valor)
+            if saturado != ESTADO.sensor_saturado:
+                ESTADO.sensor_saturado = saturado
+                log("warn", evento="sensor_nivel_fuera_de_rango", estado=saturado)
+                if saturado:
+                    try:
+                        marcar_mediciones_sin_medir(conn)
+                    except Exception as ex:  # noqa: BLE001
+                        log("warn", evento="retro_marcado_fallido", error=str(ex))
+
+        # Una medida de nivel con el sensor saturado no es medible: se marca la calidad.
+        if ESTADO.sensor_saturado and nombre in SENALES_DEPENDIENTES_DE_NIVEL:
+            calidad = "sensor_fuera_de_rango"
+
         try:
             if nombre not in senales:
                 senales[nombre] = upsert_senal(conn, equipo_id, nombre, unidad, source or tag)

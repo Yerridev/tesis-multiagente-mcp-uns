@@ -97,7 +97,7 @@ export function LienzoPage({ equipo, onNavigate }: Props) {
     return <ErrorBlock title={`Equipo ${equipo.id} no disponible`} message="La API /api/equipment no lo devolvió." onRetry={reload} />;
   }
 
-  const valor = historico ? (muestra?.value ?? eq.value) : eq.value;
+  const valor = historico ? (muestra?.value ?? eq.value ?? 0) : (eq.value ?? 0);
   const tsActual = historico ? (muestra?.ts ?? eq.timestamp) : eq.timestamp;
   const senalEquipo = equipo.id === 'caudal-mcc09'
     ? caudalSenal
@@ -135,7 +135,7 @@ export function LienzoPage({ equipo, onNavigate }: Props) {
     agenteTocando: new Set<string>(),
     editando: false,
     tema: 'claro',
-    flujo: { activo: !stale && !historico, intensidad: Math.abs(valor) },
+    flujo: { activo: !stale && !historico, intensidad: Math.abs(valor ?? 0) },
     lecturas,
   };
 

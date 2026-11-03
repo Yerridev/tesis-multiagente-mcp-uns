@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
 import { WaterSupplyNode } from './WaterSupplyNode';
-import { CatalogEndNode, CatalogJunctionNode, CatalogPumpNode, CatalogValveNode } from './CatalogParts';
+import { CatalogEndNode, CatalogJunctionNode, CatalogValveNode } from './CatalogParts';
+import { PumpTag } from './PumpTag';
 
 /* ============================================================
    Diagrama mímico de TEMPERATURA — puerto de BOSETOS/scada-temp
@@ -152,10 +153,11 @@ function PumpNode({ data }: NodeProps) {
               <line key={a} x1="156" y1="50" x2="156" y2="34" stroke="#5b6b7d" strokeWidth="3" strokeLinecap="round" transform={`rotate(${a} 156 50)`} />
             ))}
           </g>
-          <circle cx="12" cy="12" r="5" className={on && known ? 'led led--on' : 'led'} />
         </svg>
       </div>
-      <span className="tag" style={{ left: 110, top: -24 }}>BOMBA · {!known ? 'SIN DATO' : on ? 'MARCHA' : 'PARO'}</span>
+      <div style={{ position: 'absolute', left: 51, top: 12, transform: 'translate(-50%,-100%)', zIndex: 3, pointerEvents: 'none' }}>
+        <PumpTag on={on} known={known} />
+      </div>
       <Port id="discharge" position={Position.Top} style={{ left: 170 }} />
       <Port id="suction" position={Position.Right} />
     </div>
@@ -189,6 +191,11 @@ function SteelTank({ w, h, fill, id, children }: { w: number; h: number; fill: n
   );
 }
 
+/* Serpentín de T1 (coordenadas locales del tanque 210×245).
+   Entra por x=125, baja en zigzag detrás de la lectura y sale por x=175. */
+const COIL_PATH = 'M125 -4 V90 H26 V127 H152 V164 H26 V201 H175 V-4';
+const COIL_HALO = 'M125 0 V90 H26 V127 H152 V164 H26 V201 H175 V0';
+
 /* T1 · tanque de enfriamiento (con serpentín) */
 function TankT1Node({ data }: NodeProps) {
   const d = data as Data;
@@ -198,20 +205,25 @@ function TankT1Node({ data }: NodeProps) {
   return (
     <div className="tank" style={{ width: 210, height: 245 }}>
       <SteelTank w={210} h={245} fill={pct} id="tpt1">
-        <path d="M24 120 H186 V140 H24 V160 H186 V180 H24 V188 H186" fill="none" className={coil ? 'coil coil--cold' : 'coil'} />
+        <g className={coil ? 'coil coil--cold' : 'coil'}>
+          <path d={COIL_HALO} className="coil-halo" />
+          <path d={COIL_PATH} className="coil-wall" />
+          <path d={COIL_PATH} className="coil-body" />
+          <path d={COIL_PATH} className="coil-shine" />
+        </g>
         <rect x="-10" y="52" width="14" height="16" rx="3" className={d.altoTE === true ? 'level-switch-orange on' : 'level-switch-orange'} />
         <rect x="-10" y="182" width="14" height="16" rx="3" className={d.bajoTE === true ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
       <div className="tank__readout"><strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
-      <span className="tag" style={{ left: 8, top: 8 }}>T1 · ENFRIAMIENTO · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
+      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T1 · ENFRIAMIENTO · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
       <span className="tag level-tag" style={{ right: 224, top: 60 }}>NIVEL ALTO <Sw on={d.altoTE === true} /></span>
       <span className="tag level-tag" style={{ right: 224, top: 190 }}>NIVEL BAJO <Sw on={d.bajoTE === true} /></span>
       <Port id="in" position={Position.Bottom} style={{ left: 30 }} />
       <Port id="ovf" position={Position.Bottom} style={{ left: 130 }} />
       <Port id="retV2" position={Position.Bottom} style={{ left: 175 }} />
-      <Port id="v1" position={Position.Top} style={{ left: 150 }} />
-      <Port id="coilU" position={Position.Right} style={{ top: 120 }} />
-      <Port id="coilD" position={Position.Right} style={{ top: 188 }} />
+      <Port id="v1" position={Position.Top} style={{ left: 45 }} />
+      <Port id="coilU" position={Position.Top} style={{ left: 125 }} />
+      <Port id="coilD" position={Position.Top} style={{ left: 175 }} />
     </div>
   );
 }
@@ -239,7 +251,9 @@ function TempSensorNode({ data }: NodeProps) {
   const tag: CSSProperties =
     dir === 'up' ? { left: -22, top: -70, width: 114, textAlign: 'center' }
       : dir === 'down' ? { left: -22, top: 92, width: 114, textAlign: 'center' }
-        : dir === 'right' ? { left: 100, top: 25 } : { right: 100, top: 25 };
+        : dir === 'right'
+          ? { left: 100, top: 12, width: 96, minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' }
+          : { right: 100, top: 12, width: 96, minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' };
   return (
     <div className="valve nodrag nopan" title="Solo lectura · sin órdenes al equipo" style={{ width: vertical ? 40 : 70, height: vertical ? 70 : 40 }}>
       <div style={{ position: 'absolute', left: vertical ? -15 : 0, top: vertical ? 15 : 0, width: 70, height: 40, transform: `rotate(${rot}deg)` }}>
@@ -257,7 +271,13 @@ function TempSensorNode({ data }: NodeProps) {
           <circle cx="35" cy="-11" r="2.5" className="ts-led" />
         </svg>
       </div>
-      <span className="tag" style={tag}>{label}</span>
+      <span className="tag" style={tag}>
+        {label === 'TEMPERATURA SALIDA'
+          ? <>TEMPERATURA<br />SALIDA</>
+          : label === 'TEMPERATURA ENTRADA'
+            ? <>TEMPERATURA<br />ENTRADA</>
+            : label}
+      </span>
       {vertical ? (
         <>
           <Port id="t" position={Position.Top} />
@@ -273,6 +293,9 @@ function TempSensorNode({ data }: NodeProps) {
   );
 }
 
+/* Resistencia tubular en horquilla, reducida 20 % y elevada. */
+const HEATER_PATH = 'M0 160.4 H117 A9.6 9.6 0 0 1 117 179.6 H0';
+
 /* T2 · tanque principal (con resistencia) */
 function TankT2Node({ data }: NodeProps) {
   const d = data as Data;
@@ -283,15 +306,25 @@ function TankT2Node({ data }: NodeProps) {
   return (
     <div className="tank" style={{ width: 215, height: 220 }}>
       <SteelTank w={215} h={220} fill={pct} id="tpt2">
-        <path d="M30 195 l12 -16 l12 32 l12 -32 l12 32 l12 -32 l12 32 l12 -32 l12 32 l12 -16" fill="none" className={heating ? 'heater heater--on' : 'heater'} />
+        <g className={heating ? 'heater heater--on' : 'heater'} transform="translate(0,-8)">
+          <path d={HEATER_PATH} className="heater-halo" />
+          <path d={HEATER_PATH} className="heater-wall" />
+          <path d={HEATER_PATH} className="heater-body" />
+          <path d={HEATER_PATH} className="heater-shine" />
+          <rect x="-4.8" y="150.8" width="4.8" height="38.4" rx="1.6" className="heater-flange" />
+          <rect x="-9.6" y="164.4" width="4.8" height="11.2" className="heater-neck" />
+          <rect x="-22.4" y="158.8" width="12.8" height="22.4" rx="2.4" className="heater-head" />
+          <circle cx="-16" cy="165.2" r="1.9" className="heater-stud" />
+          <circle cx="-16" cy="174.8" r="1.9" className="heater-stud" />
+        </g>
         <rect x="206" y="42" width="14" height="16" rx="3" className={d.altoTP === true ? 'level-switch-orange on' : 'level-switch-orange'} />
         <rect x="206" y="167" width="14" height="16" rx="3" className={d.bajoTP === true ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
       <div className="tank__readout"><strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
-      <span className="tag" style={{ left: 8, top: 8 }}>T2 · PRINCIPAL · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
+      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T2 · PRINCIPAL · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
       <span className="tag level-tag level-tag--right" style={{ left: 224, top: 50 }}><Sw on={d.altoTP === true} /> NIVEL ALTO</span>
       <span className="tag level-tag level-tag--right" style={{ left: 224, top: 175 }}><Sw on={d.bajoTP === true} /> NIVEL BAJO</span>
-      <span className="tag" style={{ left: 12, top: 168 }}>RESISTENCIA {heater == null ? 'SIN DATO' : `${heater} %`} <Sw on={heating} /></span>
+      <span className="tag" style={{ left: 12, top: 190 }}>RESISTENCIA {heater == null ? 'SIN DATO' : `${heater} %`}</span>
       <Port id="inB" position={Position.Top} style={{ left: 30 }} />
       <Port id="inA" position={Position.Top} style={{ left: 75 }} />
       <Port id="inS" position={Position.Bottom} style={{ left: 175 }} />
@@ -324,34 +357,26 @@ function ChillerNode({ data }: NodeProps) {
   );
 }
 
-/* Caudal (L/min) */
-function FlowReadoutNode({ data }: NodeProps) {
-  const d = data as Data;
-  const q = typeof d.q === 'number' ? d.q : null;
-  return (
-    <div className="readout">
-      <span>CAUDAL (L/min)</span>
-      <strong>{q == null ? '—' : q.toFixed(0)}</strong>
-    </div>
-  );
-}
-
 const nodeTypes = {
   junction: CatalogJunctionNode,
   end: CatalogEndNode,
   valve: CatalogValveNode,
-  pump: CatalogPumpNode,
+  pump: PumpNode,
   tankT1: TankT1Node,
   tankT2: TankT2Node,
   chiller: ChillerNode,
-  flow: FlowReadoutNode,
   supply: WaterSupplyNode,
   tempSensor: TempSensorNode,
 };
 
 /* ───────────── Tubería (borde ReactFlow) ───────────── */
 function PipeEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
-  const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  const edgeData = data as Data | undefined;
+  const routeUp = edgeData?.routeUp === true;
+  const [straightPath] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  const path = routeUp
+      ? `M ${sourceX},${sourceY} L ${sourceX},${targetY} L ${targetX},${targetY}`
+      : straightPath;
   const flowing = (data as Data | undefined)?.active === true;
   return (
     <g>
@@ -379,17 +404,17 @@ const end = (id: string, x: number, y: number): Node => ({ id, type: 'end', posi
 
 const BASE_NODES: Node[] = [
   { id: 'pump', type: 'pump', position: { x: 285, y: 970 }, data: {}, ...fixed },
-  { id: 'flow', type: 'flow', position: { x: 330, y: 760 }, data: {}, ...fixed },
   { id: 't1', type: 'tankT1', position: { x: 425, y: 270 }, data: {}, ...fixed },
   { id: 't2', type: 'tankT2', position: { x: 525, y: 690 }, data: {}, ...fixed },
   { id: 'chiller', type: 'chiller', position: { x: 780, y: 430 }, data: {}, ...fixed },
   { id: 'TS', type: 'tempSensor', position: { x: 630, y: 925 }, data: { label: 'TEMPERATURA SALIDA', dir: 'left', src: 'control' }, ...fixed },
   { id: 'TSE', type: 'tempSensor', position: { x: 580, y: 565 }, data: { label: 'TEMPERATURA ENTRADA', dir: 'right', src: 'cooler' }, ...fixed },
   /* Posición nominal: V2 abierta · V1 y V3 cerradas */
-  valve('V1', 670, 215, 'h', false), valve('V2', 555, 600, 'v', true, 'left'), valve('V3', 735, 985, 'h', false),
-  junction('JV', 575, 215), junction('JS', 650, 1020),
-  end('END1', 705, 203),
-  { id: 'SUPPLY', type: 'supply', position: { x: 820, y: 927 }, data: { side: 'l' }, ...fixed },
+  valve('V1', 670, 215, 'h', false), valve('V2', 555, 600, 'v', true, 'left'),
+  /* V3 queda en la subida del abastecimiento, separada de su boca superior. */
+  valve('V3', 920, 820, 'v', false, 'left'),
+  junction('JV', 575, 215), junction('JIN', 470, 215), junction('JS', 650, 1020),
+  { id: 'SUPPLY', type: 'supply', position: { x: 820, y: 927 }, data: { side: 't' }, ...fixed },
 ];
 
 const ed = (id: string, source: string, sh: string, target: string, th: string, type: 'pipe' | 'coolant' = 'pipe', extra: Data = {}): Edge => ({
@@ -401,24 +426,32 @@ const EDGES: Edge[] = [
   ed('r1', 't1', 'retV2', 'TSE', 't'), ed('r2', 'TSE', 'b', 't2', 'inA'),
   ed('ov', 't1', 'ovf', 'V2', 't'), ed('ov2', 'V2', 'b', 't2', 'inB'),
   ed('s1', 't2', 'out', 'TS', 't'), ed('s1b', 'TS', 'b', 'JS', 't'), ed('s2', 'JS', 'l', 'pump', 'suction'),
-  ed('x1', 'SUPPLY', 'l', 'V3', 'r'), ed('x2', 'V3', 'l', 't2', 'inS'),
-  ed('f1', 'END1', 'l', 'V1', 'r'), ed('f2', 'V1', 'l', 'JV', 'r'), ed('f3', 'JV', 'b', 't1', 'v1'),
-  /* Refrigerante: la superior gira cerca del enfriador, la inferior antes (escalonado, sin cruces) */
-  ed('c1', 'chiller', 'outU', 't1', 'coilU', 'coolant', { turnX: 745 }),
-  ed('c2', 'chiller', 'outD', 't1', 'coilD', 'coolant', { turnX: 690 }),
+  ed('x0', 'SUPPLY', 't', 'V3', 'b'),
+  ed('x1', 'V3', 't', 'V1', 'r', 'pipe', { routeUp: true }),
+  ed('f2', 'V1', 'l', 'JV', 'r'), ed('f3a', 'JV', 'l', 'JIN', 'r'), ed('f3b', 'JIN', 'b', 't1', 'v1'),
+  /* Refrigerante: sube por la derecha y pasa por encima de T1 sin cruzarse. */
+  ed('c1', 'chiller', 'outU', 't1', 'coilU', 'coolant', { turnX: 745, topY: 238 }),
+  ed('c2', 'chiller', 'outD', 't1', 'coilD', 'coolant', { turnX: 690, topY: 258 }),
 ];
+
+const TEMP_TAG_PLAN = {
+  V1: { open: 'top', closed: 'right', unknown: 'right' },
+  V2: { open: 'left', closed: 'top', unknown: 'top' },
+  V3: { open: 'right', closed: 'top', unknown: 'top' },
+} as const;
 
 /* ───────────── Tubería de refrigerante (enfriador ↔ serpentín del T1) ───────────── */
 function CoolantEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
-  /* Recorrido ortogonal escalonado: sale horizontal del tanque, gira 90° en su propio
-     punto (turnX) y sigue horizontal hasta el enfriador. Cada tubo tiene el suyo. */
-  const turn = (data as Data | undefined)?.turnX;
-  const turnX = typeof turn === 'number' ? turn : (sourceX + targetX) / 2;
-  const path = `M ${targetX},${targetY} L ${turnX},${targetY} L ${turnX},${sourceY} L ${sourceX},${sourceY}`;
+  /* Del enfriador sale horizontal, sube, pasa sobre T1 y baja hasta su tapa. */
+  const d = data as Data | undefined;
+  const turnX = typeof d?.turnX === 'number' ? d.turnX : sourceX - 40;
+  const topY = typeof d?.topY === 'number' ? d.topY : targetY - 30;
+  const path = `M ${sourceX},${sourceY} H ${turnX} V ${topY} H ${targetX} V ${targetY}`;
   return (
     <g>
       <path d={path} className="coolant-wall" />
       <path d={path} className="coolant-bore" />
+      <path d={path} className="coolant-shine" />
     </g>
   );
 }
@@ -436,7 +469,6 @@ function Flow({ senal }: { senal: TempSenal }) {
       const data: Data = { ...n.data };
       if (n.type === 'pump') data.on = senal.bomba;
       if (n.type === 'tempSensor') data.temp = (n.data as Data).src === 'cooler' ? senal.tempCooler : senal.tempControl;
-      if (n.type === 'flow') data.q = senal.caudal;
       if (n.type === 'tankT1') {
         data.nivelPct = senal.nivel1Pct;
         data.temp = senal.tempCooler;
@@ -455,6 +487,7 @@ function Flow({ senal }: { senal: TempSenal }) {
       if (n.type === 'valve') {
         const nom = (n.data as Data).nominal;
         data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        data.tagPlan = TEMP_TAG_PLAN[String(n.id) as keyof typeof TEMP_TAG_PLAN];
       }
       if (n.type === 'supply') data.active = senal.online && senal.valvulas.V3 === true;
       if (n.type === 'end') data.active = activo;
@@ -465,7 +498,14 @@ function Flow({ senal }: { senal: TempSenal }) {
   const edges = useMemo<Edge[]>(() => EDGES.map((e) => ({
     ...e,
     // se conserva el data original (p. ej. turnX de las tuberías de refrigerante) y solo se actualiza "active"
-    data: { ...e.data, active: e.id === 'x1' || e.id === 'x2' ? senal.online && senal.valvulas.V3 === true : senal.online && senal.bomba === true },
+    data: {
+      ...e.data,
+      active: e.id === 'x0'
+        ? senal.online && senal.valvulas.V3 === true
+        : ['x1', 'f2', 'f3a', 'f3b'].includes(e.id)
+          ? senal.online && senal.valvulas.V3 === true && senal.valvulas.V1 === true
+          : senal.online && senal.bomba === true,
+    },
   })), [senal]);
 
   useEffect(() => {

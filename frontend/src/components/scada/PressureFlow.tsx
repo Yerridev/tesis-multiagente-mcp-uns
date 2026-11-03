@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from '
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
 import { WaterSupplyNode } from './WaterSupplyNode';
 import { CatalogEndNode, CatalogJunctionNode, CatalogPumpNode, CatalogValveNode } from './CatalogParts';
+import { InstrumentTag, tagSize } from './InstrumentTag';
 
 /* ============================================================
    Diagrama mímico de PRESIÓN (MCP-09) — puerto de BOSETOS/scada-pressure
@@ -20,6 +21,8 @@ export interface PresionSenal {
   nivelAlto: boolean | null;
   nivelBajo: boolean | null;
 }
+
+const T2_LABEL_SIZE = tagSize(['TRANSMISOR DE PRESIÓN', 'PRESOSTATO'], 8);
 
 function Port({ id, position, style }: { id: string; position: Position; style?: CSSProperties }) {
   return (
@@ -115,6 +118,8 @@ function ValveNode({ data }: NodeProps) {
 function ProportionalValveNode({ data }: NodeProps) {
   const d = data as Data;
   const pct = typeof d.pct === 'number' ? d.pct : null;
+  const label = `VÁLVULA PROPORCIONAL · ${pct == null ? 'SIN DATO' : `${pct} %`}`;
+  const labelSize = tagSize([label], 11, 40);
   return (
     <div className="valve" title="Solo lectura · sin órdenes al controlador" style={{ width: 70, height: 40 }}>
       <svg width="70" height="40" viewBox="0 0 70 40" overflow="visible" aria-hidden>
@@ -126,9 +131,9 @@ function ProportionalValveNode({ data }: NodeProps) {
         <rect x="14" y="-12" width="42" height="4" rx="2" fill="#0003" />
         {pct != null && <rect x="14" y="-12" width={(42 * pct) / 100} height="4" rx="2" fill="#fff" />}
       </svg>
-      <span className="tag" style={{ left: -45, top: -58, width: 170, textAlign: 'center' }}>
-        VÁLVULA PROPORCIONAL · {pct == null ? 'SIN DATO' : `${pct} %`}
-      </span>
+      <div style={{ position: 'absolute', left: 35, top: -58, transform: 'translateX(-50%)', zIndex: 2, pointerEvents: 'none' }}>
+        <InstrumentTag label={label} size={labelSize} maxChars={40} />
+      </div>
       <Port id="l" position={Position.Left} />
       <Port id="r" position={Position.Right} />
     </div>
@@ -143,7 +148,7 @@ function PumpNode({ data }: NodeProps) {
   return (
     <div className="pump nodrag nopan" title="Solo lectura · sin órdenes al controlador" style={{ width: 220, height: 100 }}>
       <div className="pump__hit">
-        <svg width="220" height="100" viewBox="0 0 220 100" aria-hidden style={{ transform: 'scaleX(-1)' }}>
+        <svg width="220" height="100" viewBox="0 0 220 100" aria-hidden>
           <defs>
             <linearGradient id="pr-g-motor" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="#3b6bff" />
@@ -154,6 +159,7 @@ function PumpNode({ data }: NodeProps) {
               <stop offset="1" stopColor="#aab4be" />
             </linearGradient>
           </defs>
+          <g transform="translate(220 0) scale(-1 1)">
           <rect x="165" y="0" width="10" height="20" className="v-pipe" />
           <rect x="194" y="45" width="26" height="10" className="v-pipe" />
           <rect x="0" y="22" width="102" height="56" rx="8" fill="url(#pr-g-motor)" />
@@ -162,13 +168,14 @@ function PumpNode({ data }: NodeProps) {
           ))}
           <rect x="102" y="32" width="14" height="36" fill="#7b8794" />
           <rect x="116" y="18" width="80" height="64" rx="12" fill="url(#pr-g-casing)" />
-          <g className={on ? 'impeller impeller--on' : 'impeller'}>
+          <g className={on ? 'impeller impeller--on' : 'impeller'} style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
             <circle cx="156" cy="50" r="19" fill="#d5dce3" stroke="#8795a3" strokeWidth="2" />
             {[0, 60, 120, 180, 240, 300].map((a) => (
               <line key={a} x1="156" y1="50" x2="156" y2="34" stroke="#5b6b7d" strokeWidth="3" strokeLinecap="round" transform={`rotate(${a} 156 50)`} />
             ))}
           </g>
           <circle cx="12" cy="12" r="5" className={on && known ? 'led led--on' : 'led'} />
+          </g>
         </svg>
       </div>
       <span className="tag" style={{ left: 20, top: -24 }}>
@@ -229,21 +236,63 @@ function TankT1Node({ data }: NodeProps) {
   );
 }
 
+function TransmisorPresionT2() {
+  return (
+    <div style={{ width: 48, height: 62, position: 'relative' }} title="Transmisor de presión">
+      <svg width="48" height="62" viewBox="0 0 104 134" aria-hidden>
+        <rect x="12" y="10" width="80" height="70" rx="16" fill="#1f8fd8" stroke="#0f5f96" strokeWidth="2" />
+        <rect x="38" y="80" width="28" height="16" rx="3" fill="#1f8fd8" stroke="#0f5f96" strokeWidth="2" />
+        <rect x="40" y="96" width="24" height="10" rx="2" fill="#b8c0c8" stroke="#8a949e" />
+        <rect x="45" y="106" width="14" height="16" fill="#9aa4ae" stroke="#7d8791" />
+        <path d="M45 111h14M45 115h14M45 119h14" stroke="#7d8791" fill="none" />
+        <circle cx="52" cy="45" r="33" fill="#e9ecef" stroke="#b9c0c7" strokeWidth="2" />
+        <circle cx="52" cy="45" r="27" fill="#f6f7f8" stroke="#d5dadf" />
+        <rect x="33" y="30" width="38" height="22" rx="3" fill="#8fe36f" stroke="#1b2a20" strokeWidth="2" />
+        {[33, 47.5, 62].map((x) => <rect key={x} x={x} y="57" width="9" height="8" rx="1.5" fill="#2b3138" />)}
+      </svg>
+    </div>
+  );
+}
+
+function PresostatoT2() {
+  return (
+    <div style={{ width: 56, height: 51, position: 'relative' }} title="Presostato">
+      <svg width="56" height="51" viewBox="0 16 120 110" aria-hidden>
+        <rect x="10" y="20" width="100" height="74" rx="8" fill="#f4f5f6" stroke="#c8ced4" strokeWidth="2" />
+        <rect x="16" y="26" width="88" height="62" rx="6" fill="none" stroke="#dde1e5" />
+        <rect x="34" y="32" width="38" height="44" rx="2" fill="#12161a" />
+        <path d="M40 38h5M40 44h5M40 50h5M40 56h5M40 62h5M40 68h5M56 38h5M56 44h5M56 50h5M56 56h5" stroke="#cfd6dc" strokeWidth="1.2" fill="none" />
+        <rect x="46" y="48" width="3" height="10" fill="#cfd6dc" />
+        <rect x="62" y="44" width="3" height="8" fill="#cfd6dc" />
+        <ellipse cx="90" cy="92" rx="6" ry="2.5" fill="#3a3f44" />
+        <rect x="48" y="94" width="24" height="12" rx="2" fill="#d4aa3a" stroke="#9a7a1f" />
+        <rect x="52" y="106" width="16" height="16" fill="#c79a2c" stroke="#9a7a1f" />
+        <path d="M52 111h16M52 115h16M52 119h16" stroke="#9a7a1f" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
 function TankT2Node({ data }: NodeProps) {
   const d = data as Data;
   const psi = typeof d.psi === 'number' ? d.psi : null;
-  const trip = psi != null && psi >= 55;
   return (
     <div className="tank" style={{ width: 130, height: 350 }}>
-      <SteelTank w={130} h={350} fill={psi == null ? null : Math.min(90, 30 + psi * 0.8)} id="prt2">
-        <rect x="50" y="-26" width="26" height="26" rx="3" fill="#2b323b" stroke="#8a96a8" />
-        <rect x="92" y="-26" width="30" height="26" rx="3" fill="#232b34" stroke="#8a96a8" />
-        <circle cx="107" cy="-13" r="8" fill={trip ? '#ff5d5d' : '#a02323'} />
-      </SteelTank>
+      <SteelTank w={130} h={350} fill={psi == null ? null : Math.min(90, 30 + psi * 0.8)} id="prt2" />
+      <div style={{ position: 'absolute', left: 6, top: -56, zIndex: 2, pointerEvents: 'none' }}>
+        <TransmisorPresionT2 />
+      </div>
+      <div style={{ position: 'absolute', left: 74, top: -49, zIndex: 2, pointerEvents: 'none' }}>
+        <PresostatoT2 />
+      </div>
       <div className="psi"><span>Presión (PSI)</span><strong>{psi == null ? '—' : psi.toFixed(0)}</strong></div>
       <span className="tag" style={{ left: 36, top: 150 }}>TANQUE T2</span>
-      <span className="tag" style={{ left: 2, top: -66, textAlign: 'center' }}>TRANSMISOR<br />DE PRESIÓN</span>
-      <span className="tag" style={{ left: 128, top: -22 }}>PRESOSTATO</span>
+      <div style={{ position: 'absolute', left: 30, top: -84, transform: 'translateX(-50%)', zIndex: 2, pointerEvents: 'none' }}>
+        <InstrumentTag label="TRANSMISOR DE PRESIÓN" size={T2_LABEL_SIZE} />
+      </div>
+      <div style={{ position: 'absolute', left: 102, top: -77, transform: 'translateX(-50%)', zIndex: 2, pointerEvents: 'none' }}>
+        <InstrumentTag label="PRESOSTATO" size={T2_LABEL_SIZE} />
+      </div>
       <Port id="inR" position={Position.Right} style={{ top: 320 }} />
       <Port id="air1" position={Position.Right} style={{ top: 225 }} />
       <Port id="air2" position={Position.Right} style={{ top: 241 }} />
@@ -317,10 +366,10 @@ function HoseEdge({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
 /* ───────────── Geometría (idéntica a BOSETOS/scada-pressure) ───────────── */
 const fixed = { draggable: false, selectable: false };
 const junction = (id: string, cx: number, cy: number): Node => ({ id, type: 'junction', position: { x: cx - 1, y: cy - 1 }, data: {}, ...fixed });
-const valve = (valveId: string, cx: number, cy: number, orientation: 'h' | 'v', nominal: boolean): Node => ({
+const valve = (valveId: string, cx: number, cy: number, orientation: 'h' | 'v', nominal: boolean, tag?: string): Node => ({
   id: valveId, type: 'valve', ...fixed,
   position: orientation === 'h' ? { x: cx - 35, y: cy - 20 } : { x: cx - 20, y: cy - 35 },
-  data: { valveId, label: valveId, orientation, nominal },
+  data: { valveId, label: valveId, orientation, nominal, ...(orientation === 'h' ? { pressureTag: true, tagSide: 'r' } : {}), ...(tag ? { tag } : {}) },
 });
 const end = (id: string, x: number, y: number, side: 'r' | 't'): Node => ({ id, type: 'end', position: { x, y }, data: { side }, ...fixed });
 
@@ -330,15 +379,16 @@ const BASE_NODES: Node[] = [
   { id: 't2', type: 'tankT2', position: { x: 622, y: 840 }, data: {}, ...fixed },
   { id: 'ac', type: 'charger', position: { x: 760, y: 1040 }, data: {}, ...fixed },
   { id: 'PV', type: 'propValve', position: { x: 445, y: 715 }, data: {}, ...fixed },
-  /* Posición nominal: V2, V5, V6 abiertas · V1, V3, V4, V7 cerradas */
-  valve('V1', 300, 948, 'h', false), valve('V2', 388, 865, 'v', true), valve('V3', 300, 785, 'h', false), valve('V4', 770, 1213, 'h', false),
-  valve('V5', 835, 1270, 'v', true), valve('V6', 760, 1330, 'h', true), valve('V7', 405, 1475, 'v', false),
+  /* Posición nominal: V2, V5 abiertas · V1, V3, V4, V6, V7 cerradas */
+  valve('V1', 300, 948, 'h', false, 'lever-top-h'), valve('V2', 388, 865, 'v', true, 'lever-top-v'), valve('V3', 300, 785, 'h', false), valve('V4', 770, 1213, 'h', false, 'side-right'),
+  valve('V5', 835, 1270, 'v', true, 'lever-right'), valve('V6', 760, 1330, 'h', false), valve('V7', 57, 1160, 'v', false, 'left'),
   junction('JTL', 388, 735), junction('JV3', 388, 785), junction('JV1', 388, 948),
-  junction('JLt2', 553, 985), junction('JLb2', 553, 1330), junction('JU', 585, 735), junction('JB', 585, 1160),
+  junction('JLt2', 553, 985), junction('JLb2', 553, 1330), junction('JU', 585, 735), junction('JRB', 585, 1160),
   junction('JR2', 457, 985),
   junction('JT', 405, 1388), junction('JD', 835, 1330), junction('J4', 835, 1213), junction('JE', 835, 1160),
-  end('END1', 253, 936, 'r'), end('END3', 253, 773, 'r'), end('END4', 723, 1201, 'r'),
-  { id: 'SUPPLY', type: 'supply', position: { x: 305, y: 1545 }, data: { side: 't' }, ...fixed },
+  junction('JA', 57, 1377), junction('JB', 57, 948),
+  end('END3', 253, 773, 'r'), end('END4', 723, 1201, 'r'),
+  { id: 'SUPPLY', type: 'supply', position: { x: 87, y: 1319 }, data: { side: 'l' }, ...fixed },
 ];
 
 const ed = (id: string, source: string, sh: string, target: string, th: string, type: 'pipe' | 'hose' = 'pipe'): Edge => ({
@@ -347,7 +397,10 @@ const ed = (id: string, source: string, sh: string, target: string, th: string, 
 
 const EDGES: Edge[] = [
   ed('o1', 't1', 'out', 'JT', 't'), ed('o2', 'JT', 'r', 'pump', 'suction'),
-  ed('o3', 'V7', 't', 'JT', 'b'), ed('o4', 'SUPPLY', 't', 'V7', 'b'),
+  ed('o4', 'SUPPLY', 'l', 'JA', 'r'),
+  ed('o5', 'JA', 't', 'V7', 'b'),
+  ed('o6', 'V7', 't', 'JB', 'b'),
+  ed('o7', 'JB', 'r', 'V1', 'l'),
   ed('u1', 'pump', 'discharge', 'JD', 'b'),
   ed('l1', 'JD', 'l', 'V6', 'r'), ed('l2', 'V6', 'l', 'JLb2', 'r'), ed('l3', 'JLb2', 't', 'JLt2', 'b'),
   ed('l4', 'JLt2', 'l', 'JR2', 'r'), ed('l5', 'JR2', 'b', 't1', 'inR'),
@@ -355,13 +408,33 @@ const EDGES: Edge[] = [
   ed('t4', 'JE', 'l', 't2', 'inR'), ed('t6a', 'ac', 'o1', 't2', 'air1'), ed('t6b', 'ac', 'o2', 't2', 'air2'),
   ed('h1', 'pump', 'air', 'ac', 'b', 'hose'),
   ed('s1', 'J4', 'l', 'V4', 'r'), ed('s2', 'V4', 'l', 'END4', 'r'),
-  ed('r1', 't2', 'outL', 'JB', 'r'), ed('r2', 'JB', 't', 'JU', 'b'), ed('r3', 'JU', 'l', 'PV', 'r'),
+  ed('r1', 't2', 'outL', 'JRB', 'r'), ed('r2', 'JRB', 't', 'JU', 'b'), ed('r3', 'JU', 'l', 'PV', 'r'),
   ed('r4', 'PV', 'l', 'JTL', 'r'), ed('r5', 'JTL', 'b', 'JV3', 't'),
   ed('v1', 'JV3', 'l', 'V3', 'r'), ed('v2', 'V3', 'l', 'END3', 'r'),
   ed('v3', 'JV3', 'b', 'V2', 't'), ed('v4', 'V2', 'b', 'JV1', 't'),
-  ed('f1', 'END1', 'r', 'V1', 'l'), ed('f2', 'V1', 'r', 'JV1', 'l'),
+  ed('f2', 'V1', 'r', 'JV1', 'l'),
   ed('n1', 'JV1', 'b', 't1', 'in'),
 ];
+
+/* Válvula que gobierna cada tramo: si está cerrada, el agua no circula por él. */
+const EDGE_VALVE: Record<string, string> = {
+  o4: 'V7', o5: 'V7', o6: 'V7', o7: 'V7',
+  l1: 'V6', l2: 'V6', l3: 'V6', l4: 'V6', l5: 'V6',
+  s1: 'V4', s2: 'V4',
+  v1: 'V3', v2: 'V3',
+};
+
+const HORIZONTAL_TAG_PLAN = { open: 'top', closed: 'right', unknown: 'right' } as const;
+const VERTICAL_TAG_PLAN = { open: 'top', closed: 'top', unknown: 'top' } as const;
+const TAG_PLAN = {
+  V1: HORIZONTAL_TAG_PLAN,
+  V2: VERTICAL_TAG_PLAN,
+  V3: HORIZONTAL_TAG_PLAN,
+  V4: HORIZONTAL_TAG_PLAN,
+  V5: VERTICAL_TAG_PLAN,
+  V6: HORIZONTAL_TAG_PLAN,
+  V7: VERTICAL_TAG_PLAN,
+} as const;
 
 const edgeTypes = { pipe: PipeEdge, hose: HoseEdge };
 
@@ -381,6 +454,7 @@ function Flow({ senal }: { senal: PresionSenal }) {
       if (n.type === 'valve') {
         const nom = (n.data as Data).nominal;
         data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        data.tagPlan = TAG_PLAN[String(n.id) as keyof typeof TAG_PLAN];
       }
       if (n.type === 'supply') data.active = senal.online && senal.valvulas.V7 === true;
       if (n.type === 'end') data.active = activo;
@@ -388,10 +462,11 @@ function Flow({ senal }: { senal: PresionSenal }) {
     });
   }, [senal]);
 
-  const edges = useMemo<Edge[]>(() => EDGES.map((e) => ({
-    ...e,
-    data: { active: e.id === 'o3' || e.id === 'o4' ? senal.online && senal.valvulas.V7 === true : senal.online && senal.bomba === true },
-  })), [senal]);
+  const edges = useMemo<Edge[]>(() => EDGES.map((e) => {
+    const gate = EDGE_VALVE[e.id];
+    const active = senal.online && (gate ? senal.valvulas[gate] === true : senal.bomba === true);
+    return { ...e, data: { active } };
+  }), [senal]);
 
   useEffect(() => {
     const el = ref.current;

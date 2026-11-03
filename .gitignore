@@ -32,3 +32,5 @@ backend/auditoria/*.jsonl
 _antes_restauracion_*/
 .commitmsg.txt
 subir-github.bat
+recrear-backend.bat
+subir-yerri.bat

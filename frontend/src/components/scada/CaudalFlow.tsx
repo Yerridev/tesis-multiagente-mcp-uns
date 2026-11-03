@@ -1,5 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
+import { InstrumentTag, tagSize } from './InstrumentTag';
+import { PumpTag } from './PumpTag';
 
 /* ============================================================
    Diagrama mímico de CAUDAL (MCC-09) — puerto de BOSETOS/scada-flow
@@ -55,7 +57,6 @@ function EndNode({ data }: NodeProps) {
   return (
     <div className={`pipe-end pipe-end--${side}`}>
       <div className="pipe-end__flange" />
-      {d.active === true && <span className="drip" />}
       <Port id={side} position={side === 'l' ? Position.Left : Position.Top} />
     </div>
   );
@@ -83,12 +84,23 @@ function ValveNode({ data }: NodeProps) {
   const orientation = String(d.orientation) as 'h' | 'v';
   const open = (d.open as boolean | null) ?? null;
   const vertical = orientation === 'v';
+  const left = vertical && d.valveId === 'V5';
   return (
     <div className="valve nodrag nopan" title="Solo lectura · sin órdenes al PLC" style={{ width: vertical ? 40 : 70, height: vertical ? 70 : 40 }}>
-      <div className="valve__hit" style={vertical ? { left: -15, top: 15, width: 70, height: 40, transform: 'rotate(90deg)' } : { left: 0, top: 0, width: 70, height: 40 }}>
+      <div
+        className="valve__hit"
+        style={vertical
+          ? { left: -15, top: 15, width: 70, height: 40, transform: left ? 'scaleX(-1) rotate(90deg)' : 'rotate(90deg)' }
+          : { left: 0, top: 0, width: 70, height: 40 }}
+      >
         <ValveGlyph open={open} />
       </div>
-      <span className="valve__tag" style={vertical ? { left: 46, top: 26 } : { left: 0, top: -18, width: 70 }}>
+      <span
+        className="valve__tag"
+        style={vertical
+          ? (left ? { right: 46, top: 26 } : { left: 46, top: 26 })
+          : { left: 0, top: -18, width: 70 }}
+      >
         {String(d.label ?? '')}
       </span>
       {vertical ? (
@@ -110,6 +122,8 @@ function ValveNode({ data }: NodeProps) {
 function ProportionalValveNode({ data }: NodeProps) {
   const d = data as Data;
   const pct = typeof d.pct === 'number' ? d.pct : null;
+  const label = `VÁLVULA PROPORCIONAL · ${pct == null ? 'SIN DATO' : `${pct} %`}`;
+  const labelSize = tagSize([label], 11, 40);
   return (
     <div className="valve" title="Solo lectura · sin órdenes al PLC" style={{ width: 70, height: 40 }}>
       <svg width="70" height="40" viewBox="0 0 70 40" overflow="visible" aria-hidden>
@@ -121,9 +135,9 @@ function ProportionalValveNode({ data }: NodeProps) {
         <rect x="14" y="-12" width="42" height="4" rx="2" fill="#0003" />
         {pct != null && <rect x="14" y="-12" width={(42 * pct) / 100} height="4" rx="2" fill="#fff" />}
       </svg>
-      <span className="tag" style={{ left: -45, top: -58, width: 170, textAlign: 'center' }}>
-        VÁLVULA PROPORCIONAL · {pct == null ? 'SIN DATO' : `${pct} %`}
-      </span>
+      <div style={{ position: 'absolute', left: 35, top: -58, transform: 'translateX(-50%)', zIndex: 2, pointerEvents: 'none' }}>
+        <InstrumentTag label={label} size={labelSize} maxChars={40} />
+      </div>
       <Port id="l" position={Position.Left} />
       <Port id="r" position={Position.Right} />
     </div>
@@ -139,23 +153,53 @@ function GaugeNode({ data }: NodeProps) {
   const value = typeof d.value === 'number' ? d.value : null;
   const shown = value ?? 0;
   const ang = (v: number) => -120 + (Math.min(80, Math.max(0, v)) / 80) * 240;
+  const digital = d.kind === 'flow';
+  const pct = Math.min(1, Math.max(0, shown / 80));
+
   return (
     <div className="gauge" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`${label}: ${value == null ? 'sin datos' : shown.toFixed(0)}`}>
-        <circle cx="50" cy="50" r="47" className="dial__face" />
-        {Array.from({ length: 17 }, (_, i) => i * 5).map((v) => (
-          <line key={v} x1="50" x2="50" y1="6" y2={v % 20 === 0 ? 15 : 11} className="dial__tick" transform={`rotate(${ang(v)} 50 50)`} />
-        ))}
-        {[0, 20, 40, 60, 80].map((v) => (
-          <text key={v} className="dial__num" textAnchor="middle" x={50 + 31 * Math.sin((ang(v) * Math.PI) / 180)} y={53 - 31 * Math.cos((ang(v) * Math.PI) / 180)}>{v}</text>
-        ))}
-        <g style={{ transform: `rotate(${ang(shown)}deg)`, transformOrigin: '50px 50px', transition: 'transform .5s ease-out', opacity: value == null ? 0.25 : 1 }}>
-          <line x1="50" y1="52" x2="50" y2="17" className="dial__needle" />
-        </g>
-        <circle cx="50" cy="50" r="5" className="dial__hub" />
-        <text x="50" y="82" textAnchor="middle" className="dial__value">{value == null ? 'SIN DATO' : shown.toFixed(0)}</text>
+      <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`${label}: ${value == null ? 'sin datos' : shown.toFixed(2)}`}>
+        {digital ? (
+          <>
+            <rect x="2" y="2" width="96" height="96" rx="10" fill="#1a2733" stroke="#6f8193" strokeWidth="3" />
+            <rect x="10" y="14" width="80" height="46" rx="5" fill="#06121a" stroke="#0b2a3a" strokeWidth="1.5" />
+            <text x="50" y="45" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="22" fill="#7ff0ff" opacity="0.07">88.88</text>
+            <text x="50" y="45" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="22" fill={value == null ? '#4a5b69' : '#7ff0ff'}>
+              {value == null ? '---' : shown.toFixed(2)}
+            </text>
+            <text x="50" y="56" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="8" fill="#4cc3f2">
+              {value == null ? 'SIN DATO' : 'L/min'}
+            </text>
+            <rect x="14" y="70" width="72" height="8" rx="4" fill="#06121a" stroke="#0b2a3a" />
+            <rect x="14" y="70" width={72 * pct} height="8" rx="4" fill="#4cc3f2" style={{ transition: 'width .5s ease-out' }} opacity={value == null ? 0.25 : 1} />
+            <text x="14" y="92" fontFamily="monospace" fontSize="8" fill="#8da2b3">0</text>
+            <text x="86" y="92" textAnchor="end" fontFamily="monospace" fontSize="8" fill="#8da2b3">80</text>
+          </>
+        ) : (
+          <>
+            <circle cx="50" cy="50" r="47" className="dial__face" />
+            {Array.from({ length: 17 }, (_, i) => i * 5).map((v) => (
+              <line key={v} x1="50" x2="50" y1="6" y2={v % 20 === 0 ? 15 : 11} className="dial__tick" transform={`rotate(${ang(v)} 50 50)`} />
+            ))}
+            {[0, 20, 40, 60, 80].map((v) => (
+              <text key={v} className="dial__num" textAnchor="middle" x={50 + 31 * Math.sin((ang(v) * Math.PI) / 180)} y={53 - 31 * Math.cos((ang(v) * Math.PI) / 180)}>{v}</text>
+            ))}
+            <g style={{ transform: `rotate(${ang(shown)}deg)`, transformOrigin: '50px 50px', transition: 'transform .5s ease-out', opacity: value == null ? 0.25 : 1 }}>
+              <line x1="50" y1="52" x2="50" y2="17" className="dial__needle" />
+            </g>
+            <circle cx="50" cy="50" r="5" className="dial__hub" />
+            <text x="50" y="82" textAnchor="middle" className="dial__value">{value == null ? 'SIN DATO' : shown.toFixed(0)}</text>
+          </>
+        )}
       </svg>
-      <span className="tag" style={{ left: 0, top: -24, whiteSpace: 'nowrap' }}>{label}</span>
+      <span
+        className="tag"
+        style={digital
+          ? { left: '50%', transform: 'translateX(-50%)', top: -29, whiteSpace: 'nowrap', padding: '6px 7px', lineHeight: 1 }
+          : { left: 0, top: -24, whiteSpace: 'nowrap' }}
+      >
+        {label}
+      </span>
       {inline ? (
         <>
           <Port id="t" position={Position.Top} />
@@ -201,9 +245,10 @@ function PumpNode({ data }: NodeProps) {
               <line key={a} x1="156" y1="50" x2="156" y2="34" stroke="#5b6b7d" strokeWidth="3" strokeLinecap="round" transform={`rotate(${a} 156 50)`} />
             ))}
           </g>
-          <circle cx="12" cy="12" r="5" className={on && known ? 'led led--on' : 'led'} />
-          <text x="22" y="16" className="pump__label">{!known ? 'SIN DATO' : on ? 'MARCHA' : 'PARO'}</text>
         </svg>
+      </div>
+      <div style={{ position: 'absolute', left: 51, top: 12, transform: 'translate(-50%,-100%)', zIndex: 3, pointerEvents: 'none' }}>
+        <PumpTag on={on} known={known} />
       </div>
       <Port id="discharge" position={Position.Top} style={{ left: 170 }} />
       <Port id="suction" position={Position.Right} />
@@ -320,7 +365,7 @@ const BASE_NODES: Node[] = [
   /* Posición nominal según el manual INDUCONTROL del módulo: V2, V5 abiertas · V1, V3, V4, V6, V7 cerradas */
   valve('V1', 810, 888, 'h', false), valve('V2', 745, 730, 'v', true), valve('V3', 810, 640, 'h', false), valve('V4', 490, 775, 'h', false),
   valve('V5', 440, 830, 'v', true), valve('V6', 500, 888, 'h', false), valve('V7', 728, 1325, 'v', false),
-  junction('JT', 728, 1263), junction('JSUP-B', 820, 1360), junction('JSUP-T', 820, 1263), junction('J888', 440, 888), junction('J775', 440, 775), junction('J667', 440, 667),
+  junction('JT', 728, 1263), junction('JSUP-B', 820, 1360), junction('JSUP-T', 820, 1260), junction('J888', 440, 888), junction('J775', 440, 775), junction('J667', 440, 667),
   junction('JTL', 440, 585), junction('JTR', 745, 585), junction('J640', 745, 640), junction('J888R', 745, 888), junction('JE', 715, 888),
   end('END1', 845, 876, 'l'), end('END3', 845, 628, 'l'), end('END4', 525, 763, 'l'),
 ];
@@ -343,6 +388,16 @@ const EDGES: Edge[] = [
   ed('f1', 'END1', 'l', 'V1', 'r'), ed('f2', 'V1', 'l', 'J888R', 'r'),
 ];
 
+const CAUDAL_TAG_PLAN = {
+  V1: { open: 'top', closed: 'left', unknown: 'left' },
+  V2: { open: 'right', closed: 'top', unknown: 'top' },
+  V3: { open: 'top', closed: 'left', unknown: 'left' },
+  V4: { open: 'top', closed: 'left', unknown: 'left' },
+  V5: { open: 'right', closed: 'top', unknown: 'top' },
+  V6: { open: 'top', closed: 'right', unknown: 'right' },
+  V7: { open: 'right', closed: 'top', unknown: 'top' },
+} as const;
+
 const edgeTypes = { pipe: PipeEdge };
 
 /* ───────────── Lienzo con re-encaje automático ───────────── */
@@ -362,13 +417,24 @@ function Flow({ senal }: { senal: CaudalSenal }) {
       if (n.type === 'valve') {
         const nom = (n.data as Data).nominal;
         data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        data.tagPlan = CAUDAL_TAG_PLAN[String(n.id) as keyof typeof CAUDAL_TAG_PLAN];
       }
       if (n.type === 'end') data.active = activo;
       return { ...n, data };
     });
   }, [senal]);
 
-  const edges = useMemo<Edge[]>(() => EDGES.map((e) => ({ ...e, data: { active: e.id.startsWith('o4') || e.id === 'o3' ? senal.online && senal.valvulas.V7 === true : senal.online && senal.bomba === true } })), [senal.online, senal.bomba, senal.valvulas]);
+  const edges = useMemo<Edge[]>(() => EDGES.map((e) => {
+    const pumpActive = senal.online && senal.bomba === true;
+    const supplyBranch = e.id.startsWith('o4') || e.id === 'o3';
+    const v6Branch = ['v1', 'v2', 'v3'].includes(e.id);
+    const active = supplyBranch
+      ? senal.online && senal.valvulas.V7 === true
+      : v6Branch
+        ? pumpActive && senal.valvulas.V6 === true
+        : pumpActive;
+    return { ...e, data: { active } };
+  }), [senal.online, senal.bomba, senal.valvulas]);
 
   useEffect(() => {
     const el = ref.current;

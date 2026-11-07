@@ -42,6 +42,7 @@ ejecutor-mcp.bat
 # ===== .bat locales movidos a bat/ (siguen sin subirse) =====
 bat/subir-github.bat
 bat/subir-yerri.bat
+bat/subir-nuestro.bat
 bat/recrear-backend.bat
 bat/reconstruir-backend.bat
 bat/ejecutor-mcp.bat

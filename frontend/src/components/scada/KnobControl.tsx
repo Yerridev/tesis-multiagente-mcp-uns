@@ -11,9 +11,11 @@ interface Props {
   disabled?: boolean;
   onChange: (value: number) => void;
   onCommit?: (value: number) => void;
+  /** El número bajo la perilla se puede escribir directamente (azul, letra blanca). */
+  editable?: boolean;
 }
 
-export function KnobControl({ value, min = 0, max, step = 1, ticks, label, disabled, onChange, onCommit }: Props) {
+export function KnobControl({ value, min = 0, max, step = 1, ticks, label, disabled, onChange, onCommit, editable }: Props) {
   const sweep = 270;
   const bounded = Math.max(min, Math.min(max, value));
   const angle = -sweep / 2 + ((bounded - min) / (max - min)) * sweep;
@@ -58,7 +60,13 @@ export function KnobControl({ value, min = 0, max, step = 1, ticks, label, disab
         <circle cx="100" cy="100" r="62" fill={`url(#knob-${max})`} stroke="#0b2a5c" strokeWidth="3" />
         <line x1="100" y1="100" x2={nx} y2={ny} stroke="#cfe6ff" strokeWidth="4" strokeLinecap="round" />
       </svg>
-      <span className="ca-readout">{num(bounded, 0)}</span><small className="ca-knob-sub">{label}</small>
+      {editable
+        ? <input type="number" className="ca-readout ca-readout--edit" min={min} max={max} step={step} value={value}
+            aria-label={label}
+            onChange={(e) => onChange(Number(e.target.value))}
+            onBlur={() => { if (!disabled) onCommit?.(bounded); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }} />
+        : <span className="ca-readout">{num(bounded, 0)}</span>}<small className="ca-knob-sub">{label}</small>
     </div>
   );
 }

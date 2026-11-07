@@ -1762,3 +1762,77 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Vista general: equipos 2x2 | agente coordinador (mismo ancho y alto) ---------- */
+.lz-planta {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+.lz-planta-cuerpo {
+  background: var(--white, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
+}
+.lz-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lz-planta-agente {
+  position: static !important;
+  height: auto;
+  align-self: stretch;
+}
+.lz-planta-agente .lz-agente-log { flex: 1; max-height: none; min-height: 200px; }
+@media (max-width: 1100px) {
+  .lz-planta { grid-template-columns: 1fr; }
+  .lz-tarjetas { grid-template-columns: 1fr; }
+}
+.lz-atencion-ancha {
+  margin: 16px 0 24px; background: var(--white, #fff); border: 1px solid var(--border, #e5e7eb);
+  border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
+}
+/* espacio real al final de la vista (el margen inferior se pierde en el contenedor con scroll) */
+.lz-vista:has(.lz-atencion-ancha)::after { content: ''; display: block; height: 28px; flex: none; }
+
+/* ---------- Agente coordinador: siempre visible con su caja de envio ---------- */
+.lz-planta-agente {
+  position: sticky !important; top: 16px; align-self: start;
+  height: calc(100vh - 140px); min-height: 480px; overflow: hidden;
+}
+.lz-planta-agente .lz-agente { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.lz-planta-agente .lz-agente-log { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
+.lz-agente-form {
+  display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 14px;
+  border: 1.5px solid var(--border, #d0d5dd); border-radius: 999px; background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06); transition: border-color .15s, box-shadow .15s;
+}
+.lz-agente-form:focus-within { border-color: #ee3f3a; box-shadow: 0 0 0 4px rgba(238, 63, 58, .14); }
+.lz-agente-form input, .lz-agente-form input:focus { border: 0; outline: none; box-shadow: none; background: transparent; font-size: 13.5px; padding: 8px 0; }
+.lz-agente-form .btn { border: 0; border-radius: 999px; padding: 9px 18px; font-size: 13px; background: #ee3f3a; color: #fff; font-weight: 700; }
+.lz-agente-form .btn:hover:not(:disabled) { background: #c62f2b; }
+.lz-agente-form .btn:disabled { background: #e5e7eb; color: #9ca3af; }
+@media (max-width: 1100px) { .lz-planta-agente { position: static !important; height: 560px; } }
+
+
+/* ---------- Primera pantalla: Equipos y Agente terminan justo en el pie de la ventana (sin scroll interno) ---------- */
+.lz-planta { height: auto; min-height: calc(100vh - 185px); align-items: stretch; flex: none; }  /* flex:none: .lz-vista es flex y la encogia */
+.lz-planta-cuerpo { display: flex; flex-direction: column; min-height: 0; overflow: visible; padding: 14px; }
+.lz-planta-cuerpo > section { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
+.lz-planta-cuerpo .lz-sec-cab { margin: 0; }
+.lz-planta-cuerpo .lz-tarjetas { flex: 1; grid-auto-rows: minmax(min-content, 1fr); gap: 10px; }
+/* tarjeta compacta: todo cabe en su mitad de alto */
+.lz-planta-cuerpo .lz-tarjeta { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.lz-planta-cuerpo .lz-tj-principal .num { font-size: 26px; }
+.lz-planta-cuerpo .lz-tarjeta > * { flex: none; }
+.lz-planta-cuerpo .lz-tarjeta > .eq-spark, .lz-planta-cuerpo .lz-tarjeta > .lz-tj-spark-vacio { flex: 1 1 30px; min-height: 30px; max-height: 90px; height: auto !important; }
+.lz-planta-cuerpo .lz-tj-spark-vacio { display: grid; place-items: center; padding: 0; }
+.lz-planta-cuerpo .lz-tj-chips { flex-wrap: wrap; }
+.lz-planta-cuerpo .lz-tj-diag { padding: 5px 8px; }
+.lz-planta-cuerpo .lz-tj-diag span, .lz-planta-cuerpo .lz-tj-diag p { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.lz-planta-cuerpo .lz-tj-pie { padding-top: 6px; margin-top: auto; }
+.lz-planta-cuerpo .lz-tj-pie .btn { padding: 6px 12px; }
+.lz-planta-agente { position: static !important; top: auto; height: 100%; min-height: 0; align-self: stretch; }
+@media (max-width: 1100px) {
+  .lz-planta { height: auto; }
+  .lz-planta-cuerpo { overflow: visible; }
+  .lz-planta-agente { height: 560px; }
+}

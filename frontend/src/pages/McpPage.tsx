@@ -3,7 +3,7 @@ import { usePlant } from '../context/PlantContext';
 import { api } from '../services/api';
 import type { AgentTool } from '../types';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
-import { IconDatabase, IconHistory, IconSignal } from '../components/common/Icons';
+import { McpFlow } from '../components/agents/McpFlow';
 
 const SERVERS = [
   {
@@ -23,12 +23,6 @@ const SERVERS = [
   },
 ];
 
-const SERVER_ICON: Record<string, typeof IconSignal> = {
-  'tiempo-real': IconSignal,
-  'histórico': IconHistory,
-  'análisis': IconDatabase,
-};
-
 export function McpPage() {
   const { link, health, history, load, error, reload } = usePlant();
   const [tools, setTools] = useState<AgentTool[] | null>(null);
@@ -43,62 +37,31 @@ export function McpPage() {
   if (load === 'loading') return <LoadingBlock />;
   if (load === 'error') return <ErrorBlock message={error ?? undefined} onRetry={reload} />;
 
+  const estadoDe = (key: string) =>
+    key === 'tiempo-real'
+      ? link === 'connected' ? 'ok' : link === 'disconnected' ? 'err' : 'busy'
+      : key === 'histórico'
+        ? history.length ? 'ok' : 'pending'
+        : health === 'ok' ? 'ok' : health === 'error' ? 'err' : 'pending';
+
   return (
     <>
-      <section className="srv-grid">
-        {SERVERS.map((server) => {
-          const Icon = SERVER_ICON[server.key] ?? IconDatabase;
-          const serverTools = (tools ?? []).filter((t) => t.server === server.key);
-          const state =
-            server.key === 'tiempo-real'
-              ? link === 'connected'
-                ? 'ok'
-                : link === 'disconnected'
-                  ? 'err'
-                  : 'busy'
-              : server.key === 'histórico'
-                ? history.length
-                  ? 'ok'
-                  : 'pending'
-                : health === 'ok'
-                  ? 'ok'
-                  : health === 'error'
-                    ? 'err'
-                    : 'pending';
-          return (
-            <article className="srv-card" key={server.key}>
-              <div className="srv-head">
-                <span className={`srv-dot ${state}`} />
-                <span className="srv-name">{server.name}</span>
-              </div>
-              <p className="srv-desc">{server.desc}</p>
-              <span className="srv-tools-label">Herramientas disponibles · {serverTools.length}</span>
-              <ul className="srv-tools">
-                {serverTools.length === 0 ? (
-                  <li className="muted">sin herramientas publicadas</li>
-                ) : (
-                  serverTools.map((tool) => (
-                    <li key={tool.name} title={tool.description}>
-                      {tool.name}
-                    </li>
-                  ))
-                )}
-              </ul>
-              <p className="srv-desc" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <Icon width="14" height="14" /> Estado derivado de la señal real correspondiente
-              </p>
-            </article>
-          );
-        })}
-      </section>
+      <div className="mcp-grid">
+        <section className="panel mcp-srv">
+          <div className="panel-head">
+            <div>
+              <h2>Servidores MCP</h2>
+              <span className="panel-sub">Cada servidor con sus herramientas · {(tools ?? []).length} herramienta(s) publicadas</span>
+            </div>
+          </div>
+          {tools === null ? (
+            <div className="af-wrap mf-wrap" style={{ display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Cargando herramientas…</div>
+          ) : (
+            <McpFlow servidores={SERVERS.map((s) => ({ ...s, estado: estadoDe(s.key) }))} tools={tools} />
+          )}
+        </section>
 
-      <p className="agent-note">
-        <b>Origen de la información:</b> <code>/api/agent/tools</code> publica las herramientas del agente. Los datos
-        provienen de <code>/api/equipment</code>, <code>/api/history</code> y <code>/hubs/plant</code>; todas las
-        herramientas son de solo lectura y ninguna escribe en el PLC.
-      </p>
-
-      <section className="panel">
+      <section className="panel mcp-reg">
         <div className="panel-head">
           <div>
             <h2>Registro de llamadas</h2>
@@ -127,6 +90,13 @@ export function McpPage() {
           </table>
         </div>
       </section>
+      </div>
+
+      <p className="agent-note">
+        <b>Origen de la información:</b> <code>/api/agent/tools</code> publica las herramientas del agente. Los datos
+        provienen de <code>/api/equipment</code>, <code>/api/history</code> y <code>/hubs/plant</code>; todas las
+        herramientas son de solo lectura y ninguna escribe en el PLC.
+      </p>
     </>
   );
 }

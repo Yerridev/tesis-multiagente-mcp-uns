@@ -4,7 +4,7 @@ import { ComingSoon } from './components/common/ComingSoon';
 import { IconBranch, IconSettings, IconTopology } from './components/common/Icons';
 import { useRoute, type Route } from './router';
 import { DashboardPage } from './pages/DashboardPage';
-import { MonitorPage } from './pages/MonitorPage';
+import { ArquitecturaLogicaPage } from './pages/ArquitecturaLogicaPage';
 import { AgentPage } from './pages/AgentPage';
 import { McpPage } from './pages/McpPage';
 import { ModuleCaudalPage } from './pages/ModuleCaudalPage';
@@ -23,7 +23,7 @@ function View({ route, onNavigate }: { route: Route; onNavigate: (route: Route) 
     case 'dashboard':
       return <DashboardPage onNavigate={onNavigate} />;
     case 'monitor':
-      return <MonitorPage />;
+      return <DashboardPage onNavigate={onNavigate} />; // monitoreo ahora vive en el Dashboard
     case 'agents':
       return <AgentPage />;
     case 'mcp':
@@ -59,13 +59,7 @@ function View({ route, onNavigate }: { route: Route; onNavigate: (route: Route) 
         />
       );
     case 'arch-logical':
-      return (
-        <ComingSoon
-          icon={<IconBranch />}
-          title="Pendiente de implementar"
-          text="Aquí se mostrará el flujo de datos: PLC → publicador MQTT → broker → ingest → PostgreSQL → API REST → dashboard y agentes IA. Esta sección todavía no está disponible."
-        />
-      );
+      return <ArquitecturaLogicaPage />;
     case 'mod-presion':
       return <ModulePresionPage />;
     case 'mod-temp':

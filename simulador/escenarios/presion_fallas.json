@@ -1,0 +1,16 @@
+{
+  "nombre": "Presion: arranque PC a 20 psi y fallas",
+  "eventos": [
+    {"t": 2,   "accion": "escribir", "url": "pid/setpoint_pc", "valor": 20.0, "nota": "SP 20 psi"},
+    {"t": 5,   "accion": "escribir", "url": "DATOS_PAC/INICIO_PC", "valor": true, "nota": "INICIO_PC (flanco)"},
+    {"t": 200, "accion": "escribir", "url": "pid/valvula_pc", "valor": 5.0, "nota": "valvula 50 %"},
+    {"t": 350, "accion": "fuga", "valor": 0.3, "nota": "fuga importante: el PID se satura"},
+    {"t": 500, "accion": "fuga", "valor": 0.0},
+    {"t": 600, "accion": "sensor_congelado", "valor": true, "nota": "transmisor congelado"},
+    {"t": 660, "accion": "sensor_congelado", "valor": false},
+    {"t": 700, "accion": "agua_t1", "valor": false, "nota": "T1 sin agua: la bomba debe parar"},
+    {"t": 760, "accion": "agua_t1", "valor": true},
+    {"t": 800, "accion": "plc_desconectado", "valor": true, "nota": "cFP caido"},
+    {"t": 860, "accion": "plc_desconectado", "valor": false}
+  ]
+}

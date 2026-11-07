@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import type { AgentCall, AgentStatus } from '../types';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { IconArrow } from '../components/common/Icons';
+import { AgentFlow } from '../components/agents/AgentFlow';
 
 interface ChatMessage {
   id: number;
@@ -39,6 +40,12 @@ const TOOL_AGENT: Record<string, string> = {
 
 const AGENT_KEY = (key: string) => `mcp-agente-${key}`;
 
+/* Agente -> servidores MCP que ilumina en el diagrama */
+const AGENTE_SERVIDORES: Record<string, string[]> = {
+  ingesta: ['srv-rt'], validacion: ['srv-rt'], analisis: ['srv-hist'], reportes: ['srv-hist', 'srv-traz'],
+};
+const NOMBRE_A_KEY: Record<string, string> = Object.fromEntries(AGENTES.map((a) => [a.name, a.key]));
+
 export function AgentPage() {
   const { link, health, history, load, error, reload } = usePlant();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -48,6 +55,8 @@ export function AgentPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<AgentStatus | null>(null);
+  const [activos, setActivos] = useState<Set<string>>(new Set());
+  const apagar = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
 
@@ -124,6 +133,18 @@ export function AgentPage() {
     try {
       const reply = await api.agentAsk(message);
       setMessages((prev) => [...prev, { id: nextId.current++, role: 'agent', text: reply.reply, tools: reply.tools, model: reply.model ?? null }]);
+      {
+        const on = new Set<string>(['orquestador']);
+        for (const tool of reply.tools) {
+          const key = NOMBRE_A_KEY[TOOL_AGENT[tool.name] ?? ''] ?? 'orquestador';
+          on.add(key);
+          for (const srv of AGENTE_SERVIDORES[key] ?? []) on.add(srv);
+        }
+        on.add('reportes'); on.add('srv-traz');   // toda respuesta queda registrada
+        setActivos(on);
+        if (apagar.current) clearTimeout(apagar.current);
+        apagar.current = setTimeout(() => setActivos(new Set()), 6000);
+      }
       setActions((prev) => {
         const rows: Action[] = reply.tools.map((tool) => ({
           ts: reply.ts,
@@ -168,61 +189,66 @@ export function AgentPage() {
 
   return (
     <div className="agents-view">
-      {/* 5 agentes de la arquitectura (tarjetas contraíbles) */}
-      <div className="cards cards-agents">
-        {agentCards.map((agent) => (
-          <div className={`agent-card${open[agent.key] ? ' open' : ''}`} data-agent={agent.key} key={agent.key}>
-            <button
-              type="button"
-              className="agent-toggle"
-              aria-expanded={open[agent.key] ? 'true' : 'false'}
-              onClick={() => toggleCard(agent.key)}
-            >
-              <span className={`srv-dot ${dotState(agent.key)}`} />
-              <span className="agent-name">{agent.name}</span>
-              <span className="agent-caret">▸</span>
-            </button>
-            <div className="agent-body">
-              <div className="agent-body-inner">
-                <div className="agent-pad">
-                  <p className="agent-desc">{agent.desc}</p>
-                  <div className="agent-row">
-                    <span className="agent-k">Usa el servidor MCP de</span>
-                    <span className="agent-v">{agent.server}</span>
-                  </div>
-                  <div className="agent-row">
-                    <span className="agent-k">Última tarea</span>
-                    <span className={`agent-v agent-task${lastTask(agent.name).startsWith('Sin') ? ' is-empty' : ''}`}>
-                      {lastTask(agent.name)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+      <div className="agents-grid">
+        {/* Historial de acciones */}
+        <section className="panel ag-hist">
+          <div className="panel-head">
+            <div>
+              <h2>Historial de acciones</h2>
+              <span className="panel-sub">Qué hizo cada agente y resultado</span>
+            </div>
+            <span className="tag">{actions.length} acción(es)</span>
+          </div>
+
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Agente</th>
+                  <th>Qué hizo</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actions.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="empty">
+                      Sin acciones registradas aún — aparecerán aquí las interacciones con los agentes.
+                    </td>
+                  </tr>
+                ) : (
+                  actions.map((action, index) => (
+                    <tr key={`${action.ts}-${index}`}>
+                      <td>{new Date(action.ts).toLocaleTimeString('es-PE', { hour12: false })}</td>
+                      <td style={{ fontWeight: 700 }}>{action.agent}</td>
+                      <td style={{ whiteSpace: 'normal', maxWidth: 320 }}>{action.what}</td>
+                      <td>
+                        <span className={`tag ${action.ok ? 'tag-ok' : 'tag-err'}`}>
+                          {action.ok ? 'OK' : 'ERROR'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {/* Agentes de IA en tiempo real (diagrama de nodos) */}
+        <section className="panel ag-flow">
+          <div className="panel-head">
+            <div>
+              <h2>Agentes de IA</h2>
+              <span className="panel-sub">Flujo en tiempo real · rojo = trabajando ahora</span>
             </div>
           </div>
-        ))}
-      </div>
+          <AgentFlow agentes={AGENTES} estado={dotState} tarea={lastTask} activos={activos} ocupado={busy}
+            llm={{ activo: llm, modelo: status?.model }} />
+        </section>
 
-      <p className="agents-note">
-        {llm ? (
-          <>
-            <b>IA ACTIVA · OPENROUTER:</b> el asistente consulta el modelo <code>{status?.model}</code> con los datos en
-            vivo de <code>/api/equipment</code>, <code>/api/history</code> y <code>/hubs/plant</code> (50 consultas
-            gratis al día). Las herramientas son deterministas y de solo lectura: <b>sin escritura al PLC</b>. Toca una
-            tarjeta para ver sus detalles.
-          </>
-        ) : (
-          <>
-            <b>MOTOR DE REGLAS:</b> punto de estado = señal real del equipo (verde activo · naranja ocupado · rojo caído
-            · gris sin verificar). Las respuestas se resuelven con reglas deterministas sobre los datos en vivo; el
-            modelo LLM se activa al configurar <code>OPENROUTER_API_KEY</code>. Toca una tarjeta para ver sus detalles.
-          </>
-        )}
-      </p>
-
-      <div className="agents-bottom">
         {/* Chat (atendido por el Agente Orquestador) */}
-        <section className="panel panel-chat">
+        <section className="panel panel-chat ag-chat">
           <div className="panel-head">
             <div>
               <h2>Asistente de agentes IA</h2>
@@ -300,52 +326,24 @@ export function AgentPage() {
           </form>
         </section>
 
-        {/* Historial de acciones */}
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>Historial de acciones</h2>
-              <span className="panel-sub">Qué hizo cada agente y resultado</span>
-            </div>
-            <span className="tag">{actions.length} acción(es)</span>
-          </div>
-
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Agente</th>
-                  <th>Qué hizo</th>
-                  <th>Resultado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {actions.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="empty">
-                      Sin acciones registradas aún — aparecerán aquí las interacciones con los agentes.
-                    </td>
-                  </tr>
-                ) : (
-                  actions.map((action, index) => (
-                    <tr key={`${action.ts}-${index}`}>
-                      <td>{new Date(action.ts).toLocaleTimeString('es-PE', { hour12: false })}</td>
-                      <td style={{ fontWeight: 700 }}>{action.agent}</td>
-                      <td style={{ whiteSpace: 'normal', maxWidth: 320 }}>{action.what}</td>
-                      <td>
-                        <span className={`tag ${action.ok ? 'tag-ok' : 'tag-err'}`}>
-                          {action.ok ? 'OK' : 'ERROR'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </div>
+
+      <p className="agents-note">
+        {llm ? (
+          <>
+            <b>IA ACTIVA · OPENROUTER:</b> el asistente consulta el modelo <code>{status?.model}</code> con los datos en
+            vivo de <code>/api/equipment</code>, <code>/api/history</code> y <code>/hubs/plant</code> (50 consultas
+            gratis al día). Las herramientas son deterministas y de solo lectura: <b>sin escritura al PLC</b>. 
+          </>
+        ) : (
+          <>
+            <b>MOTOR DE REGLAS:</b> punto de estado = señal real del equipo (verde activo · naranja ocupado · rojo caído
+            · gris sin verificar). Las respuestas se resuelven con reglas deterministas sobre los datos en vivo; el
+            modelo LLM se activa al configurar <code>OPENROUTER_API_KEY</code>.
+          </>
+        )}
+      </p>
+
     </div>
   );
 }

@@ -211,32 +211,6 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
             </div>
           </section>
 
-          <section className="lz-atencion" aria-labelledby="lz-t-atencion">
-            <div className="lz-sec-cab">
-              <h2 id="lz-t-atencion">Requiere atención</h2>
-              <small>{atencion.length} equipo(s)</small>
-            </div>
-            {atencion.length === 0 ? (
-              <div className="lz-vacio">Todos los equipos operan sin alarmas.</div>
-            ) : (
-              atencion.map(({ config, sev, diag }) => (
-                <button
-                  type="button"
-                  key={config.id}
-                  className={`lz-aten-fila sev-${sev}`}
-                  onClick={() => onNavigate(RUTA[config.id])}
-                >
-                  <span className="lz-punto" />
-                  <b>{config.codigo}</b>
-                  <span>
-                    {sev === 'sin_datos'
-                      ? 'Sin datos en vivo: revisar comunicación con el PLC'
-                      : `${diag?.nombre ?? 'Atención'}: ${diag?.explicacion ?? ''}`}
-                  </span>
-                </button>
-              ))
-            )}
-          </section>
         </main>
 
         <aside className="lz-planta-agente panel">
@@ -250,6 +224,33 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
           <AgentePanel />
         </aside>
       </div>
+
+      <section className="lz-atencion lz-atencion-ancha" aria-labelledby="lz-t-atencion">
+        <div className="lz-sec-cab">
+          <h2 id="lz-t-atencion">Requiere atención</h2>
+          <small>{atencion.length} equipo(s)</small>
+        </div>
+        {atencion.length === 0 ? (
+          <div className="lz-vacio">Todos los equipos operan sin alarmas.</div>
+        ) : (
+          atencion.map(({ config, sev, diag }) => (
+            <button
+              type="button"
+              key={config.id}
+              className={`lz-aten-fila sev-${sev}`}
+              onClick={() => onNavigate(RUTA[config.id])}
+            >
+              <span className="lz-punto" />
+              <b>{config.codigo}</b>
+              <span>
+                {sev === 'sin_datos'
+                  ? 'Sin datos en vivo: revisar comunicación con el PLC'
+                  : `${diag?.nombre ?? 'Atención'}: ${diag?.explicacion ?? ''}`}
+              </span>
+            </button>
+          ))
+        )}
+      </section>
     </div>
   );
 }

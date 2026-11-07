@@ -934,3 +934,219 @@
 .process-mimic .pm-vp-info{position:absolute;left:82px;top:8px;display:grid;grid-template-columns:auto 1fr;gap:0 7px;padding:6px 10px;background:#05090d;border:1px solid var(--pm-line);border-radius:6px;white-space:nowrap;pointer-events:none;color:var(--pm-text)}
 .process-mimic .pm-vp-info strong{grid-row:1/3;align-self:center;color:var(--pm-water);font:700 23px monospace}
 .process-mimic .pm-vp-info span,.process-mimic .pm-vp-info small{color:var(--pm-muted);font-size:11px}
+
+/* ── Cabecera de módulo con modo REAL / SIMULADOR ── */
+.mod-header{--accent:var(--uss-green);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:13px 20px;border-left:6px solid var(--accent);border-radius:14px;background:linear-gradient(120deg,#111,#292929);color:#fff;box-shadow:var(--shadow-lg)}
+.mod-header--sin-comunicacion{--accent:#ef4444}.mod-header--reconectando,.mod-header--simulado{--accent:#f59e0b}
+.mod-header__id{font:700 10px var(--mono);letter-spacing:.14em;color:var(--accent)}
+.mod-header__title{margin:4px 0 0;font-size:22px;font-weight:800;text-transform:uppercase}
+.mod-header__meta{margin:4px 0 0;font:600 11px var(--mono);letter-spacing:.04em;color:var(--accent)}
+.mod-header__actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-btn{display:grid;grid-template-columns:auto auto;column-gap:8px;align-items:center;padding:6px 14px;border-radius:12px;border:1px solid #3f3f46;background:#18181b;color:#fff;cursor:pointer;text-align:left;transition:border-color .2s,background .2s}
+.mode-btn:hover{border-color:#a1a1aa}
+.mode-btn__label{font-size:10px;text-transform:uppercase;color:#a1a1aa}
+.mode-btn__value{font-weight:800;font-size:14px}
+.mode-btn__action{grid-column:1/-1;font-size:11px;color:#a1a1aa}
+.mode-btn--real .mode-btn__value{color:var(--uss-green)}
+.mode-btn--simulador{border-color:#f59e0b;background:rgba(245,158,11,.12)}
+.mode-btn--simulador .mode-btn__value{color:#f59e0b}
+.status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(239,68,68,.15)}
+.status-badge__dot{width:10px;height:10px;border-radius:50%;background:#ef4444}
+.status-badge--conectado{background:rgba(74,222,0,.15)}.status-badge--conectado .status-badge__dot{background:var(--uss-green);box-shadow:0 0 9px var(--uss-green)}
+.status-badge--reconectando,.status-badge--simulado{background:rgba(245,158,11,.15)}.status-badge--reconectando .status-badge__dot,.status-badge--simulado .status-badge__dot{background:#f59e0b}
+@media (max-width:900px){.mod-header{padding:9px 16px}.mod-header__title{font-size:17px}}
+
+/* ── Caudal: mímico a la izquierda (alto completo) · tendencia + controles a la derecha ── */
+.lv-main.ca-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.35fr);align-items:stretch}
+.ca-layout > .mimic-panel{display:flex;flex-direction:column;min-height:0}
+.ca-layout > .mimic-panel .ca-canvas,.ca-layout > .mimic-panel .pm-canvas{flex:1 1 auto;min-height:420px;height:auto}
+.ca-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ca-side .lv-trend{flex:0 0 auto}
+.ca-side .lv-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1100px){.lv-main.ca-layout{grid-template-columns:1fr}.ca-side .lv-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.ca-side .lv-controls{grid-template-columns:1fr}}
+/* orden en 3 columnas: Opciones · Controlador · Perturbación / Control PID (doble) · Histórico */
+.ca-side .lv-options{order:1}.ca-side .lv-signals{order:2}.ca-side .ca-pert{order:3}.ca-side .lv-pid{order:4;grid-column:span 3}
+@media (max-width:700px){.ca-side .lv-pid{grid-column:auto}}
+.ca-side .lv-chart,.ca-side .lv-chart > div{flex:none}.ca-side .lv-chart .chart{flex:none;height:230px;min-height:0}
+
+/* cabecera más fina */
+.mod-header{padding:8px 16px;border-left-width:5px;border-radius:12px;gap:12px}
+.mod-header__id{font-size:9px}
+.mod-header__title{margin-top:2px;font-size:16px}
+.mod-header__meta{margin-top:2px;font-size:10px}
+.mode-btn{display:inline-flex;gap:6px;padding:4px 10px;border-radius:9px}
+.mode-btn__label{font-size:9px}.mode-btn__value{font-size:12px}
+.status-badge{padding:5px 11px;font-size:11px;gap:6px}.status-badge__dot{width:8px;height:8px}
+/* panel emergente Histórico */
+.co-top{flex-wrap:wrap;gap:6px}
+.co-hist{max-width:340px}
+.co-hist-list{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin:0}
+.co-hist-list dt{color:#6b7280;font-size:13px}.co-hist-list dd{margin:0;text-align:right;font-weight:800}
+.co-hist-list dd.nodata{color:#9ca3af}
+.co-hist-dot{font-style:normal;color:#ef4444;margin-right:4px}.co-hist-dot.on{color:var(--uss-green)}
+
+/* ── Caudal: los 4 paneles en UNA fila (compactos) ── */
+.ca-side .lv-controls{grid-template-columns:minmax(0,.95fr) minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr);gap:10px;align-items:stretch}
+.ca-side .lv-options{order:1}.ca-side .lv-signals{order:2}.ca-side .lv-pid{order:3;grid-column:auto}.ca-side .ca-pert{order:4}
+.ca-side .lv-control-card{padding:8px 10px;min-height:0;border-radius:12px;font-size:12px}
+.ca-side .lv-control-card h3{font-size:10px;padding-bottom:4px;margin-bottom:6px}
+.ca-side .lv-control-card small{font-size:10px}
+.ca-side .co-top{gap:4px}
+.ca-side .co-top .pill{font-size:9px;padding:2px 6px}
+.ca-side .co-ver{font-size:11px;padding:3px 6px}
+.ca-side .lv-opt-btns button{font-size:11px;padding:4px 6px}
+.ca-side .lv-signals div{padding:4px 0;font-size:11px}
+.ca-side .lv-signals b{font-size:11px}
+/* PID: campos arriba, perilla al lado, más pequeña */
+.ca-side .lv-pid-body{gap:6px;justify-content:space-between;align-items:center}
+.ca-side .lv-pid dl{min-width:0}
+.ca-side .lv-pid dl div{gap:6px;padding:3px 0}
+.ca-side .lv-pid dt{font-size:11px}
+.ca-side .lv-pid input,.ca-side .ca-pert input,.ca-side .ca-command input{width:52px;padding:3px 4px;font-size:11px}
+.ca-side .lv-pid button,.ca-side .ca-pert button{font-size:11px;padding:4px 8px}
+.ca-side .ca-knob{width:92px;height:92px}
+.ca-side .ca-knob-wrap{gap:2px}
+.ca-side .ca-readout{font-size:12px;padding:1px 8px}
+.ca-side .ca-knob-sub{font-size:8px}
+.ca-side .ca-pert-sub{font-size:9px;margin:0 0 2px}
+@media (max-width:1300px){.ca-side .lv-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.ca-side .lv-controls{grid-template-columns:1fr}}
+/* paneles de control estirados hasta abajo (alineados con el final del mímico) */
+.ca-side .lv-controls{flex:1 1 auto;grid-template-rows:1fr;align-content:stretch}
+.ca-side .lv-control-card{height:100%;display:flex;flex-direction:column}
+.ca-side .lv-pid > button,.ca-side .ca-pert > button:last-child{margin-top:auto}
+@media (max-width:1300px){.ca-side .lv-controls{grid-template-rows:none}}
+/* PID: tabla Kc | Ti | Td arriba (nombre encima del valor) y Setpoint grande debajo */
+.ca-side .lv-pid-body{flex-direction:column;align-items:stretch;gap:8px;flex:1 1 auto}
+.ca-side .lv-pid dl{display:grid;grid-template-columns:repeat(3,1fr);margin:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ca-side .lv-pid dl div{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;border-bottom:0;border-right:1px solid var(--border)}
+.ca-side .lv-pid dl div:last-child{border-right:0}
+.ca-side .lv-pid dt{padding:4px 0;text-align:center;font-size:11px;background:#f4f6f3;border-bottom:1px solid var(--border)}
+.ca-side .lv-pid dd{margin:0;padding:4px}
+.ca-side .lv-pid dd input{width:100%;box-sizing:border-box;text-align:center;font-size:13px;padding:4px 2px}
+.ca-side .lv-pid .ca-command{flex:1 1 auto;justify-content:center}
+.ca-side .lv-pid .ca-knob{width:130px;height:130px}
+.ca-side .lv-pid .ca-readout{font-size:14px}
+.ca-side .lv-pid .ca-knob-sub{font-size:9px}
+.ca-side .lv-pid .ca-command input{width:70px;text-align:center}
+
+/* número del setpoint editable: azul con letra blanca, también cuando está bloqueado */
+.ca-readout--edit{width:76px;box-sizing:border-box;text-align:center;-moz-appearance:textfield}
+.ca-readout--edit::-webkit-outer-spin-button,.ca-readout--edit::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ca-readout--edit:focus{outline:2px solid #4aa3ff;outline-offset:2px}
+.ca-side .lv-pid .lv-pid-apply{margin-top:0;width:100%}
+.ca-side .lv-pid .ca-command .ca-readout--edit{width:80px}
+/* columna PID dividida: Control PID arriba · Setpoint abajo */
+.ca-side .ca-pid-col{order:3;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ca-side .ca-pid-col .lv-pid{height:auto;flex:0 0 auto}
+.ca-side .ca-pid-col .ca-sp{flex:1 1 auto}
+.ca-side .ca-sp .ca-command{flex:1 1 auto;justify-content:center}
+.ca-side .ca-sp .ca-knob{width:112px;height:112px}
+/* cabecera de tendencia en una línea: título a la izquierda · muestras + REAL a la derecha */
+.ca-side .lv-trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ca-trend-right{display:flex;align-items:center;gap:8px}
+.ca-trend-right .pill{font-size:10px;padding:2px 8px}
+/* Setpoint arriba · Control PID abajo */
+.ca-side .ca-pid-col .ca-sp{order:1}.ca-side .ca-pid-col .lv-pid:not(.ca-sp){order:2}
+/* Perturbación: perilla centrada en vertical y del mismo tamaño que la del setpoint */
+.ca-side .ca-pert .ca-pert-sub{margin-top:auto}
+.ca-side .ca-pert .ca-knob{width:112px;height:112px}
+/* Controlador con estilo tabla (como la del PID): misma distribución, se mantienen los fondos de los valores */
+.ca-side .ca-sig-table{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ca-side .ca-sig-table > div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;padding:0;border-bottom:1px solid var(--border)}
+.ca-side .ca-sig-table > div:last-child{border-bottom:0}
+.ca-side .ca-sig-table span{display:flex;align-items:center;padding:6px 8px;background:#f4f6f3;border-right:1px solid var(--border);font-weight:700;color:var(--muted);font-size:11px}
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{display:flex;align-items:center;justify-content:center;margin:4px;text-align:center}
+.ca-side .lv-signals .ca-sig-table{display:block;padding:0;border-bottom:1px solid var(--border)}.ca-side .lv-signals .ca-sig-table > div{display:grid;gap:0}
+/* PID más compacto → más espacio para la perilla del Setpoint */
+.ca-side .ca-pid-col .lv-pid:not(.ca-sp) .lv-pid-body{gap:5px}
+.ca-side .lv-pid dt{padding:2px 0;font-size:10px}
+.ca-side .lv-pid dd{padding:2px}
+.ca-side .lv-pid dd input{font-size:11px;padding:2px}
+.ca-side .lv-pid .lv-pid-apply{padding:3px 8px;font-size:10px}
+.ca-side .ca-sp .ca-knob{width:140px;height:140px}
+/* sin recuadro negro de foco al hacer clic en la perilla (teclado: aro azul suave) */
+.ca-knob:focus{outline:none}
+.ca-knob:focus-visible{outline:none;filter:drop-shadow(0 0 4px #4aa3ff)}
+/* perilla del Setpoint más grande */
+.ca-side .ca-sp .ca-knob{width:170px;height:170px}
+/* quitar el tope max-width:130px (y 104/88 en pantallas medianas) que impedía agrandarla */
+.ca-side .ca-sp .ca-knob,.ca-side .ca-pert .ca-knob{max-width:none}
+.ca-side .ca-sp .ca-knob{width:145px;height:145px}
+/* tendencia más baja (había un min-height:360px) para que todo quepa sin scroll */
+.ca-side .lv-chart{min-height:0;padding:8px 10px}
+.ca-side .lv-chart .chart{height:200px}
+.ca-side .lv-chart .chart-legend{margin-bottom:4px!important}
+.ca-side .lv-chart-foot{padding-top:6px}
+/* ── Caudal: TODO cabe en la pantalla (sin scroll). La tendencia absorbe el espacio que sobre/falte ── */
+@media (min-width:1101px){
+  .lv-scada:has(> .ca-layout){height:calc(100vh - 112px);min-height:560px}
+  .lv-main.ca-layout{flex:1 1 auto;min-height:0}
+  .ca-layout > .mimic-panel .ca-canvas,.ca-layout > .mimic-panel .pm-canvas{min-height:0}
+  .ca-side{min-height:0}
+  .ca-side .lv-trend{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart > div{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart .chart{flex:1 1 auto;height:auto;min-height:110px}
+  .ca-side .lv-controls{flex:0 0 auto}
+  .ca-side .ca-sp .ca-knob{width:125px;height:125px}
+}
+/* "Modo" y "REAL/SIMULADOR" con el mismo tamaño de letra */
+.mode-btn__label,.mode-btn__value{font-size:12px;line-height:1.2}
+.mode-btn .mode-btn__label{font-size:12px;font-weight:800;letter-spacing:0;text-transform:uppercase}.mode-btn .mode-btn__value{font-size:12px;font-weight:800;letter-spacing:0}
+
+/* ── Nivel / Presión / Temperatura con el mismo diseño que Caudal ── */
+.co-fieldset{border:0;margin:0;padding:0;min-width:0}
+.ca-side .lv-options > .co-ver{margin-top:6px;width:100%}
+.ca-side .lv-options .co-top{display:flex;flex-direction:column;align-items:stretch}
+.ca-side .lv-options .co-top .co-ver{width:100%;justify-content:center}
+/* PID de solo lectura (presión): valor centrado como celda */
+.ca-side .lv-pid dd.ca-pid-ro{padding:4px 2px;text-align:center;font:700 12px var(--mono)}
+/* PidEditor de nivel con estilo tabla */
+.ca-side .pid-editor{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:8px;overflow:hidden;gap:0}
+.ca-side .pid-editor label{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;border-right:1px solid var(--border);text-align:center;font-weight:800;font-size:10px;color:var(--muted)}
+.ca-side .pid-editor label:nth-of-type(3){border-right:0}
+.ca-side .pid-editor label::first-line{line-height:1}
+.ca-side .pid-editor input{margin:2px;width:auto;box-sizing:border-box;text-align:center;font:700 11px var(--mono);padding:2px;border:1px solid var(--border);border-radius:5px}
+.ca-side .pid-editor > button{grid-column:1/-1;margin:5px;padding:3px 8px;font-size:10px;border:1px solid #9eb09a;border-radius:6px;background:#eef5eb;font-weight:700;cursor:pointer}
+.ca-side .pid-editor > .co-aviso{grid-column:1/-1;padding:0 6px 4px}
+/* Apertura de válvula (nivel) dentro de la 4ª columna */
+.ca-side .lv-valve .lv-valve-state{display:flex;justify-content:center;gap:10px;font-size:11px}
+.ca-side .lv-valve .lv-valve-cmds{margin-top:auto}
+.ca-side .ca-sp .co-aviso{font-size:10px;text-align:center}
+.ca-side .pid-editor label{min-width:0}
+.ca-side .pid-editor input{width:calc(100% - 4px);min-width:0}
+/* tabla Controlador compacta (Presión tiene 8 filas) y valores en una sola línea */
+.ca-side .ca-sig-table > div{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.ca-side .ca-sig-table span{padding:3px 6px;font-size:10px;line-height:1.15}
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{margin:2px 3px;padding:1px 4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* la tendencia nunca se aplasta por debajo de 220 px (si no cabe, la página hace scroll en vez de solaparse) */
+@media (min-width:1101px){.ca-side .lv-trend{min-height:220px}.lv-scada:has(> .ca-layout){height:auto;min-height:calc(100vh - 112px)}}
+/* Nivel: el pill REAL/DRY-RUN ya se muestra junto a la tendencia → ocultar el de Opciones */
+.ca-side .lv-options .co-fieldset .co-top > .pill:not(.pill-dark){display:none}
+/* valores de Controlador: se ven completos; si no caben, saltan de línea dentro de la celda */
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;line-height:1.2;text-align:center;padding:2px 4px}
+/* Presión / Temperatura: su 4º panel no tiene botón abajo → centrar el bloque (antes quedaba pegado al fondo) */
+.ca-side .ca-pert:not(:has(> button)) > :last-child{margin-bottom:auto}
+.ca-side .ca-pert > small{display:block;text-align:center;width:100%}
+/* cabecera: acento #EE3F3A (borde, id y ficha del PLC) en modo REAL; título siempre blanco; simulador sigue en naranja */
+.mod-header,.mod-header--conectado,.mod-header--sin-comunicacion{--accent:#ee3f3a}
+.mod-header--reconectando,.mod-header--simulado{--accent:#f59e0b}
+.mod-header__title{color:#fff}
+
+/* ── Opciones: MISMO ORDEN en los 4 SCADA ──
+   1 Órdenes · 2 Histórico · 3 usuario · 4 botones (Iniciar, Detener…) · 5 mensaje de estado al fondo */
+.ca-side .lv-options{display:flex;flex-direction:column}
+.ca-side .lv-options .lv-opt-btns{flex:0 0 auto}
+.ca-side .lv-options > small:last-child{margin-top:auto}
+/* Nivel (ControlPanel): reordenar sus piezas con el mismo esquema */
+.ca-side .lv-options > .co-fieldset:first-of-type{display:contents}
+.ca-side .lv-options > h3{order:0}
+.ca-side .lv-options .co-top{order:1;margin-bottom:0}
+.ca-side .lv-options > .co-ver{order:2;margin-top:6px}
+.ca-side .lv-options .co-top .pill-dark{order:3;display:block;align-self:center;background:none;border:0;color:var(--muted);font-size:10px;font-weight:400;padding:0;text-transform:none}
+.ca-side .lv-options .lv-opt-btns{order:4;margin-top:6px}
+.ca-side .lv-options .co-condiciones,.ca-side .lv-options .co-aviso{order:5;margin-top:auto !important;padding-left:0 !important;list-style:none;text-align:center;font-size:10px !important}
+.ca-side .lv-options > .co-fieldset .co-top{display:contents}.ca-side .lv-options > .co-fieldset .co-ver{order:1}
+.ca-side .lv-options > small{order:3;margin-top:4px}.ca-side .lv-options > small:last-child{order:5;margin-top:auto}.ca-side .lv-options button,.ca-side .lv-options .co-top{flex:0 0 auto}

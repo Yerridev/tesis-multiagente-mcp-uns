@@ -4,6 +4,8 @@ import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { TrendChart } from '../components/charts/TrendChart';
 import { TempFlow, type TempSenal } from '../components/scada/TempFlow';
 import { KnobControl } from '../components/scada/KnobControl';
+import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
+import { HistoricoModal } from '../components/scada/HistoricoModal';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
 import type { ControlOrden, TemperaturaSenales } from '../types';
 import { enviarControlTemperatura, estadoControlTemperatura, listarOrdenesTemperatura, tokenControl } from '../services/control';
@@ -16,6 +18,7 @@ export function ModuleTempPage() {
   const { byId, historyFor, load, error, reload, now, link, temperaturaSenal } = usePlant();
   const eq=byId[ID]; const samples=useMemo(()=>historyFor(ID).slice(-300),[historyFor]);
   const [pid,setPid]=useState({kp:'',ti:'',td:''});
+  const [modo,setModo]=useState<Modo>('real'), [historicoAbierto,setHistoricoAbierto]=useState(false);
   const [armado,setArmado]=useState(false), [mensaje,setMensaje]=useState('Comprobando control protegido…'), [ordenes,setOrdenes]=useState<ControlOrden[]>([]), [abierto,setAbierto]=useState(false), [sp,setSp]=useState(25), [spArrastre,setSpArrastre]=useState<number|null>(null), [usuario,setUsuario]=useState(tokenControl());
   const cargar=async()=>{ const [estado,lista]=await Promise.all([estadoControlTemperatura(),listarOrdenesTemperatura()]); const e=estado.datos?.datos; setArmado(estado.ok&&e?.realArmado===true); setUsuario(estado.datos?.usuario??tokenControl()); if(lista.ok&&lista.datos)setOrdenes(lista.datos); if(!estado.ok)setMensaje(`Control: ${estado.error??'sin respuesta'}`); else if(!e?.realArmado)setMensaje('Control físico bloqueado: modo REAL no armado'); else if(e.proceso.selector!=='PC')setMensaje('Control bloqueado: selector en HMI/local'); else if(!e.telemetria.fresca)setMensaje('Control bloqueado: telemetría vencida'); else setMensaje('Control REAL habilitado · M30 y MW100-MW103'); };
   useEffect(()=>{ void cargar(); const i=window.setInterval(()=>void cargar(),3000); return()=>window.clearInterval(i); },[]);
@@ -44,17 +47,86 @@ export function ModuleTempPage() {
     setMensaje(r.ok?`${clave.toUpperCase()}: enviada; esperando lectura posterior`:`${clave.toUpperCase()}: ${r.error??'rechazado'}`);
     window.setTimeout(()=>void cargar(),700);
   };
+  // Guarda de una vez los parámetros PID que se hayan escrito (cada uno se verifica con lectura del PLC)
+  const guardarPidTodos=async()=>{ for(const k of ['kp','ti','td'] as const){ if(pid[k]!=='') await guardarPid(k); } };
+  const estadoCom:EstadoCom=online?'conectado':link==='reconnecting'||link==='connecting'?'reconectando':'sin-comunicacion';
+  // SIMULADOR: solo cambia lo que se DIBUJA en el mímico; las órdenes quedan deshabilitadas.
+  const sim=modo==='simulador';
+  const w=Math.sin(now/2400);
+  const senalSim:TempSenal={online:true,tempControl:48.2+w,tempCooler:21.4+w*.4,nivel1Pct:72,nivel2Pct:65,bomba:true,caudal:14.8+w,heaterPct:52,coolerOn:true,valvulas:{V1:true,V2:true,V3:true,V4:false},altoTE:false,bajoTE:false,altoTP:false,bajoTP:false};
+  const salida=Math.max(0,Math.min(100,real(temperaturaSenal,'pid/salida_pct')??0));
+  const pidVal=(k:'kp'|'ti'|'td')=>real(temperaturaSenal,`pid/${k}`);
+
   return <div className="lv-scada">
-    <div className="lv-title"><div><span>{eq.id}</span><h2>Módulo de control de temperatura</h2></div><div className={`lv-live ${online?'on':''}`}><i/>{online?'PLC conectado':'Sin comunicación'}</div></div>
-    <div className="lv-main"><section className="panel mimic-panel ca-flow tp-flow"><div className="panel-head"><div><h2>Diagrama mímico</h2><span className="panel-sub">Twido · {eq.ip} · telemetría y control real protegido</span></div><span className={`pill ${online?'pill-ok pill-live':'pill-err'}`}><i/>{online?'PLC conectado':'Sin comunicación'}</span></div><TempFlow senal={senal}/></section><section className="lv-trend"><div className="lv-trend-head"><div><b>Tendencia del proceso</b><small>Temperatura y consigna en °C</small></div><span>{samples.length} muestras · {online?(link==='connected'?'en vivo':link):'PLC sin datos'}</span></div><div className="lv-chart"><TrendChart series={series} unit="°C" size="tall" yTicks={[0,10,20,30,40,50,60]} timeTitle emptyText="Sin telemetría de temperatura · esperando el PLC Twido…"/></div><div className="lv-chart-foot"><span>Última lectura</span><b>{online?`${timeOnly(eq.timestamp)} · ${formatAge(edad)}`:'Sin comunicación · módulo apagado'}</b></div></section></div>
-    <div className="lv-controls">
-      <section className="lv-control-card lv-options"><h3>Opciones</h3><div className="co-top"><span className={`pill ${armado?'pill-err':'pill-warn'}`}>{armado?'REAL':'BLOQUEADO'}</span><button className="co-ver" onClick={()=>{setAbierto(true);void cargar();}}>Órdenes <span className={ordenes.length?'co-cont':'co-cont vacio'}>{ordenes.length}</span></button></div><small>{usuario} · supervisor</small><div className="lv-opt-btns"><button disabled={!puede} onClick={()=>{if(window.confirm('Iniciar el lazo de temperatura desde PC?'))void mandar('Iniciar');}}>Iniciar</button><button disabled={!armado||!online} onClick={()=>{if(window.confirm('Detener el lazo de temperatura?'))void mandar('Detener');}}>Detener</button></div><small>{mensaje}</small></section>
-      <section className="lv-control-card lv-signals"><h3>Controlador</h3><div><span>Origen de mando</span><b>{pc?'PC / SCADA WEB':hmi?'HMI / LOCAL':'Sin selección'}</b></div><div><span>T principal</span><strong>{online&&temp!=null?`${num(temp,2)} °C`:'Sin dato'}</strong></div><div><span>T enfriador</span><strong>{real(temperaturaSenal,'temperatura/enfriador_c')==null?'Sin dato':`${num(real(temperaturaSenal,'temperatura/enfriador_c')!,2)} °C`}</strong></div><div><span>Señal control</span><strong>{real(temperaturaSenal,'pid/salida_pct')==null?'Sin dato':`${num(real(temperaturaSenal,'pid/salida_pct')!,1)} %`}</strong></div></section>
-      <section className="lv-control-card lv-pid"><h3>PID y setpoint</h3><div className="lv-pid-body"><dl><div><dt>Kp</dt><dd>{real(temperaturaSenal,'pid/kp')==null?'—':num(real(temperaturaSenal,'pid/kp')!,2)}</dd></div><div><dt>Ti</dt><dd>{real(temperaturaSenal,'pid/ti')==null?'—':num(real(temperaturaSenal,'pid/ti')!,2)}</dd></div><div><dt>Td</dt><dd>{real(temperaturaSenal,'pid/td')==null?'—':num(real(temperaturaSenal,'pid/td')!,2)}</dd></div></dl><KnobControl value={setpoint} min={15} max={50} ticks={[15,20,25,30,35,40,45,50]} label="Setpoint °C" disabled={!puede} onChange={(v)=>{setSp(v);setSpArrastre(v)}} onCommit={confirmarSp}/></div><small>La perilla envía SP al PLC; Kp, Ti y Td se ajustan abajo.</small></section>
-      <section className="lv-control-card lv-temp-pid-edit"><h3>Ajuste PID del Twido</h3><p>Kp, Ti y Td se guardan por separado y se comprueban con lectura del PLC.</p>{(['kp','ti','td'] as const).map(clave=><label key={clave} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}><b style={{width:35}}>{clave.toUpperCase()}</b><input type="number" min="0" max="10000" step="1" value={pid[clave]} placeholder={String(real(temperaturaSenal,`pid/${clave}`)??'Sin dato')} onChange={e=>setPid({...pid,[clave]:e.target.value})} style={{width:100}}/><button disabled={!puede||pid[clave]===''} onClick={()=>void guardarPid(clave)}>Guardar</button></label>)}</section>
-      <section className="lv-control-card ca-pert"><h3>Salida PID</h3><p className="ca-pert-sub">Resistencia / enfriamiento</p><KnobControl value={Math.max(0,Math.min(100,real(temperaturaSenal,'pid/salida_pct')??0))} max={100} ticks={[0,20,40,60,80,100]} label="% salida" disabled onChange={()=>{}}/><small>Solo lectura</small></section>
-      <section className="lv-control-card lv-record"><h3>Histórico</h3><div className="lv-rec-icon">●</div><div><span>Tasa</span><b>1 segundo</b></div><div><span>Muestras</span><b>{samples.length}</b></div><div><span>Última lectura</span><b className="nodata">{online?timeOnly(eq.timestamp):'Sin datos'}</b></div><div><span>Fuente</span><b>MQTT / UNS</b></div></section>
+    <ModuloHeader id={eq.id} titulo="Módulo de control de temperatura" meta="Schneider Twido TWDLCAE40DRF · 192.168.114.10 · telemetría y control real protegido" estado={estadoCom} modo={modo} onModoChange={setModo}/>
+
+    <div className="lv-main ca-layout">
+      <section className="panel mimic-panel ca-flow tp-flow">
+        <div className="panel-head"><div><h2>Diagrama mímico</h2></div></div>
+        <TempFlow senal={sim?senalSim:senal}/>
+      </section>
+
+      {/* columna derecha: tendencia + paneles de control */}
+      <div className="ca-side">
+        <section className="lv-trend">
+          <div className="lv-trend-head">
+            <b>Tendencia del proceso</b>
+            <div className="ca-trend-right">
+              <span>{samples.length} muestras · {online?(link==='connected'?'en vivo':link):'PLC sin datos'}</span>
+              <span className={`pill ${armado?'pill-err':'pill-warn'}`}>{armado?'REAL':'BLOQUEADO'}</span>
+            </div>
+          </div>
+          <div className="lv-chart"><TrendChart series={series} unit="°C" size="tall" yTicks={[0,10,20,30,40,50,60]} timeTitle emptyText="Sin telemetría de temperatura · esperando el PLC Twido…"/></div>
+          <div className="lv-chart-foot"><span>Última lectura</span><b>{online?`${timeOnly(eq.timestamp)} · ${formatAge(edad)}`:'Sin comunicación · módulo apagado'}</b></div>
+        </section>
+
+        <div className="lv-controls">
+          <section className="lv-control-card lv-options"><h3>Opciones</h3>
+            <div className="co-top">
+              <button type="button" className="co-ver" onClick={()=>{setAbierto(true);void cargar();}}>Órdenes <span className={ordenes.length?'co-cont':'co-cont vacio'}>{ordenes.length}</span></button>
+              <button type="button" className="co-ver" onClick={()=>setHistoricoAbierto(true)}>Histórico</button>
+            </div>
+            <small>{usuario} · supervisor</small>
+            <div className="lv-opt-btns">
+              <button disabled={sim||!puede} onClick={()=>{if(window.confirm('Iniciar el lazo de temperatura desde PC?'))void mandar('Iniciar');}}>Iniciar</button>
+              <button disabled={sim||!armado||!online} onClick={()=>{if(window.confirm('Detener el lazo de temperatura?'))void mandar('Detener');}}>Detener</button>
+            </div>
+            <small>{mensaje}</small>
+          </section>
+
+          <section className="lv-control-card lv-signals"><h3>Controlador</h3>
+            <div className="ca-sig-table">
+              <div><span>Origen de mando</span><strong>{pc?'PC / SCADA WEB':hmi?'HMI / LOCAL':'Sin dato'}</strong></div>
+              <div><span>T principal</span><strong>{online&&temp!=null?`${num(temp,2)} °C`:'Sin dato'}</strong></div>
+              <div><span>T enfriador</span><strong>{real(temperaturaSenal,'temperatura/enfriador_c')==null?'Sin dato':`${num(real(temperaturaSenal,'temperatura/enfriador_c')!,2)} °C`}</strong></div>
+              <div><span>Señal control</span><strong>{real(temperaturaSenal,'pid/salida_pct')==null?'Sin dato':`${num(real(temperaturaSenal,'pid/salida_pct')!,1)} %`}</strong></div>
+            </div>
+          </section>
+
+          <div className="ca-pid-col">
+            <section className="lv-control-card lv-pid ca-sp"><h3>Setpoint</h3>
+              <div className="ca-command"><KnobControl value={setpoint} min={15} max={50} ticks={[15,20,25,30,35,40,45,50]} label="Setpoint °C" disabled={sim||!puede} editable onChange={(v)=>{setSp(v);setSpArrastre(v)}} onCommit={confirmarSp}/></div>
+            </section>
+            <section className="lv-control-card lv-pid"><h3>Control PID</h3>
+              <div className="lv-pid-body">
+                <dl>
+                  {(['kp','ti','td'] as const).map(k=><div key={k}><dt>{k==='kp'?'Kp':k==='ti'?'Ti':'Td'}</dt><dd><input type="number" min="0" max="10000" step="1" value={pid[k]} placeholder={pidVal(k)==null?'—':String(pidVal(k))} onChange={e=>setPid({...pid,[k]:e.target.value})}/></dd></div>)}
+                </dl>
+                <button className="lv-pid-apply" disabled={sim||!puede||(pid.kp===''&&pid.ti===''&&pid.td==='')} onClick={()=>void guardarPidTodos()}>Aplicar PID</button>
+              </div>
+            </section>
+          </div>
+
+          <section className="lv-control-card ca-pert"><h3>Salida PID</h3>
+            <p className="ca-pert-sub">Resistencia / enfriamiento</p>
+            <KnobControl value={sim?52:salida} max={100} ticks={[0,20,40,60,80,100]} label="% salida" disabled onChange={()=>{}}/>
+            <small>Solo lectura</small>
+          </section>
+        </div>
+      </div>
     </div>
+
+    <HistoricoModal abierto={historicoAbierto} onClose={()=>setHistoricoAbierto(false)} id={eq.id} online={online} muestras={samples.length} ultima={timeOnly(eq.timestamp)} fuente="MQTT / UNS"/>
     {abierto&&<div className="co-modal" role="dialog" aria-modal="true" onClick={()=>setAbierto(false)}><div className="co-modal-caja" onClick={(e)=>e.stopPropagation()}><div className="co-modal-head"><b>Órdenes de control · temperatura-mct09</b><button onClick={()=>setAbierto(false)}>×</button></div><div className="co-modal-cuerpo">{ordenes.length===0?<p className="co-vacio">Sin órdenes todavía.</p>:<div className="co-list">{ordenes.map(o=><div className="co-item" key={o.id}><span>{o.tipo}{o.parametro?` ${o.parametro}`:''}{o.valor!=null?` = ${o.valor}${o.unidad?` ${o.unidad}`:''}`:''}</span><b className={o.estado==='Confirmado'?'ok':['Rechazado','Error','Timeout'].includes(o.estado)?'err':'wait'}>{o.estado}</b><small>{o.motivo??''} {timeOnly(o.actualizada??o.expedida)}</small></div>)}</div>}</div><div className="co-modal-pie">Modo REAL · %M30 y %MW100–%MW103 · cada orden exige lectura posterior coincidente</div></div></div>}
   </div>;
 }

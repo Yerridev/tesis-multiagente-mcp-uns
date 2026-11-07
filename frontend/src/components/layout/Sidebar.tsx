@@ -1,4 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react';
+import logoAg from '../../assets/logo-ag.svg';
+import logoMini from '../../assets/logo-40x40.svg';
 import { NAV, type Route } from '../../router';
 import {
   IconAgent,
@@ -101,6 +103,8 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse, open, 
           <IconClose className="ico-close" />
           <IconMenu className="ico-menu" />
         </button>
+        <img src={logoAg} alt="" className="brand-logo brand-logo--ag" />
+        <img src={logoMini} alt="" className="brand-logo-sm" />
         <div className="brand-text">
           <strong>MCP-INDUSTRIAL</strong>
           <small>Orquestación de datos</small>

@@ -1,0 +1,18 @@
+{
+  "nombre": "Caudal: fallas inyectadas",
+  "descripcion": "Arranque a 40 L/min; cierre parcial de válvula, obstrucción, falta de agua en T1, sensor congelado y caída del PLC.",
+  "eventos": [
+    {"t": 0,   "accion": "escribir_v_real", "direccion": 400, "valor": 40.0, "nota": "SP = 40 L/min"},
+    {"t": 1,   "accion": "escribir_m_bit", "byte": 0, "bit": 2, "valor": true, "nota": "Iniciar (M0.2)"},
+    {"t": 120, "accion": "escribir_mw", "direccion": 25, "valor": 12800, "nota": "Válvula al 40 %: el PID debe compensar con más velocidad"},
+    {"t": 240, "accion": "obstruccion", "valor": 0.5, "nota": "Obstrucción del 50 %: el PID satura"},
+    {"t": 360, "accion": "obstruccion", "valor": 0.0},
+    {"t": 420, "accion": "agua_t1", "valor": false, "nota": "Tanque T1 sin agua: nivel bajo, el sistema se detiene"},
+    {"t": 480, "accion": "agua_t1", "valor": true},
+    {"t": 540, "accion": "escribir_m_bit", "byte": 0, "bit": 2, "valor": true, "nota": "Reinicio"},
+    {"t": 660, "accion": "sensor_congelado", "valor": true},
+    {"t": 720, "accion": "sensor_congelado", "valor": false},
+    {"t": 780, "accion": "plc_desconectado", "valor": true, "nota": "CP243-1 sin respuesta"},
+    {"t": 840, "accion": "plc_desconectado", "valor": false}
+  ]
+}

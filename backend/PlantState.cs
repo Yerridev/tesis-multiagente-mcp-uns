@@ -130,7 +130,9 @@ public sealed class PlantState
             Name: "Tanque MCN-09",
             Controller: eq?.Controller ?? "MicroLogix 1100",
             PlcIp: eq?.Ip ?? "192.168.114.9",
-            PlcStatus: n.MqttConectado && n.plcConectado ? "ONLINE" : "OFFLINE",
+            PlcStatus: n.MqttConectado && n.plcConectado
+                       && n.UltimoHeartbeat is DateTimeOffset hb && DateTimeOffset.Now - hb <= TimeSpan.FromSeconds(25)
+                ? "ONLINE" : "OFFLINE",
             Mode: n.Modo(),
             Level: medible ? n.Numero("nivel/cm") : null,
             Unit: "cm",
@@ -158,7 +160,11 @@ public sealed class PlantState
     /// </summary>
     public void AplicarNivel(NivelState n)
     {
-        var ts = n.UltimoMensaje;
+        // La frescura del equipo se mide con el HEARTBEAT del conector edge (el que lee el
+        // PLC), no con el último mensaje MQTT: el conector de control sigue publicando
+        // (válvula, fuente de mando) aunque el edge o el PLC ya no respondan, y eso hacía
+        // que la interfaz mostrara "PLC conectado" con el laboratorio desconectado.
+        var ts = n.UltimoHeartbeat ?? n.UltimoMensaje;
         if (ts is null) return;                       // nunca ha llegado un mensaje real
         var cm = n.Numero("nivel/cm");
         lock (_sync)

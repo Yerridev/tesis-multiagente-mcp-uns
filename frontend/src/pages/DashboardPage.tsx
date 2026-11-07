@@ -6,7 +6,7 @@ import { Banner, ErrorBlock, LoadingBlock } from '../components/common/States';
 import { EquipmentCard } from '../components/equipment/EquipmentCard';
 import { TrendChart } from '../components/charts/TrendChart';
 import { IconAgent, IconArrow, IconDatabase, IconSignal } from '../components/common/Icons';
-import { ageSeconds, formatAge, isStale, moduleMeta, timeOnly, valorMedible } from '../utils/format';
+import { ageSeconds, formatAge, isStale, moduleMeta, num, timeOnly, valorMedible } from '../utils/format';
 
 interface Props {
   onNavigate: (route: Route) => void;
@@ -21,8 +21,9 @@ export function DashboardPage({ onNavigate }: Props) {
         id: item.id,
         label: `${moduleMeta(item.id).short} (${item.unit})`,
         color: moduleMeta(item.id).color,
+        fill: true,
         points: historyFor(item.id)
-          .slice(-180)
+          .slice(-240)
           .map((s) => ({ t: Date.parse(s.ts), v: s.value })),
       })),
     [equipment, historyFor],
@@ -171,7 +172,23 @@ export function DashboardPage({ onNavigate }: Props) {
             {link === 'connected' ? 'Recibiendo' : 'En pausa'}
           </span>
         </div>
-        <TrendChart series={charts} size="normal" emptyText="Esperando la primera telemetría del hub SignalR…" />
+        <TrendChart series={charts} size="tall" emptyText="Esperando la primera telemetría del hub SignalR…" />
+      </section>
+
+      {/* Antes era la página "Monitoreo en tiempo real" */}
+      <section className="cards-live">
+        {equipment.map((item) => (
+          <div className={`live-box live-${item.id.split('-')[0]}`} key={item.id}>
+            <span>{moduleMeta(item.id).short}</span>
+            <b className={valorMedible(item.calidad) ? undefined : 'nodata'}>
+              {valorMedible(item.calidad) ? num(item.value, 2) : 'n/d'}
+            </b>
+            <small>
+              {item.unit} · consigna {num(item.setpoint, 1)} {item.unit} · {moduleMeta(item.id).label}
+              {valorMedible(item.calidad) ? '' : ' · SIN MEDIDA (sensor fuera de rango)'}
+            </small>
+          </div>
+        ))}
       </section>
 
       <section className="panel teaser">

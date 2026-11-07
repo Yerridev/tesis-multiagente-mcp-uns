@@ -1,0 +1,5 @@
+{
+  "nombre": "Operación normal",
+  "descripcion": "Selector en PC y niveles correctos. El SCADA o un agente fija el SP y da Iniciar; el lazo calienta y regula.",
+  "eventos": []
+}

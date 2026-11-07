@@ -4,6 +4,8 @@ import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { TrendChart } from '../components/charts/TrendChart';
 import { PressureFlow, type PresionSenal } from '../components/scada/PressureFlow';
 import { KnobRO as Knob } from '../components/scada/KnobRO';
+import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
+import { HistoricoModal } from '../components/scada/HistoricoModal';
 import { ageSeconds, formatAge, isStale, num, timeOnly } from '../utils/format';
 import type { ControlOrden, PresionSenales } from '../types';
 import { enviarControlPresion, estadoControlPresion, listarOrdenesPresion, tokenControl } from '../services/control';
@@ -35,6 +37,8 @@ export function ModulePresionPage() {
   const [confirmarDetencion, setConfirmarDetencion] = useState(false);
   const [setpointPendiente, setSetpointPendiente] = useState(false);
   const [pidAplicando, setPidAplicando] = useState(false);
+  const [modo, setModo] = useState<Modo>('real');
+  const [historicoAbierto, setHistoricoAbierto] = useState(false);
 
   const cargarOrdenes = async () => {
     const r = await listarOrdenesPresion();
@@ -183,198 +187,135 @@ export function ModulePresionPage() {
     nivelBajo: alarmaBaja,
   };
 
+  const estadoCom: EstadoCom = online ? 'conectado' : link === 'reconnecting' || link === 'connecting' ? 'reconectando' : 'sin-comunicacion';
+  // SIMULADOR: solo cambia lo que se DIBUJA en el mímico; las órdenes quedan deshabilitadas.
+  const sim = modo === 'simulador';
+  const w = Math.sin(now / 2400);
+  const senalSim: PresionSenal = {
+    online: true, presion: 31.8 + w * 1.1, nivelPct: 71 + w * 2, bomba: true, valvulaPct: 58,
+    valvulas: { V1: true, V2: true, V3: false, V4: false, V5: true, V6: false, V7: false },
+    nivelAlto: false, nivelBajo: false,
+  };
+  const puedeSp = !sim && armado && online && auto === true && controlPc === true && marcha === false && !setpointPendiente && !pidAplicando;
+
   return (
     <div className="lv-scada">
-      <div className="lv-title">
-        <div>
-          <span>{eq.id}</span>
-          <h2>Módulo de control de presión</h2>
-        </div>
-        <div className={`lv-live ${online ? 'on' : ''}`}>
-          <i />
-          {online ? 'PLC conectado' : 'Sin comunicación'}
-        </div>
-      </div>
+      <ModuloHeader
+        id={eq.id}
+        titulo="Módulo de control de presión"
+        meta="NI Compact FieldPoint cFP-2200 · 192.168.114.8 · telemetría y control real protegido"
+        estado={estadoCom}
+        modo={modo}
+        onModoChange={setModo}
+      />
 
-      <div className="lv-main">
+      <div className="lv-main ca-layout">
         <section className="panel mimic-panel ca-flow pr-flow">
-          <div className="panel-head">
-            <div>
-              <h2>Diagrama mímico</h2>
-              <span className="panel-sub">
-                {eq.controller} · {eq.ip} · telemetría real · solo lectura
-              </span>
-            </div>
-            <div className="mimic-chips">
-              <span className={`pill ${online ? 'pill-ok pill-live' : 'pill-err'}`}>
-                <i />
-                {online ? 'PLC conectado' : 'Sin comunicación'}
-              </span>
-            </div>
-          </div>
-          <PressureFlow senal={senal} />
+          <div className="panel-head"><div><h2>Diagrama mímico</h2></div></div>
+          <PressureFlow senal={sim ? senalSim : senal} />
         </section>
 
-        <section className="lv-trend">
-          <div className="lv-trend-head">
-            <div>
+        {/* columna derecha: tendencia + paneles de control */}
+        <div className="ca-side">
+          <section className="lv-trend">
+            <div className="lv-trend-head">
               <b>Tendencia del proceso</b>
-              <small>Presión y consigna en PSI</small>
+              <div className="ca-trend-right">
+                <span>{samples.length} muestras · {online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}</span>
+                <span className={`pill ${armado ? 'pill-err' : 'pill-warn'}`}>{armado ? 'REAL' : 'BLOQUEADO'}</span>
+              </div>
             </div>
-            <span>
-              {samples.length} muestras · {online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}
-            </span>
+            <div className="lv-chart">
+              <TrendChart series={series} unit="PSI" size="tall" yTicks={[0, 10, 20, 30, 40, 50, 60]} timeTitle emptyText="Sin telemetría de presión · esperando el PLC NI cFP-2200…" />
+            </div>
+            <div className="lv-chart-foot">
+              <span>Última lectura</span>
+              <b>{online ? `${timeOnly(eq.timestamp)} · ${formatAge(age)}` : 'Sin comunicación · módulo apagado'}</b>
+            </div>
+          </section>
+
+          <div className="lv-controls">
+            <section className="lv-control-card lv-options">
+              <h3>Opciones</h3>
+              <div className="co-top">
+                <button type="button" className="co-ver" onClick={() => { setOrdenesAbiertas(true); void cargarOrdenes(); }}>
+                  Órdenes <span className={ordenes.length ? 'co-cont' : 'co-cont vacio'}>{ordenes.length}</span>
+                </button>
+                <button type="button" className="co-ver" onClick={() => setHistoricoAbierto(true)}>Histórico</button>
+              </div>
+              <small>{tokenControl()} · supervisor</small>
+              <div className="lv-opt-btns">
+                <button
+                  disabled={sim || !armado || !online || setpointPendiente || pidAplicando}
+                  title={armado ? 'El SCADA toma el mando del supervisor del cFP-2200 y arranca la bomba' : 'Control REAL no habilitado'}
+                  onClick={() => setConfirmarInicio(true)}
+                >Iniciar</button>
+                <button
+                  disabled={sim || !armado || !online}
+                  title={armado ? 'El SCADA cede el mando y detiene la bomba' : 'Control REAL no habilitado'}
+                  onClick={() => setConfirmarDetencion(true)}
+                >Detener</button>
+              </div>
+              <small>{mensaje}</small>
+            </section>
+
+            <section className="lv-control-card lv-signals">
+              <h3>Controlador</h3>
+              <div className="ca-sig-table">
+                <div><span>Controlador</span><strong>{eq.controller || 'Sin dato'}</strong></div>
+                <div><span>Señal presión</span><strong>{psi != null ? `${num(psi, 2)} psi` : 'Sin dato'}</strong></div>
+                <div><span>Transmisor</span><strong>{mA != null ? `${num(mA, 2)} mA` : 'Sin dato'}</strong></div>
+                <div><span>Mando</span><strong>{auto ? 'AUTOMÁTICO' : manual ? 'MANUAL' : 'Sin dato'}</strong></div>
+                <div><span>Supervisor</span><strong>{controlPc == null ? 'Sin dato' : controlPc ? 'PC / SCADA' : 'HMI LOCAL'}</strong></div>
+                <div><span>Sistema</span><strong>{marcha == null ? 'Sin dato' : marcha ? 'EN MARCHA' : 'PARADO'}</strong></div>
+                <div><span>Presostato</span><strong>{presostato == null ? 'Sin dato' : presostato ? 'ACTIVO' : 'NO ACTIVO'}</strong></div>
+                <div><span>Variador</span><strong>{variadorPct != null ? `${num(variadorPct, 0)} %` : 'Sin dato'}</strong></div>
+              </div>
+            </section>
+
+            <div className="ca-pid-col">
+              <section className="lv-control-card lv-pid ca-sp">
+                <h3>Setpoint</h3>
+                <div className="ca-command">
+                  <Knob
+                    value={setpoint}
+                    max={40}
+                    ticks={[0, 10, 20, 30, 40]}
+                    label={`Setpoint ${eq.unit}`}
+                    onCommit={puedeSp ? (valor) => void mandar('Setpoint', valor, 'psi') : undefined}
+                  />
+                </div>
+              </section>
+              <section className="lv-control-card lv-pid">
+                <h3>Control PID</h3>
+                <div className="lv-pid-body">
+                  <dl>
+                    <div><dt>Kp</dt><dd className="ca-pid-ro">{kp != null ? num(kp, 2) : '—'}</dd></div>
+                    <div><dt>Ti</dt><dd className="ca-pid-ro">{ti != null ? num(ti, 3) : '—'}</dd></div>
+                    <div><dt>Td</dt><dd className="ca-pid-ro">{td != null ? num(td, 3) : '—'}</dd></div>
+                  </dl>
+                  <button
+                    type="button"
+                    className="lv-pid-apply"
+                    disabled={sim || !armado || !online || auto !== true || controlPc !== true || marcha !== false || setpointPendiente || pidAplicando}
+                    onClick={() => void aplicarPidDocumentado()}
+                  >
+                    {pidAplicando ? 'Aplicando y verificando…' : 'Aplicar PID documentado'}
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <section className="lv-control-card ca-pert">
+              <h3>Perturbación</h3>
+              <p className="ca-pert-sub">% apertura válvula</p>
+              <Knob value={sim ? 58 : valvulaPct} max={100} ticks={[0, 20, 40, 60, 80, 100]} label="Apertura de válvula" />
+            </section>
           </div>
-          <div className="lv-chart">
-            <TrendChart
-              series={series}
-              unit="PSI"
-              size="tall"
-              yTicks={[0, 10, 20, 30, 40, 50, 60]}
-              timeTitle
-              emptyText="Sin telemetría de presión · esperando el PLC NI cFP-2200…"
-            />
-          </div>
-          <div className="lv-chart-foot">
-            <span>Última lectura</span>
-            <b>{online ? `${timeOnly(eq.timestamp)} · ${formatAge(age)}` : 'Sin comunicación · módulo apagado'}</b>
-          </div>
-        </section>
+        </div>
       </div>
 
-      <div className="lv-controls">
-        <section className="lv-control-card lv-options">
-          <h3>Opciones</h3>
-          <div className="lv-opt-btns">
-            <button
-              disabled={!armado || !online || setpointPendiente || pidAplicando}
-              title={armado ? 'El SCADA toma el mando del supervisor del cFP-2200 y arranca la bomba' : 'Control REAL no habilitado'}
-              onClick={() => setConfirmarInicio(true)}
-            >
-              Iniciar
-            </button>
-            <button
-              disabled={!armado || !online}
-              title={armado ? 'El SCADA cede el mando y detiene la bomba' : 'Control REAL no habilitado'}
-              onClick={() => setConfirmarDetencion(true)}
-            >
-              Detener
-            </button>
-            <button disabled title="No aplica: el reinicio del lazo se hace en el cFP-2200">Reiniciar</button>
-          </div>
-          <small>{mensaje}</small>
-          <button type="button" className="co-ver" onClick={() => { setOrdenesAbiertas(true); void cargarOrdenes(); }}>
-            Ver órdenes de control ({ordenes.length})
-          </button>
-        </section>
-
-        <section className="lv-control-card lv-signals">
-          <h3>Controlador</h3>
-          <div>
-            <span>Controlador</span>
-            <b>{eq.controller}</b>
-          </div>
-          <div>
-            <span>Señal presión</span>
-            <strong>{psi != null ? `${num(psi, 2)} psi` : 'Sin dato'}</strong>
-          </div>
-          <div>
-            <span>Transmisor</span>
-            <strong>{mA != null ? `${num(mA, 2)} mA` : 'Sin dato'}</strong>
-          </div>
-          <div>
-            <span>Mando</span>
-            <strong>{auto ? 'AUTOMÁTICO (PC/HMI)' : manual ? 'MANUAL (pulsadores)' : 'Sin dato'}</strong>
-          </div>
-          <div>
-            <span>Supervisor</span>
-            <strong>{controlPc == null ? 'Sin dato' : controlPc ? 'PC / SCADA WEB' : 'HMI LOCAL'}</strong>
-          </div>
-          <div>
-            <span>Sistema</span>
-            <strong>{marcha ? 'EN MARCHA' : 'PARADO'}</strong>
-          </div>
-          <div>
-            <span>Presostato</span>
-            <strong>{presostato == null ? 'Sin dato' : presostato ? 'ACTIVO' : 'NO ACTIVO'}</strong>
-          </div>
-          <div>
-            <span>Variador</span>
-            <strong>{variadorPct != null ? `${num(variadorPct, 0)} %` : 'Sin dato'}</strong>
-          </div>
-        </section>
-
-        <section className="lv-control-card lv-pid">
-          <h3>PID Y SETPOINT</h3>
-          <div className="lv-pid-body">
-            <dl>
-              <div>
-                <dt>Kp</dt>
-                <dd>{kp != null ? num(kp, 2) : '—'}</dd>
-              </div>
-              <div>
-                <dt>Ti</dt>
-                <dd>{ti != null ? num(ti, 3) : '—'}</dd>
-              </div>
-              <div>
-                <dt>Td</dt>
-                <dd>{td != null ? num(td, 3) : '—'}</dd>
-              </div>
-            </dl>
-            <Knob
-              value={setpoint}
-              max={40}
-              ticks={[0, 5, 10, 15, 20, 25, 30, 35, 40]}
-              label={`Setpoint ${eq.unit}`}
-              onCommit={armado && online && auto === true && controlPc === true && marcha === false && !setpointPendiente && !pidAplicando
-                ? (valor) => void mandar('Setpoint', valor, 'psi')
-                : undefined}
-            />
-          </div>
-          <button
-            type="button"
-            disabled={!armado || !online || auto !== true || controlPc !== true || marcha !== false || setpointPendiente || pidAplicando}
-            onClick={() => void aplicarPidDocumentado()}
-          >
-            {pidAplicando ? 'Aplicando y verificando…' : 'Aplicar PID documentado'}
-          </button>
-          <small className="co-aviso">
-            {setpointPendiente
-              ? `Solicitado: ${solicitadoSp ?? '—'} PSI · esperando confirmación del cFP-2200`
-              : `Solicitado: ${solicitadoSp ?? '—'} PSI · confirmado: ${confirmadoSp ?? '—'} PSI`}
-            <br />La consigna solo puede cambiarse con el sistema detenido; mientras una orden está pendiente,
-            la perilla y el arranque quedan bloqueados.
-          </small>
-        </section>
-
-        <section className="lv-control-card ca-pert">
-          <h3>% Apertura válvula</h3>
-          <p className="ca-pert-sub">Perturbación</p>
-          <Knob value={valvulaPct} max={100} ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]} label="Apertura de válvula" />
-        </section>
-
-        <section className="lv-control-card lv-record">
-          <h3>Histórico</h3>
-          <div className="lv-rec-icon">●</div>
-          <div>
-            <span>Tasa</span>
-            <b>1 segundo</b>
-          </div>
-          <div>
-            <span>Muestras</span>
-            <b>{samples.length}</b>
-          </div>
-          <div>
-            <span>Última lectura</span>
-            <b className={online ? undefined : 'nodata'}>{online ? timeOnly(eq.timestamp) : 'Sin datos'}</b>
-          </div>
-          <div>
-            <span>Fuente</span>
-            <b>API REST + SignalR</b>
-          </div>
-        </section>
-      </div>
-
+      <HistoricoModal abierto={historicoAbierto} onClose={() => setHistoricoAbierto(false)} id={eq.id} online={online} muestras={samples.length} ultima={timeOnly(eq.timestamp)} fuente="API REST + SignalR" />
       {ordenesAbiertas && (
         <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setOrdenesAbiertas(false)}>
           <div className="co-modal-caja" onClick={(e) => e.stopPropagation()}>

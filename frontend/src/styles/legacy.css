@@ -37,7 +37,7 @@
   color: #fff;
 }
 .nav-group.child-active .nav-ico {
-  color: var(--uss-green);
+  color: #ee3f3a;
 }
 .nav-caret {
   margin-left: auto;
@@ -655,3 +655,109 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Agentes de IA: distribucion historial + diagrama | chat ---------- */
+.agents-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: 'hist chat' 'flow chat';
+  grid-template-rows: auto 1fr;
+  gap: 20px;
+}
+.agents-grid > .ag-hist { grid-area: hist; }
+.agents-grid > .ag-flow { grid-area: flow; display: flex; flex-direction: column; }
+.agents-grid > .ag-chat { grid-area: chat; }
+.agents-grid .ag-hist .table-wrap { max-height: 220px; overflow: auto; }
+.agents-grid .ag-chat .chat-log { max-height: none; flex: 1; }
+.af-wrap { flex: 1; min-height: 420px; border-radius: 10px; overflow: hidden; background: var(--white); }
+.af-node {
+  width: 190px; padding: 8px 10px; border-radius: 10px; background: var(--white);
+  border: 1.5px solid var(--line, #d0d5dd); box-shadow: 0 2px 6px rgba(0,0,0,.06); font-size: 11px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.af-head { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.af-sub { display: block; color: var(--muted); margin-top: 2px; }
+.af-tarea { margin-top: 5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.af-tarea.is-empty { color: var(--muted-2, #98a2b3); font-style: italic; }
+.af-usuario { background: #1f2937; color: #fff; border-color: #1f2937; }
+.af-usuario .af-sub { color: rgba(255,255,255,.7); }
+.af-servidor { border-style: dashed; background: #f8fafc; }
+.af-activo { border-color: #ee3f3a; box-shadow: 0 0 0 3px rgba(238,63,58,.18), 0 2px 8px rgba(0,0,0,.08); }
+.af-handle { opacity: 0; }
+.react-flow__edge.af-edge-on .react-flow__edge-path { stroke: #ee3f3a; stroke-width: 2.2; }
+@media (max-width: 1100px) {
+  .agents-grid { grid-template-columns: 1fr; grid-template-areas: 'flow' 'chat' 'hist'; }
+}
+.af-llm { background: #eef4ff; border-color: #7aa2f7; }
+.react-flow__edge.af-edge-off .react-flow__edge-path { stroke-dasharray: 5 4; opacity: .5; }
+
+/* ---------- Arquitectura logica (nodos) ---------- */
+.al-wrap { height: calc(100vh - 230px); min-height: 560px; border-radius: 10px; overflow: hidden; background: #fbfcfe; }
+.al-capa { border-radius: 14px; border: 2px solid; display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; box-sizing: border-box; }
+.al-num { font-size: 44px; font-weight: 800; line-height: 1; color: #1e3a8a; }
+.al-capa-txt { width: 170px; display: flex; flex-direction: column; color: #1e3a8a; }
+.al-capa-txt b { font-size: 17px; line-height: 1.2; }
+.al-capa-txt small { font-size: 12px; color: #475569; margin-top: 4px; }
+.al-c6 { background: #f1efff; border-color: #a5a0f0; }
+.al-c5 { background: #e9f5ff; border-color: #7cc4f0; }
+.al-c4 { background: #e8faf7; border-color: #6fd3c4; }
+.al-c3 { background: #fff8e5; border-color: #f2c75c; }
+.al-c2 { background: #fff1ea; border-color: #f29a6b; }
+.al-c1 { background: #ffeef3; border-color: #f08aa8; }
+.al-caja { background: #fff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font-size: 11px; color: #0f172a; box-shadow: 0 1px 4px rgba(15,23,42,.06); }
+.al-caja b { display: block; font-size: 12.5px; color: #0b1f4d; }
+.al-caja small { display: block; color: #475569; margin-top: 3px; line-height: 1.35; }
+.al-caja ul { margin: 4px 0 0; padding-left: 15px; line-height: 1.4; color: #334155; }
+.al-b-c6 { border-color: #a5a0f0; } .al-b-c5 { border-color: #3b82c4; } .al-b-c4 { border-color: #3fb8a6; }
+.al-b-c3 { border-color: #e2ad2b; } .al-b-c2 { border-color: #e07a45; } .al-b-c1 { border-color: #e06a8f; }
+.al-b-llm { border-color: #7aa2f7; background: #eef4ff; }
+.al-b-mon { border-color: #3b6fd8; background: #f2f6ff; }
+.al-b-seg { border-color: #22a35a; background: #effbf3; }
+.react-flow__edge.al-edge .react-flow__edge-path { stroke: #1e3a8a; stroke-width: 1.6; }
+.react-flow__edge.al-edge .react-flow__edge-text { font-size: 11px; font-weight: 700; fill: #0b1f4d; }
+
+/* ---------- Servidores MCP: nodos | registro ---------- */
+.mcp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+.mcp-grid > .panel { display: flex; flex-direction: column; min-height: 560px; }
+.mcp-reg .table-wrap { flex: 1; max-height: none; overflow: auto; }
+.mf-wrap { min-height: 480px; }
+.mf-srv { width: 230px; }
+.mf-tool { width: 230px; padding: 6px 10px; }
+.mf-tool .af-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mf-ico { width: 16px; height: 16px; border-radius: 4px; background: #fdecea; color: #ee3f3a; font-weight: 800; display: inline-grid; place-items: center; font-size: 11px; }
+.react-flow__edge.mf-edge-ok .react-flow__edge-path { stroke: #ee3f3a; stroke-width: 1.8; }
+.react-flow__edge.mf-edge .react-flow__edge-path { stroke: #94a3b8; stroke-dasharray: 5 4; }
+@media (max-width: 1100px) { .mcp-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Caja de envio del chat ---------- */
+.chat-form {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px;
+  border: 1.5px solid var(--border, #d0d5dd); border-radius: 999px; background: var(--white, #fff);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06); transition: border-color .15s, box-shadow .15s;
+}
+.chat-form:focus-within { border-color: #ee3f3a; box-shadow: 0 0 0 4px rgba(238, 63, 58, .14); }
+.chat-form input { flex: 1; min-width: 0; border: 0 !important; outline: none; background: transparent; box-shadow: none !important; font-size: 14px; padding: 8px 0; }
+.chat-form .chat-send {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 9px 18px;
+  background: #ee3f3a; color: #fff; font-weight: 700; cursor: pointer; transition: background .15s, transform .1s;
+}
+.chat-form .chat-send:hover:not(:disabled) { background: #c62f2b; }
+.chat-form .chat-send:active:not(:disabled) { transform: scale(.97); }
+.chat-form .chat-send:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+
+/* Ocupar todo el alto de la ventana (sin espacio en blanco abajo) */
+.mcp-grid { height: calc(100vh - 200px); min-height: 520px; }
+.mcp-grid > .panel { min-height: 0; height: 100%; }
+.mcp-grid .mf-wrap { flex: 1; min-height: 0; }
+.agents-grid { height: calc(100vh - 200px); min-height: 620px; }
+.agents-grid > .ag-chat { display: flex; flex-direction: column; min-height: 0; }
+.agents-grid .af-wrap { min-height: 0; }
+@media (max-width: 1100px) { .mcp-grid, .agents-grid { height: auto; } .mcp-grid > .panel { height: 560px; } }
+
+/* Servidores MCP y Agentes: los paneles llegan justo al pie de la ventana; la nota queda al bajar */
+.mcp-grid, .agents-grid { height: calc(100vh - 118px); flex: none; }
+@media (max-width: 1100px) { .mcp-grid, .agents-grid { height: auto; } }
+
+/* Dashboard: módulos y tarjetas en vivo de 2 en 2 (Caudal | Nivel / Presión | Temperatura) */
+.eq-grid, .cards-live { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+@media (max-width: 760px) { .eq-grid, .cards-live { grid-template-columns: 1fr !important; } }

@@ -1,0 +1,9 @@
+{
+  "nombre": "Selector fuera de PC",
+  "descripcion": "El selector pasa a HMI: el conector de control debe rechazar órdenes con SELECTOR_NO_PC.",
+  "eventos": [
+    {"t": 0,  "accion": "selector", "valor": "pc"},
+    {"t": 60, "accion": "selector", "valor": "hmi"},
+    {"t": 180,"accion": "selector", "valor": "pc"}
+  ]
+}

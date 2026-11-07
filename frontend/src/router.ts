@@ -50,7 +50,6 @@ export const NAV: NavSection[] = [
     header: 'Principal',
     entries: [
       item('dashboard', 'Dashboard', 'grid'),
-      item('monitor', 'Monitoreo en tiempo real', 'monitor'),
       item('agents', 'Agentes de IA', 'agent'),
       item('mcp', 'Servidores MCP', 'server'),
       {
@@ -71,8 +70,7 @@ export const NAV: NavSection[] = [
   {
     header: 'Arquitectura',
     entries: [
-      item('arch-physical', 'Arquitectura física', 'topology'),
-      item('arch-logical', 'Arquitectura lógica', 'branch'),
+      item('arch-logical', 'Arquitectura lógica', 'topology'),
     ],
   },
   {

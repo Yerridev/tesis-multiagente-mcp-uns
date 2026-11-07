@@ -4,6 +4,7 @@ import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { TrendChart } from '../components/charts/TrendChart';
 import { CaudalFlow, type CaudalSenal } from '../components/scada/CaudalFlow';
 import { KnobControl } from '../components/scada/KnobControl';
+import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
 import type { CaudalSenales, ControlOrden } from '../types';
 import { enviarControlCaudal, estadoControlCaudal, listarOrdenesCaudal, tokenControl } from '../services/control';
@@ -36,8 +37,10 @@ export function ModuleCaudalPage() {
   const [td, setTd] = useState('0');
   const [ordenes, setOrdenes] = useState<ControlOrden[]>([]);
   const [ordenesAbiertas, setOrdenesAbiertas] = useState(false);
+  const [historicoAbierto, setHistoricoAbierto] = useState(false);
   const [confirmarInicio, setConfirmarInicio] = useState(false);
   const [confirmarDetencion, setConfirmarDetencion] = useState(false);
+  const [modo, setModo] = useState<Modo>('real');
   const [usuario, setUsuario] = useState(tokenControl());
 
   const cargarOrdenes = async () => {
@@ -118,48 +121,49 @@ export function ModuleCaudalPage() {
     nivelBajo: estado(caudalSenal, 'estado/nivel_bajo'),
   };
 
+  // Estado de comunicación para la cabecera
+  const estadoCom: EstadoCom = online ? 'conectado' : link === 'reconnecting' || link === 'connecting' ? 'reconectando' : 'sin-comunicacion';
+  // SIMULADOR: solo cambia lo que se DIBUJA en el mímico; nunca habilita órdenes al PLC.
+  const sim = modo === 'simulador';
+  const w = Math.sin(now / 2400);
+  const senalSim: CaudalSenal = {
+    online: true, caudal: 18.5 + w * 1.4, presion: 22.4, nivelPct: 67 + w * 3, bomba: true, valvulaPct: 63,
+    valvulas: { V1: false, V2: true, V3: false, V4: false, V5: true, V6: false, V7: false },
+    nivelAlto: false, nivelBajo: false,
+  };
+
   return (
     <div className="lv-scada">
-      <div className="lv-title">
-        <div>
-          <span>{eq.id}</span>
-          <h2>Módulo de control de caudal</h2>
-        </div>
-        <div className={`lv-live ${online ? 'on' : ''}`}>
-          <i />
-          {online ? 'PLC conectado' : 'Sin comunicación'}
-        </div>
-      </div>
+      <ModuloHeader
+        id={eq.id}
+        titulo="Módulo de control de caudal"
+        meta="Siemens S7-200 · 192.168.114.7 · telemetría y control real protegido"
+        estado={estadoCom}
+        modo={modo}
+        onModoChange={setModo}
+      />
 
-      <div className="lv-main">
+      <div className="lv-main ca-layout">
         <section className="panel mimic-panel ca-flow">
           <div className="panel-head">
             <div>
               <h2>Diagrama mímico</h2>
-              <span className="panel-sub">
-                {eq.controller} · {eq.ip} · telemetría y control real protegido
-              </span>
-            </div>
-            <div className="mimic-chips">
-              <span className={`pill ${online ? 'pill-ok pill-live' : 'pill-err'}`}>
-                <i />
-                {online ? 'PLC conectado' : 'Sin comunicación'}
-              </span>
-              {!online && <span className="pill pill-warn">Válvulas en posición nominal</span>}
             </div>
           </div>
-          <CaudalFlow senal={senal} />
+          <CaudalFlow senal={sim ? senalSim : senal} />
         </section>
 
+        {/* columna derecha: tendencia + paneles de control */}
+        <div className="ca-side">
         <section className="lv-trend">
           <div className="lv-trend-head">
-            <div>
-              <b>Tendencia del proceso</b>
-              <small>Caudal y consigna en L/min</small>
+            <b>Tendencia del proceso</b>
+            <div className="ca-trend-right">
+              <span>
+                {samples.length} muestras · {online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}
+              </span>
+              <span className={`pill ${armado ? 'pill-err' : 'pill-warn'}`}>{armado ? 'REAL' : 'BLOQUEADO'}</span>
             </div>
-            <span>
-              {samples.length} muestras · {online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}
-            </span>
           </div>
           <div className="lv-chart">
             <TrendChart
@@ -176,30 +180,30 @@ export function ModuleCaudalPage() {
             <b>{online ? `${timeOnly(eq.timestamp)} · ${formatAge(age)}` : 'Sin comunicación · módulo apagado'}</b>
           </div>
         </section>
-      </div>
 
       <div className="lv-controls">
         <section className="lv-control-card lv-options">
           <h3>Opciones</h3>
           <div className="co-top">
-            <span className={`pill ${armado ? 'pill-err' : 'pill-warn'}`}>{armado ? 'REAL' : 'BLOQUEADO'}</span>
             <button type="button" className="co-ver" onClick={() => { setOrdenesAbiertas(true); void cargarOrdenes(); }}>
               Órdenes <span className={ordenes.length ? 'co-cont' : 'co-cont vacio'}>{ordenes.length}</span>
             </button>
+            <button type="button" className="co-ver" onClick={() => setHistoricoAbierto(true)}>Histórico</button>
           </div>
           <small>{usuario} · supervisor</small>
           <div className="lv-opt-btns">
-            <button disabled={!armado || !online} onClick={() => setConfirmarInicio(true)}>Iniciar</button>
-            <button disabled={!armado || !online} onClick={() => setConfirmarDetencion(true)}>Detener</button>
+            <button disabled={sim || !armado || !online} onClick={() => setConfirmarInicio(true)}>Iniciar</button>
+            <button disabled={sim || !armado || !online} onClick={() => setConfirmarDetencion(true)}>Detener</button>
           </div>
           <small>{mensaje}</small>
         </section>
 
         <section className="lv-control-card lv-signals">
           <h3>Controlador</h3>
+          <div className="ca-sig-table">
           <div>
             <span>Controlador</span>
-            <b>{estado(caudalSenal, 'estado/selector_remoto') ? 'REMOTO' : estado(caudalSenal, 'estado/selector_local') ? 'LOCAL' : 'Sin dato'}</b>
+            <strong>{estado(caudalSenal, 'estado/selector_remoto') ? 'REMOTO' : estado(caudalSenal, 'estado/selector_local') ? 'LOCAL' : 'Sin dato'}</strong>
           </div>
           <div>
             <span>Señal caudal</span>
@@ -209,8 +213,10 @@ export function ModuleCaudalPage() {
             <span>Señal control</span>
             <strong>{real(caudalSenal, 'actuadores/variador_pct') == null ? 'Sin dato' : `${num(real(caudalSenal, 'actuadores/variador_pct')!, 1)} %`}</strong>
           </div>
+          </div>
         </section>
 
+        <div className="ca-pid-col">
         <section className="lv-control-card lv-pid">
           <h3>Control PID</h3>
           <div className="lv-pid-body">
@@ -228,49 +234,41 @@ export function ModuleCaudalPage() {
                 <dd><input value={td} onChange={(e) => setTd(e.target.value)} /></dd>
               </div>
             </dl>
+            <button className="lv-pid-apply" disabled={!armado} onClick={() => void aplicarPid()}>Aplicar PID</button>
+          </div>
+        </section>
+        <section className="lv-control-card lv-pid ca-sp">
+          <h3>Setpoint</h3>
             <div className="ca-command">
               <KnobControl value={Number(sp)} max={140} ticks={[0, 20, 40, 60, 80, 100, 120, 140]}
-                label={`Setpoint ${eq.unit}`} disabled={!armado}
+                label={`Setpoint ${eq.unit}`} disabled={!armado} editable
                 onChange={(v) => setSp(String(v))}
                 onCommit={(v) => void mandar('Setpoint', v, undefined, 'L/min')} />
-              <input type="number" min="0" max="140" value={sp}
-                onChange={(e) => setSp(e.target.value)}
-                onBlur={() => { if (armado) void mandar('Setpoint', Number(sp), undefined, 'L/min'); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' && armado) void mandar('Setpoint', Number(sp), undefined, 'L/min'); }} />
             </div>
-          </div>
-          <button disabled={!armado} onClick={() => void aplicarPid()}>Aplicar PID</button>
         </section>
+        </div>
 
         <section className="lv-control-card ca-pert">
           <h3>Perturbación</h3>
           <p className="ca-pert-sub">% apertura válvula</p>
-          <KnobControl value={Number(valvula)} max={100} ticks={[0, 20, 40, 60, 80, 100]} label="Apertura de válvula" disabled={!armado} onChange={(v) => setValvula(String(v))} />
-          <input type="number" min="0" max="100" value={valvula} onChange={(e) => setValvula(e.target.value)} />
+          <KnobControl value={Number(valvula)} max={100} ticks={[0, 20, 40, 60, 80, 100]} label="Apertura de válvula" disabled={!armado} editable onChange={(v) => setValvula(String(v))} />
           <button disabled={!armado} onClick={() => void mandar('AjustarValvula', Number(valvula), undefined, '%')}>Aplicar válvula</button>
         </section>
 
-        <section className="lv-control-card lv-record">
-          <h3>Histórico</h3>
-          <div className="lv-rec-icon">●</div>
-          <div>
-            <span>Tasa</span>
-            <b>1 segundo</b>
-          </div>
-          <div>
-            <span>Muestras</span>
-            <b>{samples.length}</b>
-          </div>
-          <div>
-            <span>Última lectura</span>
-            <b className={online ? undefined : 'nodata'}>{online ? timeOnly(eq.timestamp) : 'Sin datos'}</b>
-          </div>
-          <div>
-            <span>Fuente</span>
-            <b>API REST + SignalR</b>
-          </div>
-        </section>
       </div>
+        </div>
+      </div>
+      {historicoAbierto && <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setHistoricoAbierto(false)}>
+        <div className="co-modal-caja co-hist" onClick={(e) => e.stopPropagation()}>
+          <div className="co-modal-head"><b><i className={online ? 'co-hist-dot on' : 'co-hist-dot'}>●</i> Histórico · caudal-mcc09</b><button onClick={() => setHistoricoAbierto(false)}>×</button></div>
+          <dl className="co-modal-cuerpo co-hist-list">
+            <dt>Tasa</dt><dd>1 segundo</dd>
+            <dt>Muestras</dt><dd>{samples.length}</dd>
+            <dt>Última lectura</dt><dd className={online ? undefined : 'nodata'}>{online ? timeOnly(eq.timestamp) : 'Sin datos'}</dd>
+            <dt>Fuente</dt><dd>API REST + SignalR</dd>
+          </dl>
+        </div>
+      </div>}
       {ordenesAbiertas && <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setOrdenesAbiertas(false)}>
         <div className="co-modal-caja" onClick={(e) => e.stopPropagation()}>
           <div className="co-modal-head"><b>Órdenes de control · caudal-mcc09</b><button onClick={() => setOrdenesAbiertas(false)}>×</button></div>

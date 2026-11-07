@@ -1,0 +1,15 @@
+{
+  "nombre": "Nivel: arranque PC, cambio de SP y fallas",
+  "eventos": [
+    {"t": 5,   "accion": "escribir_n", "direccion": 5, "valor": 6348, "nota": "SP 25 cm desde la PC"},
+    {"t": 10,  "accion": "escribir_b", "bit": 4, "valor": true, "nota": "START_PC (flanco 0->1)"},
+    {"t": 400, "accion": "escribir_n", "direccion": 5, "valor": 10348, "nota": "SP 15 cm"},
+    {"t": 700, "accion": "fuga_lpm", "valor": 4, "nota": "fuga en el tanque 2"},
+    {"t": 900, "accion": "sensor_congelado", "valor": true, "nota": "sensor ultrasonico congelado"},
+    {"t": 960, "accion": "sensor_congelado", "valor": false},
+    {"t": 1000, "accion": "agua_t1", "valor": false, "nota": "T1 sin agua: la bomba debe parar"},
+    {"t": 1100, "accion": "agua_t1", "valor": true},
+    {"t": 1150, "accion": "plc_desconectado", "valor": true, "nota": "PLC caido"},
+    {"t": 1200, "accion": "plc_desconectado", "valor": false}
+  ]
+}

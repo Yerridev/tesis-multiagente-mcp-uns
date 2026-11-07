@@ -175,9 +175,9 @@
   color: #fff;
 }
 .nav-item.active {
-  background: var(--uss-green);
-  border-left-color: var(--uss-green-d);
-  color: var(--text);
+  background: #ee3f3a;
+  border-left-color: #c62f2b;
+  color: #fff;
   font-weight: 700;
 }
 .nav-item[aria-disabled="true"] {
@@ -573,3 +573,15 @@
     display: none;
   }
 }
+.brand-logo.brand-logo--ag{width:110px;height:110px}
+
+/* La pagina crece con su contenido (no se encoge dentro del scroll): asi el padding inferior
+   de .content siempre deja aire entre la ultima tarjeta y el pie de la ventana. */
+.page { flex: 1 0 auto; }
+.content::after { content: ''; display: block; flex: none; height: 12px; }
+
+/* logo mini (sidebar cerrado): LOGO-40x40.svg a su tamaño real */
+.app[data-collapsed="true"] .brand-logo-sm { width: 40px; height: 40px; margin: 0 auto; }
+/* sidebar cerrado: logo centrado en el espacio libre bajo el boton de menu (44px) */
+.app[data-collapsed="true"] .sidebar-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 44px 0 0; box-sizing: border-box; }
+.app[data-collapsed="true"] .brand-logo-sm { margin: 0; }

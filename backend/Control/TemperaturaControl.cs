@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using MQTTnet;
@@ -42,7 +42,7 @@ public sealed class TemperaturaControlService
     public bool RealArmado => _op.Modo.Equals("Real",StringComparison.OrdinalIgnoreCase) && _op.HabilitadoEscritura && _op.VariableEntornoReal()=="1";
     public object EstadoPublico() { var e=_state.UltimoMensaje is { } u?(DateTimeOffset.Now-u).TotalSeconds:double.PositiveInfinity; return new { modoEfectivo=RealArmado?"REAL":"BLOQUEADO",realArmado=RealArmado,proceso=new { plc=_state.PlcConectado?"CONECTADO":"DESCONECTADO",selector=_state.Modo(),fallaPrincipal=_state.Bool("falla/nivel_principal"),fallaEnfriador=_state.Bool("falla/nivel_enfriador")},telemetria=new {ultimo=_state.UltimoMensaje,edadSegundos=double.IsFinite(e)?Math.Round(e,1):(double?)null,fresca=e<=TemperaturaControlContrato.TelemetriaMaxSegundos},pendientes=_ordenes.Values.Count(x=>!x.EsTerminal)}; }
     public IEnumerable<object> Ultimas(int n)=>_ordenes.Values.OrderByDescending(x=>x.Expedida).Take(Math.Clamp(n,1,50)).Select(x=>x.ParaSenal());
-    async Task<bool> Publicar(string cuerpo,CancellationToken ct) { try { var f=new MqttFactory(); using var c=f.CreateMqttClient(); await c.ConnectAsync(new MqttClientOptionsBuilder().WithTcpServer(_cfg["Mqtt:Host"]??"127.0.0.1",int.TryParse(_cfg["Mqtt:Port"],out var p)?p:1883).WithClientId($"temp-cmd-{Guid.NewGuid():N}").Build(),ct); await c.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(_op.TopicoBase+"/cmd").WithPayload(cuerpo).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build(),ct); await c.DisconnectAsync(); return true;}catch{return false;} }
+    async Task<bool> Publicar(string cuerpo,CancellationToken ct) { try { var f=new MqttFactory(); using var c=f.CreateMqttClient(); await c.ConnectAsync(new MqttClientOptionsBuilder().WithTcpServer(_cfg["Mqtt:TemperaturaControlHost"]??_cfg["Mqtt:Host"]??"127.0.0.1",int.TryParse(_cfg["Mqtt:TemperaturaControlPort"]??_cfg["Mqtt:Port"],out var p)?p:1883).WithClientId($"temp-cmd-{Guid.NewGuid():N}").Build(),ct); await c.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(_op.TopicoBase+"/cmd").WithPayload(cuerpo).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build(),ct); await c.DisconnectAsync(); return true;}catch{return false;} }
     public async Task<ResultadoEnvio> Enviar(SolicitudComando s,string usuario,string rol,CancellationToken ct)
     {
         if(!string.Equals(s.Equipo,TemperaturaControlContrato.Equipo,StringComparison.OrdinalIgnoreCase)) return new(400,null,Motivos.EquipoInvalido);

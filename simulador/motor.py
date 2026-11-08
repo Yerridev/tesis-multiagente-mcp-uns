@@ -42,3 +42,16 @@ def argumentos_comunes(ap, puerto: int):
     ap.add_argument("--escenario", help="archivo JSON de simulador/escenarios/")
     ap.add_argument("--semilla", type=int, default=None, help="semilla del ruido (pruebas repetibles)")
     ap.add_argument("--log", type=float, default=10.0, help="segundos simulados entre lineas de estado")
+    ap.add_argument("--broker", default="127.0.0.1", help="MQTT para las llaves manuales de la planta simulada")
+    ap.add_argument("--puerto-mqtt", type=int, default=1883)
+    ap.add_argument("--sin-llaves", action="store_true", help="sin llaves manuales (comportamiento anterior)")
+    ap.add_argument("--nivel-inicial", type=float, default=None, help="%% inicial de los tanques (por defecto 5 %%: hay que llenarlos)")
+
+
+def con_llaves(plc, clase, a):
+    """Envuelve el PLC con las llaves manuales de la planta simulada (salvo --sin-llaves)."""
+    if a.sin_llaves:
+        return plc, None
+    from .llaves import ConLlaves
+    ll = clase(a.broker, a.puerto_mqtt, a.nivel_inicial)
+    return ConLlaves(plc, ll), ll

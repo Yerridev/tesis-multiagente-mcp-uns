@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { LinkState } from '../../types';
 import { timeOnly, dateOnly } from '../../utils/format';
 import { IconMenu } from '../common/Icons';
+import { usePlantaModo } from '../scada/plantaSimulada';
 
 interface Props {
   title: string;
@@ -33,6 +34,7 @@ export function Header({ title, subtitle, link, now, onOpenMenu, onAction }: Pro
   }, [open]);
 
   const pill = LINK_LABEL[link];
+  const simulada = usePlantaModo() === 'simulado';   // lo decide el backend (MODO_PLANTA): igual para todas las páginas y usuarios
 
   return (
     <header className="header">
@@ -46,7 +48,9 @@ export function Header({ title, subtitle, link, now, onOpenMenu, onAction }: Pro
       </div>
 
       <div className="header-right">
-        <span className="header-plant">Planta industrial · Laboratorio USS</span>
+        {simulada
+          ? <span className="pill pill-warn" title="Backend con MODO_PLANTA=simulado: SCADA, lienzos y agentes usan los simuladores Python"><i />PLANTA SIMULADA</span>
+          : <span className="header-plant">Planta REAL · Laboratorio USS</span>}
 
         <span className={`pill ${pill.cls}`}>
           <i />

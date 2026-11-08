@@ -1,6 +1,9 @@
-﻿import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { observarEncuadre, useMedidasEstables } from './encuadre';
+import { CatalogoBoton } from './catalogo/CatalogoBoton';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
 import { InstrumentTag, tagSize } from './InstrumentTag';
+import { tagStyle as tagStyleCatalogo } from './catalogo/valveTagCatalogo';
 import { PumpTag } from './PumpTag';
 
 /* ============================================================
@@ -41,7 +44,7 @@ function JunctionNode() {
   const arms=[...new Set(mine.map(e=>e.source===id?e.sourceHandle:e.targetHandle).filter((h):h is string=>!!h))];
   return (
     <div className="junction">
-      {arms.length>=2&&<svg width="44" height="44" viewBox="0 0 44 44" className="ca-fitting" aria-hidden><g className="ca-fit-outline"><rect x="17" y="17" width="10" height="10" rx="3"/>{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}</g><g className="ca-fit-body"><rect x="17" y="17" width="10" height="10" rx="3"/>{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}</g></svg>}
+      {arms.length>=2&&<svg width="44" height="44" viewBox="0 0 44 44" className="ca-fitting" aria-hidden><g className="ca-fit-outline">{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}<rect x="12" y="12" width="20" height="20" rx="4"/></g><g className="ca-fit-body">{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}<rect x="12" y="12" width="20" height="20" rx="4"/></g></svg>}
       <Port id="t" position={Position.Top} />
       <Port id="b" position={Position.Bottom} />
       <Port id="l" position={Position.Left} />
@@ -84,23 +87,21 @@ function ValveNode({ data }: NodeProps) {
   const orientation = String(d.orientation) as 'h' | 'v';
   const open = (d.open as boolean | null) ?? null;
   const vertical = orientation === 'v';
-  const left = vertical && d.valveId === 'V5';
+  const left = vertical && (d.valveId === 'V5' || d.leverLeft === true);
   return (
-    <div className="valve nodrag nopan" title="Solo lectura · sin órdenes al PLC" style={{ width: vertical ? 40 : 70, height: vertical ? 70 : 40 }}>
+    <div className={typeof d.onToggle === 'function' ? 'valve nodrag nopan valve--manual' : 'valve nodrag nopan'}
+      title={typeof d.onToggle === 'function' ? 'Clic para abrir/cerrar (solo visual, no es una orden al PLC)' : 'Solo lectura · sin órdenes al PLC'}
+      style={{ width: vertical ? 40 : 70, height: vertical ? 70 : 40, cursor: typeof d.onToggle === 'function' ? 'pointer' : undefined }}>
       <div
         className="valve__hit"
         style={vertical
-          ? { left: -15, top: 15, width: 70, height: 40, transform: left ? 'scaleX(-1) rotate(90deg)' : 'rotate(90deg)' }
+          ? { left: -15, top: 15, width: 70, height: 40, transform: left ? 'rotate(270deg)' : 'rotate(90deg)' }  /* misma geometría que el catálogo */
           : { left: 0, top: 0, width: 70, height: 40 }}
       >
         <ValveGlyph open={open} />
       </div>
-      <span
-        className="valve__tag"
-        style={vertical
-          ? (left ? { right: 46, top: 26 } : { left: 46, top: 26 })
-          : { left: 0, top: -18, width: 70 }}
-      >
+      {/* rótulo con la regla del catálogo: se mueve (con transición) según la palanca abierta/cerrada */}
+      <span className="valve__tag" style={tagStyleCatalogo(vertical, 'top', open, left, String(d.label ?? 'V1'))}>
         {String(d.label ?? '')}
       </span>
       {vertical ? (
@@ -291,8 +292,8 @@ function TankNode({ data }: NodeProps) {
       </svg>
       <div className="tank__readout"><strong>{pct == null ? '—' : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : '%'}</span></div>
       <span className="tag level-tag" style={{ right: TW + 14, top: 41 }}>NIVEL ALTO <i className={high ? 'led led--alarm' : 'led'} /></span>
-      <span className="tag level-tag" style={{ right: TW + 14, top: 221 }}>NIVEL BAJO <i className={bajo ? 'led led--on' : 'led'} /></span>
-      <span className="tag" style={{ left: TW + 12, top: TH / 2 - 10 }}>TANQUE T1</span>
+      <span className="tag level-tag" style={{ right: TW + 14, top: 221 }}>NIVEL BAJO <i className={bajo ? 'led led--alarm' : 'led'} /></span>
+      <span className="tag tank__name" style={{ left: TW / 2, top: 34, transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>TANQUE T1</span>
       <Port id="inL" position={Position.Top} style={{ left: 90 }} />
       <Port id="inR" position={Position.Top} style={{ left: 120 }} />
       <Port id="out" position={Position.Bottom} style={{ left: 103 }} />
@@ -307,12 +308,12 @@ function WaterSupplyNode({ data }: NodeProps) {
     <svg width="200" height="118" viewBox="-10 -10 220 138" overflow="visible" aria-hidden>
       <rect x="25" y="24" width="150" height="68" rx="8" className="supply-tank" />
       <path d="M31 57q18-7 36 0t36 0t36 0t30 0v29H31z" className={active ? 'supply-water active' : 'supply-water'} />
-      <rect x="3" y="42" width="24" height="32" rx="3" className="supply-neck" />
-      <path d="M3 36v44M3 58H-9" className="supply-rim" />
+      <rect x="84" y="4" width="32" height="22" rx="3" className="supply-neck" />
+      <path d="M72 4h56M100 4V-8" className="supply-rim" />
     </svg>
     <b>ABASTECIMIENTO DE AGUA</b>
-    <span>FUENTE EXTERNA · SALIDA IZQUIERDA</span>
-    <Port id="in" position={Position.Left} style={{top:58}} />
+    <span>FUENTE EXTERNA · SALIDA SUPERIOR</span>
+    <Port id="in" position={Position.Top} style={{left:100}} />
   </div>;
 }
 
@@ -361,13 +362,15 @@ const BASE_NODES: Node[] = [
   { id: 'PG', type: 'gauge', position: { x: 468, y: 632 }, data: { kind: 'pressure', label: 'MANÓMETRO', size: 70, inline: false }, ...fixed },
   { id: 'tank', type: 'tank', position: { x: 625, y: 930 }, data: {}, ...fixed },
   { id: 'PV', type: 'propValve', position: { x: 560, y: 565 }, data: {}, ...fixed },
-  { id: 'SUPPLY', type: 'supply', position: { x: 900, y: 1202 }, data: { portSide: 'l' }, ...fixed },
+  { id: 'SUPPLY', type: 'supply', position: { x: 800, y: 1440 }, data: { portSide: 'l' }, ...fixed },
   /* Posición nominal según el manual INDUCONTROL del módulo: V2, V5 abiertas · V1, V3, V4, V6, V7 cerradas */
   valve('V1', 810, 888, 'h', false), valve('V2', 745, 730, 'v', true), valve('V3', 810, 640, 'h', false), valve('V4', 490, 775, 'h', false),
-  valve('V5', 440, 830, 'v', true), valve('V6', 500, 888, 'h', false), valve('V7', 728, 1325, 'v', false),
-  junction('JT', 728, 1263), junction('JSUP-B', 820, 1360), junction('JSUP-T', 820, 1260), junction('J888', 440, 888), junction('J775', 440, 775), junction('J667', 440, 667),
+  valve('V5', 440, 830, 'v', true), valve('V6', 500, 888, 'h', false), { ...valve('V7', 728, 1325, 'v', false), data: { valveId: 'V7', label: 'V7', orientation: 'v', nominal: false, leverLeft: true } },  /* 180° · vertical · palanca izquierda */
+  /* válvula manual en la boca de la fuente de agua (abre/cierra el abastecimiento hacia V1) */
+  valve('VF', 900, 1404, 'v', true),   /* pegada al pico de la fuente, como en el módulo real */
+  junction('JT', 728, 1263), junction('JV1F', 900, 888), junction('J888', 440, 888), junction('J775', 440, 775), junction('J667', 440, 667),
   junction('JTL', 440, 585), junction('JTR', 745, 585), junction('J640', 745, 640), junction('J888R', 745, 888), junction('JE', 715, 888),
-  end('END1', 845, 876, 'l'), end('END3', 845, 628, 'l'), end('END4', 525, 763, 'l'),
+  end('END3', 845, 628, 'l'), end('END4', 525, 763, 'l'),
 ];
 
 const ed = (id: string, source: string, sh: string, target: string, th: string): Edge => ({
@@ -376,7 +379,7 @@ const ed = (id: string, source: string, sh: string, target: string, th: string):
 
 const EDGES: Edge[] = [
   ed('o1', 'tank', 'out', 'JT', 't'), ed('o2', 'JT', 'l', 'pump', 'suction'),
-  ed('o3', 'JT', 'b', 'V7', 't'), ed('o4a', 'SUPPLY', 'in', 'JSUP-T', 'r'), ed('o4b', 'JSUP-T', 'b', 'JSUP-B', 't'), ed('o4c', 'JSUP-B', 'l', 'V7', 'b'),
+  ed('o3', 'JT', 'b', 'V7', 't'),
   ed('u1', 'pump', 'discharge', 'FM', 'b'), ed('u2', 'FM', 't', 'J888', 'b'),
   ed('v1', 'J888', 'r', 'V6', 'l'), ed('v2', 'V6', 'r', 'JE', 'l'), ed('v3', 'JE', 'b', 'tank', 'inL'),
   ed('w1', 'J888', 't', 'V5', 'b'), ed('w2', 'V5', 't', 'J775', 'b'),
@@ -385,7 +388,9 @@ const EDGES: Edge[] = [
   ed('y4', 'JTL', 'r', 'PV', 'l'), ed('y5', 'PV', 'r', 'JTR', 'l'), ed('y6', 'JTR', 'b', 'J640', 't'),
   ed('z1', 'J640', 'r', 'V3', 'l'), ed('z2', 'V3', 'r', 'END3', 'l'),
   ed('z3', 'J640', 'b', 'V2', 't'), ed('z4', 'V2', 'b', 'J888R', 't'), ed('z5', 'J888R', 'b', 'tank', 'inR'),
-  ed('f1', 'END1', 'l', 'V1', 'r'), ed('f2', 'V1', 'l', 'J888R', 'r'),
+  /* abastecimiento: fuente → válvula manual VF → V1 → tanque */
+  ed('s1', 'SUPPLY', 'in', 'VF', 'b'), ed('s2', 'VF', 't', 'JV1F', 'b'), ed('s3', 'JV1F', 'l', 'V1', 'r'),
+  ed('f2', 'V1', 'l', 'J888R', 'r'),
 ];
 
 const CAUDAL_TAG_PLAN = {
@@ -396,14 +401,71 @@ const CAUDAL_TAG_PLAN = {
   V5: { open: 'right', closed: 'top', unknown: 'top' },
   V6: { open: 'top', closed: 'right', unknown: 'right' },
   V7: { open: 'right', closed: 'top', unknown: 'top' },
+  VF: { open: 'right', closed: 'right', unknown: 'right' },
 } as const;
 
 const edgeTypes = { pipe: PipeEdge };
 
 /* ───────────── Lienzo con re-encaje automático ───────────── */
-function Flow({ senal }: { senal: CaudalSenal }) {
+export interface EstadoMimico { valvulas: Record<string, boolean | null>; nivelPct: number | null; nivelBajo: boolean | null }
+
+function Flow({ senal, onEstado, interactivo = false, onLlave }: { senal: CaudalSenal; onEstado?: (e: EstadoMimico) => void; interactivo?: boolean; onLlave?: (id: string, abierta: boolean) => void }) {
+  const ext = !interactivo && !!onLlave;   /* PLANTA SIMULADA: llaves y T1 del simulador Python */
   const rf = useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
+  /* Todas las llaves se abren/cierran con un clic, igual que en el catálogo.
+     Es solo visual (no manda órdenes al PLC): el clic sobrescribe localmente el estado leído. */
+  const [manual, setManual] = useState<Record<string, boolean>>({ VF: true, V7: false });
+  const abierta = (id: string): boolean | null => {
+    if (interactivo && id in manual) return manual[id];   // en REAL las llaves son manuales del módulo: el mímico no las mueve
+    if (!interactivo && !ext && id === 'VF') return true;
+    const nodo = BASE_NODES.find((x) => x.id === id);
+    const nom = (nodo?.data as Data | undefined)?.nominal;
+    return senal.valvulas[id] ?? (typeof nom === 'boolean' ? nom : null);
+  };
+  const alternar = (id: string) => {
+    if (interactivo) setManual((m) => ({ ...m, [id]: !(abierta(id) === true) }));
+    else if (ext) onLlave?.(id, !(abierta(id) === true));
+  };
+  const clicable = interactivo || ext;
+  const fuenteAbierta = (interactivo || ext) && abierta('VF') === true;   // en REAL no hay medición de la fuente: sin animación
+
+  /* ── Simulación visual del tanque T1 (solo cuando no hay nivel real del PLC) ──
+     VF + V1 abiertas → entra agua; V7 abierta → drena.
+     NIVEL BAJO activo con poca agua; al llegar a NIVEL ALTO se cierra V1 sola para que no rebalse. */
+  const NIVEL_BAJO_PCT = 10, NIVEL_ALTO_PCT = 90;
+  const usarSim = interactivo;   // SOLO en simulador se llena/drena el tanque virtual; en REAL el nivel viene del PLC
+  const [nivelSim, setNivelSim] = useState(0);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const llenando = fuenteAbierta && abierta('V1') === true;
+  const drenando = abierta('V7') === true;
+  useEffect(() => {
+    if (!usarSim) return;
+    const id = window.setInterval(() => {
+      setNivelSim((n) => Math.max(0, Math.min(100, n + (llenando ? 1.2 : 0) - (drenando ? 0.9 : 0))));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [usarSim, llenando, drenando]);
+  useEffect(() => {
+    if (usarSim && nivelSim >= NIVEL_ALTO_PCT && abierta('V1') === true) {
+      setManual((m) => ({ ...m, V1: false }));
+      setAviso('NIVEL ALTO · V1 se cerró sola para que el tanque no rebalse');
+      const t = window.setTimeout(() => setAviso(null), 5000);
+      return () => window.clearTimeout(t);
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nivelSim, usarSim]);
+  const nivelPct = usarSim ? nivelSim : senal.nivelPct;
+  const nivelAlto = usarSim ? nivelSim >= NIVEL_ALTO_PCT : senal.nivelAlto;
+  const nivelBajo = usarSim ? nivelSim <= NIVEL_BAJO_PCT : senal.nivelBajo;
+
+  /* informa al SCADA (p. ej. al PLC virtual) cómo están las llaves y el tanque */
+  const idsValvulas = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'VF'];
+  const firma = idsValvulas.map((v) => String(abierta(v))).join(',') + '|' + Math.round(nivelPct ?? -1) + '|' + String(nivelBajo);
+  useEffect(() => {
+    onEstado?.({ valvulas: Object.fromEntries(idsValvulas.map((v) => [v, abierta(v)])), nivelPct: nivelPct ?? null, nivelBajo: nivelBajo ?? null });
+  }, [firma]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nodes = useMemo<Node[]>(() => {
     const activo = senal.online && senal.bomba === true;
@@ -411,54 +473,70 @@ function Flow({ senal }: { senal: CaudalSenal }) {
       const data: Data = { ...n.data };
       if (n.type === 'pump') data.on = senal.bomba;
       if (n.type === 'gauge') data.value = data.kind === 'flow' ? senal.caudal : senal.presion;
-      if (n.type === 'tank') { data.levelPct = senal.nivelPct; data.alto = senal.nivelAlto; data.bajo = senal.nivelBajo; }
-      if (n.type === 'supply') data.active = senal.valvulas.V7 === true;
+      if (n.type === 'tank') { data.levelPct = nivelPct; data.alto = nivelAlto; data.bajo = nivelBajo; }
+      if (n.type === 'supply') data.active = fuenteAbierta;
       if (n.type === 'propValve') data.pct = senal.valvulaPct;
       if (n.type === 'valve') {
         const nom = (n.data as Data).nominal;
-        data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        void nom;
+        data.open = abierta(String(n.id));
+        if (clicable) data.onToggle = () => alternar(String(n.id));
         data.tagPlan = CAUDAL_TAG_PLAN[String(n.id) as keyof typeof CAUDAL_TAG_PLAN];
       }
       if (n.type === 'end') data.active = activo;
       return { ...n, data };
     });
-  }, [senal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senal, manual, nivelPct, nivelAlto, nivelBajo]);
 
   const edges = useMemo<Edge[]>(() => EDGES.map((e) => {
     const pumpActive = senal.online && senal.bomba === true;
-    const supplyBranch = e.id.startsWith('o4') || e.id === 'o3';
+    const fuente = e.id === 's1';
+    const haciaV1 = e.id === 's2' || e.id === 's3';
+    const drenajeV7 = e.id === 'o3';
     const v6Branch = ['v1', 'v2', 'v3'].includes(e.id);
-    const active = supplyBranch
-      ? senal.online && senal.valvulas.V7 === true
+    const active = fuente || haciaV1
+      ? fuenteAbierta            /* VF abierta: el agua sube de la fuente hasta V1 (se detiene ahí si V1 está cerrada) */
+      : e.id === 'f2'
+        ? fuenteAbierta && abierta('V1') === true
+      : drenajeV7
+        ? abierta('V7') === true
+      : e.id === 'z5'
+        ? pumpActive || llenando   /* entrada al tanque por la derecha (V1 o línea de la bomba) */
       : v6Branch
-        ? pumpActive && senal.valvulas.V6 === true
+        ? pumpActive && abierta('V6') === true
         : pumpActive;
     return { ...e, data: { active } };
-  }), [senal.online, senal.bomba, senal.valvulas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [senal.online, senal.bomba, senal.valvulas, manual, llenando, interactivo]);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => rf.fitView({ padding: 0.2 }));
-    ro.observe(el);
+    const ro = observarEncuadre(el, () => void rf.fitView({ padding: 0.2 }));
     return () => ro.disconnect();
   }, [rf]);
 
+  const estables = useMedidasEstables(nodes);   // evita que los nodos queden ocultos tras cada dato en vivo
+
   return (
     <div className="ca-canvas" ref={ref}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.15} maxZoom={2} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false}>
+      {aviso && <div className="ca-aviso" role="alert">⚠ {aviso}</div>}
+      <ReactFlow nodes={estables.nodes} onNodesChange={estables.onNodesChange} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.15} maxZoom={2} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false}
+        onNodeClick={(_, n) => { if (clicable && n.type === 'valve') alternar(n.id); }}>
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
-        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }} />
+        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }}><CatalogoBoton /></Controls>
       </ReactFlow>
     </div>
   );
 }
 
-export function CaudalFlow({ senal }: { senal: CaudalSenal }) {
+export function CaudalFlow({ senal, onEstado, interactivo = false, onLlave }: { senal: CaudalSenal; onEstado?: (e: EstadoMimico) => void; interactivo?: boolean; onLlave?: (id: string, abierta: boolean) => void }) {
   return (
     <ReactFlowProvider>
-      <Flow senal={senal} />
+      {/* key: al cambiar REAL⇄SIMULADOR se reinicia el estado virtual (llaves, tanque) */}
+      <Flow key={interactivo ? 'sim' : 'real'} senal={senal} onEstado={onEstado} interactivo={interactivo} onLlave={onLlave} />
     </ReactFlowProvider>
   );
 }

@@ -13,7 +13,8 @@ import argparse
 import asyncio
 
 from .escenarios import cargar
-from .motor import argumentos_comunes, bucle
+from .motor import argumentos_comunes, bucle, con_llaves
+from .llaves import LlavesPresion
 from .plantas.presion import PlantaPresion
 from .plcs.cfp2200_presion import CFP2200Presion
 from .plcs.psp_sim import ServidorPSP
@@ -45,7 +46,13 @@ async def ejecutar(a):
     escenario = cargar(a.escenario, ACCIONES) if a.escenario else None
     print(f"cFP-2200 virtual (presion) en {a.host}:{a.port}  |  aceleracion x{a.acelerar}"
           + (f"  |  escenario: {escenario.get('nombre')}" if escenario else ""))
-    await bucle(plc, lambda ev: aplicar(ev, plc, srv), escenario, a.acelerar, a.log,
+    vplc, llaves = con_llaves(plc, LlavesPresion, a)   # llaves manuales + niveles (planta simulada)
+    def aplicar_ev(ev):
+        if llaves and ev['accion'] == 'agua_t1':   # el escenario vacia/llena T1 a traves de las llaves
+            llaves.forzar('t1', 50.0 if ev.get('valor') else 5.0)
+        else:
+            aplicar(ev, plc, srv)
+    await bucle(vplc, aplicar_ev, escenario, a.acelerar, a.log,
                 lambda: "OK" if srv.conectado else "CAIDO")
 
 

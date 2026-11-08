@@ -44,6 +44,13 @@ services:
       Mqtt__Port: "1883"
       Mqtt__CaudalControlHost: host.docker.internal
       Mqtt__CaudalControlPort: "1883"
+      # ordenes de presion/temperatura: mosquitto (real) o el broker Windows host.docker.internal (planta simulada)
+      Mqtt__PresionControlHost: ${PRESION_CONTROL_HOST:-mosquitto}
+      Mqtt__PresionControlPort: "1883"
+      Mqtt__TemperaturaControlHost: ${TEMP_CONTROL_HOST:-mosquitto}
+      Mqtt__TemperaturaControlPort: "1883"
+      # real = laboratorio fisico · simulado = simulador/*.py (llaves manuales via /api/sim/llave)
+      MODO_PLANTA: ${MODO_PLANTA:-real}
       Control__Modo: ${CONTROL_MODO:-DryRun}
       Control__HabilitadoEscritura: ${CONTROL_HABILITADOESCRITURA:-false}
       CONTROL_REAL: ${CONTROL_REAL:-0}
@@ -228,6 +235,9 @@ services:
       MQTT_HOST: mosquitto
       PLC_NIVEL_IP: ${PLC_NIVEL_IP:-192.168.114.9}
       CONECTOR_SALUD_PUERTO: "8098"
+    # planta simulada: PLC_NIVEL_IP=host.docker.internal (el MicroLogix virtual corre en la PC)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["sh", "-c", "python conector_control_nivel.py --modo \"$${CONECTOR_MODO:-dry-run}\" --broker \"$${MQTT_HOST:-mosquitto}\" --plc \"$${PLC_NIVEL_IP:-192.168.114.9}\" --habilitado-real"]
       # CONTROL_REAL queda AUSENTE a propÃ³sito. Sin --habilitado-real el modo real rechaza.
     networks:

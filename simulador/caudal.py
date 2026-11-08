@@ -17,7 +17,8 @@ from snap7.type import SrvArea
 from snap7.util import set_bool, set_int, set_real
 
 from .escenarios import cargar
-from .motor import argumentos_comunes, bucle
+from .motor import argumentos_comunes, bucle, con_llaves
+from .llaves import LlavesCaudal
 from .plantas.caudal import PlantaCaudal
 from .plcs.s7200_caudal import S7200Caudal
 
@@ -73,7 +74,13 @@ async def ejecutar(a):
     print(f"S7-200 virtual (caudal) en {a.host}:{a.port}  |  aceleracion x{a.acelerar}"
           + (f"  |  escenario: {escenario.get('nombre')}" if escenario else ""))
     try:
-        await bucle(plc, lambda ev: aplicar(ev, plc, srv), escenario, a.acelerar, a.log,
+        vplc, llaves = con_llaves(plc, LlavesCaudal, a)   # llaves manuales + niveles (planta simulada)
+        def aplicar_ev(ev):
+            if llaves and ev['accion'] == 'agua_t1':   # el escenario vacia/llena T1 a traves de las llaves
+                llaves.forzar('t1', 50.0 if ev.get('valor') else 5.0)
+            else:
+                aplicar(ev, plc, srv)
+        await bucle(vplc, aplicar_ev, escenario, a.acelerar, a.log,
                     lambda: "OK" if srv.conectado else "CAIDO")
     finally:
         if srv.conectado:

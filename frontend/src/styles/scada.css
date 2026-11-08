@@ -1150,3 +1150,82 @@
 .ca-side .lv-options .co-condiciones,.ca-side .lv-options .co-aviso{order:5;margin-top:auto !important;padding-left:0 !important;list-style:none;text-align:center;font-size:10px !important}
 .ca-side .lv-options > .co-fieldset .co-top{display:contents}.ca-side .lv-options > .co-fieldset .co-ver{order:1}
 .ca-side .lv-options > small{order:3;margin-top:4px}.ca-side .lv-options > small:last-child{order:5;margin-top:auto}.ca-side .lv-options button,.ca-side .lv-options .co-top{flex:0 0 auto}
+
+/* aviso de seguridad del mímico (p. ej. nivel alto → V1 cerrada) */
+.ca-canvas { position: relative; }
+.ca-aviso { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 999px; background: #ee3f3a; color: #fff; font-weight: 800; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,.35); white-space: nowrap; }
+.ca-aviso { top: 14px; left: 16px; right: 72px; transform: none; white-space: normal; text-align: center; border-radius: 12px; }
+
+/* PLC virtual (modo simulador) */
+.plcv { margin-top: 10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fafafa; display: grid; gap: 8px; }
+.plcv-head { display: flex; align-items: center; gap: 8px; }
+.plcv-head b { flex: 1; font-size: 13px; }
+.plcv-head button { border: 0; border-radius: 999px; padding: 5px 12px; background: #ee3f3a; color: #fff; font-weight: 700; cursor: pointer; }
+.plcv-head button:disabled { background: #d1d5db; color: #6b7280; cursor: default; }
+.plcv-dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; }
+.plcv-dot.conectando { background: #f59e0b; animation: plcv-pulso 1s infinite; }
+.plcv-dot.conectado { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+@keyframes plcv-pulso { 50% { opacity: .3; } }
+.plcv-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12px; color: #dc2626; }
+.plcv-checks li.ok { color: #16a34a; }
+.plcv-head { flex-wrap: wrap; }
+.plcv-head b { font-size: 12px; line-height: 1.2; }
+.plcv-head button { width: 100%; }
+.plcv { min-width: 0; }
+.plcv-checks { font-size: 11.5px; }
+
+/* cuadro del PLC virtual con scroll propio: no estira la columna ni las demás tarjetas */
+.plcv { max-height: 190px; overflow-y: auto; scrollbar-width: thin; }
+.plcv::-webkit-scrollbar { width: 6px; }
+.plcv::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* cuadro PLC virtual más compacto y separado de Órdenes */
+.plcv { max-height: 150px; margin: 4px 0 14px; padding: 8px 10px; gap: 6px; }
+.plcv-head b { font-size: 11.5px; }
+.plcv-head button { padding: 4px 10px; font-size: 12px; }
+.plcv-checks { font-size: 11px; gap: 2px; }
+.plcv > small { font-size: 10.5px; }
+.plcv { margin: 10px 0 8px; }
+
+/* PLC virtual: entre Detener y el mensaje (los hijos de Opciones usan order) */
+.ca-side .lv-options > .plcv { order: 4; flex: none; margin: 10px 0 2px; }
+.ca-side .lv-options .lv-opt-btns { flex: none; }
+.ca-side .lv-options > .plcv { flex: 1 1 0; min-height: 0; max-height: none; }   /* usa solo el espacio libre: no agranda la tarjeta */
+
+/* ───────── Emergente único (confirmaciones y avisos) ───────── */
+.em-fondo { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 14, 20, 0.55); backdrop-filter: blur(3px); animation: em-in .14s ease-out; }
+.em-caja { max-height: min(86vh, 640px); display: flex; flex-direction: column; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); overflow: hidden; border-top: 4px solid #2b2b2b; animation: em-sube .16s ease-out; }
+.em-caja--peligro { border-top-color: #dc2626; }
+.em-caja--aviso { border-top-color: #f59e0b; }
+.em-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+.em-head b { display: block; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; color: #111827; }
+.em-head small { display: block; margin-top: 2px; font: 600 11px var(--mono, monospace); color: #6b7280; }
+.em-x { flex: none; width: 32px; height: 32px; border: 1px solid #e5e7eb; border-radius: 9px; background: #f9fafb; font-size: 18px; line-height: 1; cursor: pointer; color: #374151; }
+.em-x:hover { background: #fee2e2; border-color: #ee3f3a; color: #ee3f3a; }
+.em-cuerpo { overflow-y: auto; padding: 14px 16px; font-size: 13px; color: #1f2937; }
+.em-pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; background: #fafafa; font-size: 11.5px; color: #6b7280; }
+.em-sub { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; }
+.em-cond { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 5px; }
+.em-cond li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid #eef0f2; border-radius: 9px; background: #f8fafc; }
+.em-cond li i { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
+.em-cond li i.ok { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+.em-cond li i.mal { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
+.em-cond li b { font: 700 12px var(--mono, monospace); }
+.em-alerta { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; }
+.em-alerta--peligro { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+.em-alerta--aviso { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.em-btn { min-width: 104px; padding: 9px 16px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; color: #111827; }
+.em-btn:hover { background: #f3f4f6; }
+.em-btn--ok { background: #16a34a; border-color: #15803d; color: #fff; }
+.em-btn--ok:hover { background: #15803d; }
+.em-btn--peligro { background: #dc2626; border-color: #b91c1c; color: #fff; }
+.em-btn--peligro:hover { background: #b91c1c; }
+@keyframes em-in { from { opacity: 0; } }
+@keyframes em-sube { from { transform: translateY(10px) scale(.98); opacity: 0; } }
+
+/* Botón cerrar [×] de TODOS los emergentes: fondo rojo de la marca, × blanca */
+.em-x, .co-modal-head button, .co-modal-head > button, .cat-cerrar {
+  background: #ee3f3a !important; border: 1px solid #d12f2a !important; color: #fff !important;
+  font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.em-x:hover, .co-modal-head button:hover, .cat-cerrar:hover { background: #c92f2a !important; border-color: #b02622 !important; color: #fff !important; }

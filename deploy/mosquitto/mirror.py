@@ -42,6 +42,10 @@ def main() -> None:
 
     def on_message(client, userdata, msg):
         nonlocal copiados
+        # Las ORDENES nunca se espejan (y menos retenidas): un /cmd viejo de la planta simulada
+        # no debe llegarle jamas a un conector real que escuche el broker Docker.
+        if msg.topic.endswith("/cmd") or "/cmd/" in msg.topic:
+            return
         # retain=True: en el broker de origen los mensajes de estado/metadatos ya están
         # retenidos. Sin re-publicar con retain, el broker destino NO los retiene y un
         # suscriptor que se conecte después (p. ej. el backend tras un reinicio) nunca

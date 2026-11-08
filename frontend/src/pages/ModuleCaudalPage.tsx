@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePlant } from '../context/PlantContext';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { TrendChart } from '../components/charts/TrendChart';
-import { CaudalFlow, type CaudalSenal } from '../components/scada/CaudalFlow';
+import { CaudalFlow, type CaudalSenal, type EstadoMimico } from '../components/scada/CaudalFlow';
+import { usePlcVirtualCaudal } from '../components/scada/plcVirtualCaudal';
 import { KnobControl } from '../components/scada/KnobControl';
+import { CajaPlanta, chequeosPlanta, leerSim, moverLlave, usePlantaModo } from '../components/scada/plantaSimulada';
 import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
+import { ConfirmarOrden } from '../components/common/Emergente';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
 import type { CaudalSenales, ControlOrden } from '../types';
 import { enviarControlCaudal, estadoControlCaudal, listarOrdenesCaudal, tokenControl } from '../services/control';
@@ -42,6 +45,15 @@ export function ModuleCaudalPage() {
   const [confirmarDetencion, setConfirmarDetencion] = useState(false);
   const [modo, setModo] = useState<Modo>('real');
   const [usuario, setUsuario] = useState(tokenControl());
+  // PLC virtual (solo modo SIMULADOR): recibe el estado de llaves/tanque del mímico
+  const [estadoMimico, setEstadoMimico] = useState<EstadoMimico>({ valvulas: {}, nivelPct: null, nivelBajo: null });
+  const plc = usePlcVirtualCaudal(modo === 'simulador', estadoMimico, Number(valvula) || 0);
+  const simulada = usePlantaModo() === 'simulado';   // backend con MODO_PLANTA=simulado
+  const [avisoLlave, setAvisoLlave] = useState<string | null>(null);
+  const onLlave = useCallback((id: string, abierta: boolean) => {
+    setAvisoLlave(`${id}: ${abierta ? 'abriendo' : 'cerrando'}…`);
+    void moverLlave('caudal-mcc09', id, abierta).then((e) => setAvisoLlave(e ? `${id}: ${e}` : null));
+  }, []);
 
   const cargarOrdenes = async () => {
     const r = await listarOrdenesCaudal();
@@ -120,17 +132,36 @@ export function ModuleCaudalPage() {
     nivelAlto: estado(caudalSenal, 'estado/nivel_alto'),
     nivelBajo: estado(caudalSenal, 'estado/nivel_bajo'),
   };
+  // PLANTA SIMULADA: llaves y T1 vienen del simulador Python
+  const simC = leerSim(caudalSenal?.valores, ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'VF']);
+  if (simulada && simC.hay) {
+    senal.valvulas = simC.valvulas;
+    senal.nivelPct = simC.t1;
+    senal.nivelAlto = simC.t1Alto;
+    senal.nivelBajo = simC.t1Bajo;
+  }
+  const chequeosSim = chequeosPlanta(online, simC, { abiertas: ['V5', 'V2'], cerradas: ['V1', 'V3', 'V4', 'V6', 'V7'], tanques: ['t1'], soloBajo: true });
+  const bloqueoSim = simulada && !chequeosSim.every((c) => c.ok);
 
   // Estado de comunicación para la cabecera
   const estadoCom: EstadoCom = online ? 'conectado' : link === 'reconnecting' || link === 'connecting' ? 'reconectando' : 'sin-comunicacion';
   // SIMULADOR: solo cambia lo que se DIBUJA en el mímico; nunca habilita órdenes al PLC.
   const sim = modo === 'simulador';
-  const w = Math.sin(now / 2400);
+  const plcOk = plc.conexion === 'conectado';
   const senalSim: CaudalSenal = {
-    online: true, caudal: 18.5 + w * 1.4, presion: 22.4, nivelPct: 67 + w * 3, bomba: true, valvulaPct: 63,
-    valvulas: { V1: false, V2: true, V3: false, V4: false, V5: true, V6: false, V7: false },
-    nivelAlto: false, nivelBajo: false,
+    online: plcOk,
+    caudal: plcOk ? plc.caudal : null,
+    presion: plcOk ? (plc.marcha ? plc.caudal * 0.32 : 0) : null,
+    nivelPct: null,          // el tanque lo simula el mímico (se llena con VF+V1, drena con V7)
+    bomba: plcOk ? plc.marcha : null,
+    valvulaPct: plcOk ? Number(valvula) || 0 : null,
+    valvulas: { V1: null, V2: null, V3: null, V4: null, V5: null, V6: null, V7: null },   // las mueve el operador en el mímico
+    nivelAlto: null, nivelBajo: null,
   };
+  const seriesSim = [
+    { id: 'caudal', label: 'CAUDAL', color: '#1e88e5', points: plc.historial.map((x) => ({ t: Date.parse(x.ts), v: x.value })) },
+    ...(plc.sp > 0 ? [{ id: 'sp', label: 'SETPOINT', color: '#ffd600', dashed: true, points: plc.historial.map((x) => ({ t: Date.parse(x.ts), v: plc.sp })) }] : []),
+  ];
 
   return (
     <div className="lv-scada">
@@ -138,7 +169,7 @@ export function ModuleCaudalPage() {
         id={eq.id}
         titulo="Módulo de control de caudal"
         meta="Siemens S7-200 · 192.168.114.7 · telemetría y control real protegido"
-        estado={estadoCom}
+        estado={sim ? (plcOk ? 'conectado' : plc.conexion === 'conectando' ? 'reconectando' : 'sin-comunicacion') : estadoCom}
         modo={modo}
         onModoChange={setModo}
       />
@@ -150,7 +181,7 @@ export function ModuleCaudalPage() {
               <h2>Diagrama mímico</h2>
             </div>
           </div>
-          <CaudalFlow senal={sim ? senalSim : senal} />
+          <CaudalFlow senal={sim ? senalSim : senal} onEstado={setEstadoMimico} interactivo={sim} onLlave={!sim && simulada ? onLlave : undefined} />
         </section>
 
         {/* columna derecha: tendencia + paneles de control */}
@@ -160,14 +191,14 @@ export function ModuleCaudalPage() {
             <b>Tendencia del proceso</b>
             <div className="ca-trend-right">
               <span>
-                {samples.length} muestras · {online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}
+                {sim ? `${plc.historial.length} muestras · ${plcOk ? 'PLC virtual' : 'PLC virtual desconectado'}` : `${samples.length} muestras · ${online ? (link === 'connected' ? 'en vivo' : link) : 'PLC sin datos'}`}
               </span>
-              <span className={`pill ${armado ? 'pill-err' : 'pill-warn'}`}>{armado ? 'REAL' : 'BLOQUEADO'}</span>
+              {sim ? <span className="pill pill-warn">SIMULADOR</span> : <span className={`pill ${armado ? 'pill-err' : 'pill-warn'}`}>{armado ? 'REAL' : 'BLOQUEADO'}</span>}
             </div>
           </div>
           <div className="lv-chart">
             <TrendChart
-              series={series}
+              series={sim ? seriesSim : series}
               unit="L/min"
               size="tall"
               yTicks={[0, 20, 40, 60, 80]}
@@ -192,10 +223,26 @@ export function ModuleCaudalPage() {
           </div>
           <small>{usuario} · supervisor</small>
           <div className="lv-opt-btns">
-            <button disabled={sim || !armado || !online} onClick={() => setConfirmarInicio(true)}>Iniciar</button>
-            <button disabled={sim || !armado || !online} onClick={() => setConfirmarDetencion(true)}>Detener</button>
+            <button disabled={sim ? !plcOk || plc.marcha : !armado || !online || bloqueoSim} onClick={() => (sim ? void plc.iniciar() : setConfirmarInicio(true))}>Iniciar</button>
+            <button disabled={sim ? !plc.marcha : !armado || !online} onClick={() => (sim ? plc.detener() : setConfirmarDetencion(true))}>Detener</button>
           </div>
-          <small>{mensaje}</small>
+          {sim && (
+            <div className="plcv">
+              <div className="plcv-head">
+                <span className={`plcv-dot ${plc.conexion}`} />
+                <b>PLC virtual · S7-200</b>
+                {plc.conexion === 'desconectado'
+                  ? <button type="button" onClick={plc.conectar}>Conectar</button>
+                  : <button type="button" disabled={plc.conexion === 'conectando'} onClick={plc.desconectar}>{plc.conexion === 'conectando' ? 'Conectando…' : 'Desconectar'}</button>}
+              </div>
+              <ul className="plcv-checks">
+                {plc.chequeos.map((c) => <li key={c.id} className={c.ok ? 'ok' : ''}>{c.ok ? '✔' : '✖'} {c.texto}</li>)}
+              </ul>
+              <small>{plc.marcha ? `EN MARCHA · SP ${plc.sp.toFixed(1)} L/min · FT ${plc.caudal.toFixed(1)} L/min` : plc.listo ? 'Todo listo: puedes dar Iniciar' : 'Cumple los enclavamientos para poder iniciar'}</small>
+            </div>
+          )}
+          {!sim && simulada && <CajaPlanta chequeos={chequeosSim} aviso={avisoLlave} />}
+          <small>{sim ? plc.mensaje : mensaje}</small>
         </section>
 
         <section className="lv-control-card lv-signals">
@@ -207,11 +254,11 @@ export function ModuleCaudalPage() {
           </div>
           <div>
             <span>Señal caudal</span>
-            <strong>{online && liveCaudal != null ? `${num(liveCaudal, 1)} L/min` : 'Sin dato'}</strong>
+            <strong>{sim ? (plcOk ? `${num(plc.caudal, 1)} L/min` : 'Sin dato') : online && liveCaudal != null ? `${num(liveCaudal, 1)} L/min` : 'Sin dato'}</strong>
           </div>
           <div>
             <span>Señal control</span>
-            <strong>{real(caudalSenal, 'actuadores/variador_pct') == null ? 'Sin dato' : `${num(real(caudalSenal, 'actuadores/variador_pct')!, 1)} %`}</strong>
+            <strong>{sim ? (plcOk ? `${num(plc.variador, 1)} %` : 'Sin dato') : real(caudalSenal, 'actuadores/variador_pct') == null ? 'Sin dato' : `${num(real(caudalSenal, 'actuadores/variador_pct')!, 1)} %`}</strong>
           </div>
           </div>
         </section>
@@ -241,9 +288,9 @@ export function ModuleCaudalPage() {
           <h3>Setpoint</h3>
             <div className="ca-command">
               <KnobControl value={Number(sp)} max={140} ticks={[0, 20, 40, 60, 80, 100, 120, 140]}
-                label={`Setpoint ${eq.unit}`} disabled={!armado} editable
+                label={`Setpoint ${eq.unit}`} disabled={sim ? !plcOk : !armado} editable
                 onChange={(v) => setSp(String(v))}
-                onCommit={(v) => void mandar('Setpoint', v, undefined, 'L/min')} />
+                onCommit={(v) => (sim ? plc.cargarSetpoint(v) : void mandar('Setpoint', v, undefined, 'L/min'))} />
             </div>
         </section>
         </div>
@@ -251,8 +298,8 @@ export function ModuleCaudalPage() {
         <section className="lv-control-card ca-pert">
           <h3>Perturbación</h3>
           <p className="ca-pert-sub">% apertura válvula</p>
-          <KnobControl value={Number(valvula)} max={100} ticks={[0, 20, 40, 60, 80, 100]} label="Apertura de válvula" disabled={!armado} editable onChange={(v) => setValvula(String(v))} />
-          <button disabled={!armado} onClick={() => void mandar('AjustarValvula', Number(valvula), undefined, '%')}>Aplicar válvula</button>
+          <KnobControl value={Number(valvula)} max={100} ticks={[0, 20, 40, 60, 80, 100]} label="Apertura de válvula" disabled={sim ? !plcOk : !armado} editable onChange={(v) => setValvula(String(v))} />
+          <button disabled={sim ? !plcOk : !armado} onClick={() => (sim ? undefined : void mandar('AjustarValvula', Number(valvula), undefined, '%'))}>{sim ? 'Válvula aplicada (simulador)' : 'Aplicar válvula'}</button>
         </section>
 
       </div>
@@ -284,40 +331,19 @@ export function ModuleCaudalPage() {
           <div className="co-modal-pie">Modo REAL · cada orden exige escritura y lectura posterior coincidente</div>
         </div>
       </div>}
-      {confirmarInicio && <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setConfirmarInicio(false)}>
-        <div className="co-modal-caja co-confirm" onClick={(e) => e.stopPropagation()}>
-          <div className="co-modal-head"><b>Confirmar inicio · caudal-mcc09</b><button onClick={() => setConfirmarInicio(false)}>×</button></div>
-          <div className="co-modal-cuerpo">
-            <p><b>Condiciones verificadas antes de enviar:</b></p>
-            <ul>
-              <li>PLC: {online ? 'CONECTADO' : 'DESCONECTADO'}</li>
-              <li>Selector físico: {estado(caudalSenal, 'estado/selector_remoto') ? 'REMOTO' : 'NO REMOTO'}</li>
-              <li>Origen de mando: {estado(caudalSenal, 'estado/modo_hmi_pc') ? 'HMI (BLOQUEADO)' : 'PC'}</li>
-              <li>Nivel bajo: {estado(caudalSenal, 'estado/nivel_bajo') ? 'ACTIVO (BLOQUEADO)' : 'NO'}</li>
-              <li>Modo del backend: {armado ? 'REAL' : 'BLOQUEADO'}</li>
-            </ul>
-            <p className="co-real-warning">MODO REAL: esta orden escribirá M0.2 y accionará físicamente la bomba.</p>
-          </div>
-          <div className="co-confirm-actions"><button onClick={() => setConfirmarInicio(false)}>Cancelar</button><button className="danger" onClick={() => { setConfirmarInicio(false); void mandar('Iniciar'); }}>Confirmar e iniciar</button></div>
-        </div>
-      </div>}
-      {confirmarDetencion && <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setConfirmarDetencion(false)}>
-        <div className="co-modal-caja co-confirm" onClick={(e) => e.stopPropagation()}>
-          <div className="co-modal-head"><b>Confirmar detenci&oacute;n &middot; caudal-mcc09</b><button onClick={() => setConfirmarDetencion(false)}>&times;</button></div>
-          <div className="co-modal-cuerpo">
-            <p><b>Condiciones verificadas antes de enviar:</b></p>
-            <ul>
-              <li>PLC: {online ? 'CONECTADO' : 'DESCONECTADO'}</li>
-              <li>Selector f&iacute;sico: {estado(caudalSenal, 'estado/selector_remoto') ? 'REMOTO' : 'NO REMOTO'}</li>
-              <li>Origen de mando: {estado(caudalSenal, 'estado/modo_hmi_pc') ? 'HMI (BLOQUEADO)' : 'PC'}</li>
-              <li>Sistema en marcha: {estado(caudalSenal, 'estado/sistema_funcionando') ? 'SI' : 'NO'}</li>
-              <li>Modo del backend: {armado ? 'REAL' : 'BLOQUEADO'}</li>
-            </ul>
-            <p className="co-real-warning">MODO REAL: esta orden pondr&aacute; M0.2 en 0 y detendr&aacute; f&iacute;sicamente la bomba.</p>
-          </div>
-          <div className="co-confirm-actions"><button onClick={() => setConfirmarDetencion(false)}>Cancelar</button><button className="danger" onClick={() => { setConfirmarDetencion(false); void mandar('Detener'); }}>Confirmar y detener</button></div>
-        </div>
-      </div>}
+      <ConfirmarOrden abierto={confirmarInicio || confirmarDetencion} accion={confirmarDetencion ? 'Detener' : 'Iniciar'} equipo="caudal-mcc09" simulada={simulada}
+        condiciones={[
+          { etiqueta: 'PLC S7-200', valor: online ? 'CONECTADO' : 'DESCONECTADO', ok: online },
+          { etiqueta: 'Selector físico', valor: estado(caudalSenal, 'estado/selector_remoto') ? 'REMOTO' : 'NO REMOTO', ok: estado(caudalSenal, 'estado/selector_remoto') === true },
+          { etiqueta: 'Origen de mando', valor: estado(caudalSenal, 'estado/modo_hmi_pc') ? 'HMI' : 'PC', ok: !estado(caudalSenal, 'estado/modo_hmi_pc') },
+          confirmarDetencion
+            ? { etiqueta: 'Sistema en marcha', valor: estado(caudalSenal, 'estado/sistema_funcionando') ? 'SÍ' : 'NO' }
+            : { etiqueta: 'Nivel bajo T1', valor: estado(caudalSenal, 'estado/nivel_bajo') ? 'ACTIVO' : 'NO', ok: !estado(caudalSenal, 'estado/nivel_bajo') },
+          { etiqueta: 'Control del backend', valor: armado ? 'ARMADO' : 'BLOQUEADO', ok: armado },
+        ]}
+        efecto={confirmarDetencion ? 'pone M0.2 = 0 y detiene la bomba' : 'escribe M0.2 = 1 y arranca la bomba'}
+        onCancelar={() => { setConfirmarInicio(false); setConfirmarDetencion(false); }}
+        onConfirmar={() => { const det = confirmarDetencion; setConfirmarInicio(false); setConfirmarDetencion(false); void mandar(det ? 'Detener' : 'Iniciar'); }} />
     </div>
   );
 }

@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { observarEncuadre, useMedidasEstables } from './encuadre';
+import { CatalogoBoton } from './catalogo/CatalogoBoton';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
 import { WaterSupplyNode } from './WaterSupplyNode';
 import { CatalogEndNode, CatalogJunctionNode, CatalogValveNode } from './CatalogParts';
@@ -37,7 +39,7 @@ function Port({ id, position, style }: { id: string; position: Position; style?:
   );
 }
 
-const Sw = ({ on }: { on: boolean | null }) => <i className={on ? 'led led--on' : 'led'} />;
+const Sw = ({ on, alarma }: { on: boolean | null; alarma?: boolean }) => <i className={on ? (alarma ? 'led led--alarm' : 'led led--on') : 'led'} />;
 
 /* ───────────── Unión de tuberías ───────────── */
 const FIT_ARM: Record<string, { body: [number, number, number, number]; flange: [number, number, number, number] }> = {
@@ -216,8 +218,8 @@ function TankT1Node({ data }: NodeProps) {
       </SteelTank>
       <div className="tank__readout"><strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
       <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T1 · ENFRIAMIENTO · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
-      <span className="tag level-tag" style={{ right: 224, top: 60 }}>NIVEL ALTO <Sw on={d.altoTE === true} /></span>
-      <span className="tag level-tag" style={{ right: 224, top: 190 }}>NIVEL BAJO <Sw on={d.bajoTE === true} /></span>
+      <span className="tag level-tag" style={{ right: 224, top: 60 }}>NIVEL ALTO <Sw on={d.altoTE === true} alarma /></span>
+      <span className="tag level-tag" style={{ right: 224, top: 190 }}>NIVEL BAJO <Sw on={d.bajoTE === true} alarma /></span>
       <Port id="in" position={Position.Bottom} style={{ left: 30 }} />
       <Port id="ovf" position={Position.Bottom} style={{ left: 130 }} />
       <Port id="retV2" position={Position.Bottom} style={{ left: 175 }} />
@@ -252,8 +254,8 @@ function TempSensorNode({ data }: NodeProps) {
     dir === 'up' ? { left: -22, top: -70, width: 114, textAlign: 'center' }
       : dir === 'down' ? { left: -22, top: 92, width: 114, textAlign: 'center' }
         : dir === 'right'
-          ? { left: 100, top: 12, width: 96, minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' }
-          : { right: 100, top: 12, width: 96, minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' };
+          ? { left: 100, top: 12, minWidth: 96, whiteSpace: 'nowrap', minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' }
+          : { right: 100, top: 12, minWidth: 96, whiteSpace: 'nowrap', minHeight: 42, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.25, padding: '6px 8px' };
   return (
     <div className="valve nodrag nopan" title="Solo lectura · sin órdenes al equipo" style={{ width: vertical ? 40 : 70, height: vertical ? 70 : 40 }}>
       <div style={{ position: 'absolute', left: vertical ? -15 : 0, top: vertical ? 15 : 0, width: 70, height: 40, transform: `rotate(${rot}deg)` }}>
@@ -262,7 +264,10 @@ function TempSensorNode({ data }: NodeProps) {
           <rect x="24" y="11" width="22" height="18" rx="3" className="v-flange" />
           <rect x="31" y="-6" width="8" height="18" className="ts-stem" />
           <rect x="28" y="3" width="14" height="5" rx="1" className="ts-nut" />
-          <circle cx="35" cy="20" r="3.5" fill={col} stroke="#0b141c" strokeWidth="1" style={{ transition: 'fill .4s' }} />
+          {/* válvula del sensor: verde abierta · rojo cerrada (simulador); en REAL muestra el color de la temperatura */}
+          {typeof d.abierta === 'boolean'
+            ? <circle cx="35" cy="20" r="5.5" fill={d.abierta ? '#22c55e' : '#ef4444'} stroke="#0b141c" strokeWidth="1.2" style={{ transition: 'fill .3s', filter: `drop-shadow(0 0 3px ${d.abierta ? '#22c55e' : '#ef4444'})` }} />
+            : <circle cx="35" cy="20" r="3.5" fill={col} stroke="#0b141c" strokeWidth="1" style={{ transition: 'fill .4s' }} />}
           <rect x="17" y={headY} width="36" height={-5 - headY} rx="5" className="ts-head" />
           <rect x="21" y={sy} width="28" height={sh} rx="2" className="ts-screen" />
           <text x="35" y={sc} textAnchor="middle" dominantBaseline="central" transform={`rotate(${-rot} 35 ${sc})`} className="ts-text" style={{ fill: disp, fontSize: em }}>
@@ -320,11 +325,11 @@ function TankT2Node({ data }: NodeProps) {
         <rect x="206" y="42" width="14" height="16" rx="3" className={d.altoTP === true ? 'level-switch-orange on' : 'level-switch-orange'} />
         <rect x="206" y="167" width="14" height="16" rx="3" className={d.bajoTP === true ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
-      <div className="tank__readout"><strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
+      <div className="tank__readout" style={{ top: 88 }}>   {/* centrado entre la etiqueta T2 y la resistencia */}<strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
       <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T2 · PRINCIPAL · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
-      <span className="tag level-tag level-tag--right" style={{ left: 224, top: 50 }}><Sw on={d.altoTP === true} /> NIVEL ALTO</span>
-      <span className="tag level-tag level-tag--right" style={{ left: 224, top: 175 }}><Sw on={d.bajoTP === true} /> NIVEL BAJO</span>
-      <span className="tag" style={{ left: 12, top: 190 }}>RESISTENCIA {heater == null ? 'SIN DATO' : `${heater} %`}</span>
+      <span className="tag level-tag level-tag--right" style={{ left: 224, top: 50 }}><Sw on={d.altoTP === true} alarma /> NIVEL ALTO</span>
+      <span className="tag level-tag level-tag--right" style={{ left: 224, top: 175 }}><Sw on={d.bajoTP === true} alarma /> NIVEL BAJO</span>
+      <span className="tag" style={{ left: 12, top: 190 }}>RESISTENCIA {heater == null ? 'SIN DATO' : `${heater.toFixed(0)} %`}</span>
       <Port id="inB" position={Position.Top} style={{ left: 30 }} />
       <Port id="inA" position={Position.Top} style={{ left: 75 }} />
       <Port id="inS" position={Position.Bottom} style={{ left: 175 }} />
@@ -403,17 +408,18 @@ const valve = (valveId: string, cx: number, cy: number, orientation: 'h' | 'v', 
 const end = (id: string, x: number, y: number): Node => ({ id, type: 'end', position: { x, y }, data: { side: 'l' }, ...fixed });
 
 const BASE_NODES: Node[] = [
-  { id: 'pump', type: 'pump', position: { x: 285, y: 970 }, data: {}, ...fixed },
+  { id: 'pump', type: 'pump', position: { x: 285, y: 1040 }, data: {}, ...fixed },
   { id: 't1', type: 'tankT1', position: { x: 425, y: 270 }, data: {}, ...fixed },
   { id: 't2', type: 'tankT2', position: { x: 525, y: 690 }, data: {}, ...fixed },
   { id: 'chiller', type: 'chiller', position: { x: 780, y: 430 }, data: {}, ...fixed },
   { id: 'TS', type: 'tempSensor', position: { x: 630, y: 925 }, data: { label: 'TEMPERATURA SALIDA', dir: 'left', src: 'control' }, ...fixed },
   { id: 'TSE', type: 'tempSensor', position: { x: 580, y: 565 }, data: { label: 'TEMPERATURA ENTRADA', dir: 'right', src: 'cooler' }, ...fixed },
-  /* Posición nominal: V2 abierta · V1 y V3 cerradas */
-  valve('V1', 670, 215, 'h', false), valve('V2', 555, 600, 'v', true, 'left'),
-  /* V3 queda en la subida del abastecimiento, separada de su boca superior. */
-  valve('V3', 920, 820, 'v', false, 'left'),
-  junction('JV', 575, 215), junction('JIN', 470, 215), junction('JS', 650, 1020),
+  /* Posición nominal: V1, V2, V4 y VF cerradas (V2 se abre a mano para bajar agua de T1 a T2) */
+  valve('V1', 670, 165, 'h', false), valve('V2', 555, 600, 'v', false, 'left'),
+  /* VF (llave de la fuente) queda en la subida del abastecimiento, separada de su boca superior. */
+  valve('VF', 920, 885, 'v', false),
+  valve('V4', 700, 975, 'v', false),   /* descarga de T2: la tubería termina en la llave (bota el agua) */   /* 0° · vertical · palanca derecha */
+  junction('JV', 575, 165), junction('JIN', 470, 165), junction('JS', 650, 1090),
   { id: 'SUPPLY', type: 'supply', position: { x: 820, y: 927 }, data: { side: 't' }, ...fixed },
 ];
 
@@ -426,8 +432,9 @@ const EDGES: Edge[] = [
   ed('r1', 't1', 'retV2', 'TSE', 't'), ed('r2', 'TSE', 'b', 't2', 'inA'),
   ed('ov', 't1', 'ovf', 'V2', 't'), ed('ov2', 'V2', 'b', 't2', 'inB'),
   ed('s1', 't2', 'out', 'TS', 't'), ed('s1b', 'TS', 'b', 'JS', 't'), ed('s2', 'JS', 'l', 'pump', 'suction'),
-  ed('x0', 'SUPPLY', 't', 'V3', 'b'),
-  ed('x1', 'V3', 't', 'V1', 'r', 'pipe', { routeUp: true }),
+  ed('dr', 't2', 'inS', 'V4', 't'),
+  ed('x0', 'SUPPLY', 't', 'VF', 'b'),
+  ed('x1', 'VF', 't', 'V1', 'r', 'pipe', { routeUp: true }),
   ed('f2', 'V1', 'l', 'JV', 'r'), ed('f3a', 'JV', 'l', 'JIN', 'r'), ed('f3b', 'JIN', 'b', 't1', 'v1'),
   /* Refrigerante: sube por la derecha y pasa por encima de T1 sin cruzarse. */
   ed('c1', 'chiller', 'outU', 't1', 'coilU', 'coolant', { turnX: 745, topY: 238 }),
@@ -437,7 +444,8 @@ const EDGES: Edge[] = [
 const TEMP_TAG_PLAN = {
   V1: { open: 'top', closed: 'right', unknown: 'right' },
   V2: { open: 'left', closed: 'top', unknown: 'top' },
-  V3: { open: 'right', closed: 'top', unknown: 'top' },
+  VF: { open: 'top', closed: 'top', unknown: 'top' },
+  V4: { open: 'top', closed: 'top', unknown: 'top' },
 } as const;
 
 /* ───────────── Tubería de refrigerante (enfriador ↔ serpentín del T1) ───────────── */
@@ -459,16 +467,38 @@ function CoolantEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
 const edgeTypes = { pipe: PipeEdge, coolant: CoolantEdge };
 
 /* ───────────── Lienzo con re-encaje automático ───────────── */
-function Flow({ senal }: { senal: TempSenal }) {
+type MapaValv = Record<string, boolean | null>;
+function Flow({ senal, interactivo = false, onValvulas, onLlave }: { senal: TempSenal; interactivo?: boolean; onValvulas?: (v: MapaValv) => void; onLlave?: (id: string, abierta: boolean) => void }) {
   const rf = useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
+  /* SIMULADOR: las llaves se abren/cierran con clic (solo visual, nunca órdenes al PLC). En REAL son fijas. */
+  const [manual, setManual] = useState<Record<string, boolean>>({});
+  const nominal = (id: string) => { const nom = (BASE_NODES.find((x) => x.id === id)?.data as Data | undefined)?.nominal; return typeof nom === 'boolean' ? nom : null; };
+  const abierta = (id: string): boolean | null => {
+    if (interactivo) return id in manual ? manual[id] : nominal(id);
+    return senal.valvulas[id] ?? nominal(id);
+  };
+  const alternar = (id: string) => {
+    if (interactivo) setManual((m) => ({ ...m, [id]: !(abierta(id) === true) }));
+    else onLlave?.(id, !(abierta(id) === true));   // PLANTA SIMULADA: la mueve el simulador Python
+  };
+  const clicable = interactivo || !!onLlave;
+  const IDS = ['V1', 'V2', 'VF', 'V4'];
+  const firma = IDS.map((v) => String(abierta(v))).join(',');
+  useEffect(() => {
+    onValvulas?.(Object.fromEntries(IDS.map((v) => [v, abierta(v)])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firma]);
+  const circula = senal.online && senal.bomba === true;   // en marcha: válvulas-sensor abiertas
 
   const nodes = useMemo<Node[]>(() => {
-    const activo = senal.online && senal.bomba === true;
     return BASE_NODES.map((n) => {
       const data: Data = { ...n.data };
       if (n.type === 'pump') data.on = senal.bomba;
-      if (n.type === 'tempSensor') data.temp = (n.data as Data).src === 'cooler' ? senal.tempCooler : senal.tempControl;
+      if (n.type === 'tempSensor') {
+        data.temp = (n.data as Data).src === 'cooler' ? senal.tempCooler : senal.tempControl;
+        if (clicable) data.abierta = circula;
+      }
       if (n.type === 'tankT1') {
         data.nivelPct = senal.nivel1Pct;
         data.temp = senal.tempCooler;
@@ -485,52 +515,64 @@ function Flow({ senal }: { senal: TempSenal }) {
       }
       if (n.type === 'chiller') data.on = senal.coolerOn;
       if (n.type === 'valve') {
-        const nom = (n.data as Data).nominal;
-        data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        data.open = abierta(String(n.id));
+        if (clicable) data.onToggle = () => alternar(String(n.id));
         data.tagPlan = TEMP_TAG_PLAN[String(n.id) as keyof typeof TEMP_TAG_PLAN];
       }
-      if (n.type === 'supply') data.active = senal.online && senal.valvulas.V3 === true;
-      if (n.type === 'end') data.active = activo;
+      if (n.type === 'supply') data.active = (interactivo || senal.online) && abierta('VF') === true;
+      if (n.type === 'end') data.active = circula;
       return { ...n, data };
     });
-  }, [senal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senal, manual, interactivo, onLlave]);
 
-  const edges = useMemo<Edge[]>(() => EDGES.map((e) => ({
-    ...e,
-    // se conserva el data original (p. ej. turnX de las tuberías de refrigerante) y solo se actualiza "active"
-    data: {
-      ...e.data,
-      active: e.id === 'x0'
-        ? senal.online && senal.valvulas.V3 === true
-        : ['x1', 'f2', 'f3a', 'f3b'].includes(e.id)
-          ? senal.online && senal.valvulas.V3 === true && senal.valvulas.V1 === true
-          : senal.online && senal.bomba === true,
-    },
-  })), [senal]);
+  /* El agua avanza hasta la primera llave cerrada: fuente → VF → V1 → T1; T1 → V2 → T2;
+     y la recirculación (bomba y válvulas-sensor) solo en marcha. */
+  const edges = useMemo<Edge[]>(() => {
+    const hayAgua = interactivo || senal.online;
+    const v3 = abierta('VF') === true,   /* VF: llave de la fuente */ v1 = abierta('V1') === true, v2 = abierta('V2') === true, v4 = abierta('V4') === true;
+    return EDGES.map((e) => ({
+      ...e,
+      data: {
+        ...e.data,
+        active: e.id === 'x0' || e.id === 'x1'
+          ? hayAgua && v3
+          : ['f2', 'f3a', 'f3b'].includes(e.id)
+            ? hayAgua && v3 && v1
+            : e.id === 'dr'
+              ? hayAgua && v4 && (senal.nivel2Pct ?? (interactivo ? 0 : 100)) > 0.5
+            : ['ov', 'ov2'].includes(e.id)
+              ? hayAgua && v2 && (senal.nivel1Pct ?? (interactivo ? 0 : 100)) > 0.5
+              : circula,
+      },
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senal, manual, interactivo, onLlave]);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => rf.fitView({ padding: 0.2 }));
-    ro.observe(el);
+    const ro = observarEncuadre(el, () => void rf.fitView({ padding: 0.2 }));
     return () => ro.disconnect();
   }, [rf]);
 
+  const estables = useMedidasEstables(nodes);   // evita que los nodos queden ocultos tras cada dato en vivo
+
   return (
     <div className="ca-canvas" ref={ref}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
+      <ReactFlow nodes={estables.nodes} onNodesChange={estables.onNodesChange} edges={edges} onNodeClick={(_, n) => { if (clicable && n.type === 'valve') alternar(n.id); }} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3} maxZoom={2} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false}>
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
-        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }} />
+        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }}><CatalogoBoton /></Controls>
       </ReactFlow>
     </div>
   );
 }
 
-export function TempFlow({ senal }: { senal: TempSenal }) {
+export function TempFlow({ senal, interactivo = false, onValvulas, onLlave }: { senal: TempSenal; interactivo?: boolean; onValvulas?: (v: MapaValv) => void; onLlave?: (id: string, abierta: boolean) => void }) {
   return (
     <ReactFlowProvider>
-      <Flow senal={senal} />
+      <Flow key={interactivo ? 'sim' : 'real'} senal={senal} interactivo={interactivo} onValvulas={onValvulas} onLlave={onLlave} />
     </ReactFlowProvider>
   );
 }

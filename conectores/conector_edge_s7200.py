@@ -157,8 +157,8 @@ def ahora():
 
 
 class LectorPLC:
-    def __init__(self, ip, local_tsap, remote_tsap, db_v):
-        self.ip, self.local_tsap, self.remote_tsap, self.db_v = ip, local_tsap, remote_tsap, db_v
+    def __init__(self, ip, local_tsap, remote_tsap, db_v, puerto=102):
+        self.ip, self.local_tsap, self.remote_tsap, self.db_v, self.puerto = ip, local_tsap, remote_tsap, db_v, puerto
         self.c = None
         self.analogicas_ok = True  # se desactiva si el CP243-1 no acepta AIW/AQW
         self.lock = threading.RLock()
@@ -166,7 +166,7 @@ class LectorPLC:
     def conectar(self):
         c = snap7.client.Client()
         c.set_connection_params(self.ip, self.local_tsap, self.remote_tsap)
-        c._connect(self.ip, 0, 0, 102)  # usa los TSAP fijados; connect() los reemplazaria
+        c._connect(self.ip, 0, 0, self.puerto)  # usa los TSAP fijados; connect() los reemplazaria
         self.c = c
 
     def desconectar(self):
@@ -276,6 +276,7 @@ def main():
     p.add_argument("--source-ip", default=None, help="IP local autorizada por el CP243-1")
     p.add_argument("--local-tsap", default="1100")
     p.add_argument("--remote-tsap", default="1100")
+    p.add_argument("--puerto-plc", type=int, default=102, help="puerto S7 (102 en el PLC real; el simulador usa 1102)")
     p.add_argument("--db-v", type=int, default=1)
     p.add_argument("--broker", default="localhost")
     p.add_argument("--puerto", type=int, default=1883)
@@ -301,7 +302,7 @@ def main():
         "caudalimetro": "Kobold DRG, 4-20 mA, 0-141 L/min (calibrado)",
         "fuente_mapa": "OPC_caudal.pca (S7-200 PC Access, Inducontrol)"}, ensure_ascii=False), qos=1, retain=True)
 
-    plc = LectorPLC(a.plc, int(a.local_tsap, 16), int(a.remote_tsap, 16), a.db_v)
+    plc = LectorPLC(a.plc, int(a.local_tsap, 16), int(a.remote_tsap, 16), a.db_v, a.puerto_plc)
 
     def ack(oid, estado, **extra):
         mq.publish(f"{CONTROL}/ack", json.dumps({"id": oid, "estado": estado, "ts": ahora(), **extra}), qos=1)

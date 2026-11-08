@@ -28,6 +28,7 @@ class ParametrosNivel:
     carrera_valvula_s: float = 95.0  # tiempo de 0 a 100 % (calibrado: 9500 = 95 s)
     ruido_cuentas: float = 25.0
     prob_pico_eco: float = 0.01      # por lectura
+    rampa_variador_s: float = 8.0    # s de 0 a 100 % (rampa del ATV11)
 
 
 @dataclass
@@ -45,6 +46,9 @@ class PlantaNivel:
         self.p = p or ParametrosNivel()
         self.e = EstadoNivel()
         self.rng = random.Random(semilla)
+        self.vel_real = 0.0
+        self.camino_bomba = 1.0      # 0 = llave V4 cerrada (planta simulada con llaves)
+        self.q_in = self.q_out = 0.0
 
     def paso(self, dt: float, velocidad_pct: float, abriendo: bool, cerrando: bool):
         p, e = self.p, self.e
@@ -52,11 +56,15 @@ class PlantaNivel:
             e.apertura = min(1.0, e.apertura + dt / p.carrera_valvula_s)
         elif cerrando and not abriendo:
             e.apertura = max(0.0, e.apertura - dt / p.carrera_valvula_s)
-        v = max(0.0, min(100.0, velocidad_pct))
+        paso_v = 100.0 / p.rampa_variador_s * dt
+        self.vel_real += max(-paso_v, min(paso_v, max(0.0, min(100.0, velocidad_pct)) - self.vel_real))
+        v = self.vel_real
         q_in = 0.0
         if e.agua_t1 and v > p.velocidad_minima:
             q_in = p.q_max_lpm * (v - p.velocidad_minima) / (100.0 - p.velocidad_minima)
+        q_in *= self.camino_bomba
         q_out = p.k_valvula * e.apertura * math.sqrt(max(0.0, e.nivel_cm)) + e.fuga_lpm
+        self.q_in, self.q_out = q_in, q_out
         dh = (q_in - q_out) * 1000.0 / 60.0 / p.area_cm2 * dt     # L/min -> cm3/s -> cm
         e.nivel_cm = max(0.0, min(p.altura_cm, e.nivel_cm + dh))
 

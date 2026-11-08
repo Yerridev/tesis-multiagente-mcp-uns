@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { observarEncuadre, useMedidasEstables } from './encuadre';
+import { CatalogoBoton } from './catalogo/CatalogoBoton';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
 import { WaterSupplyNode } from './WaterSupplyNode';
 import { CatalogEndNode, CatalogJunctionNode, CatalogPumpNode, CatalogValveNode } from './CatalogParts';
@@ -227,7 +229,7 @@ function TankT1Node({ data }: NodeProps) {
       </SteelTank>
       <div className="tank__readout"><strong>{pct == null ? '—' : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : '%'}</span></div>
       <span className="tag level-tag" style={{ right: 204, top: 42 }}>NIVEL ALTO <i className={alto ? 'led led--alarm' : 'led'} /></span>
-      <span className="tag level-tag" style={{ right: 204, top: 260 }}>NIVEL BAJO <i className={bajo ? 'led led--on' : 'led'} /></span>
+      <span className="tag level-tag" style={{ right: 204, top: 260 }}>NIVEL BAJO <i className={bajo ? 'led led--alarm' : 'led'} /></span>
       <span className="tag" style={{ left: 60, top: 10 }}>TANQUE T1</span>
       <Port id="in" position={Position.Top} style={{ left: 81 }} />
       <Port id="inR" position={Position.Top} style={{ left: 150 }} />
@@ -294,8 +296,8 @@ function TankT2Node({ data }: NodeProps) {
         <InstrumentTag label="PRESOSTATO" size={T2_LABEL_SIZE} />
       </div>
       <Port id="inR" position={Position.Right} style={{ top: 320 }} />
-      <Port id="air1" position={Position.Right} style={{ top: 225 }} />
-      <Port id="air2" position={Position.Right} style={{ top: 241 }} />
+      <Port id="air1" position={Position.Right} style={{ top: 70 }} />
+      <Port id="air2" position={Position.Right} style={{ top: 86 }} />
       <Port id="outL" position={Position.Left} style={{ top: 320 }} />
     </div>
   );
@@ -374,21 +376,23 @@ const valve = (valveId: string, cx: number, cy: number, orientation: 'h' | 'v', 
 const end = (id: string, x: number, y: number, side: 'r' | 't'): Node => ({ id, type: 'end', position: { x, y }, data: { side }, ...fixed });
 
 const BASE_NODES: Node[] = [
-  { id: 'pump', type: 'pump', position: { x: 785, y: 1338 }, data: { mirror: true, air: true }, ...fixed },
+  { id: 'pump', type: 'pump', position: { x: 785, y: 1628 }   /* más abajo: deja espacio al tramo V6/JD → bomba */, data: { mirror: true, air: true }, ...fixed },
   { id: 't1', type: 'tankT1', position: { x: 307, y: 1020 }, data: {}, ...fixed },
   { id: 't2', type: 'tankT2', position: { x: 622, y: 840 }, data: {}, ...fixed },
-  { id: 'ac', type: 'charger', position: { x: 760, y: 1040 }, data: {}, ...fixed },
-  { id: 'PV', type: 'propValve', position: { x: 445, y: 715 }, data: {}, ...fixed },
+  { id: 'ac', type: 'charger', position: { x: 760, y: 885 }   /* arriba, junto a la cámara de aire de T2 */, data: {}, ...fixed },
+  { id: 'PV', type: 'propValve', position: { x: 445, y: 645 }, data: {}, ...fixed },
   /* Posición nominal: V2, V5 abiertas · V1, V3, V4, V6, V7 cerradas */
-  valve('V1', 300, 948, 'h', false, 'lever-top-h'), valve('V2', 388, 865, 'v', true, 'lever-top-v'), valve('V3', 300, 785, 'h', false), valve('V4', 770, 1213, 'h', false, 'side-right'),
-  valve('V5', 835, 1270, 'v', true, 'lever-right'), valve('V6', 760, 1330, 'h', false), valve('V7', 57, 1160, 'v', false, 'left'),
-  junction('JTL', 388, 735), junction('JV3', 388, 785), junction('JV1', 388, 948),
-  junction('JLt2', 553, 985), junction('JLb2', 553, 1330), junction('JU', 585, 735), junction('JRB', 585, 1160),
+  valve('V1', 300, 948, 'h', false, 'lever-top-h'), valve('V2', 388, 865, 'v', true, 'lever-top-v'), valve('V3', 300, 785, 'h', false), valve('V4', 770, 1320, 'h', false, 'side-right'),
+  valve('V5', 835, 1420, 'v', true, 'lever-right'), valve('V6', 760, 1520, 'h', false),
+  valve('V7', 405, 1740, 'v', false, 'left'),   /* descarga de T1: la tubería termina en la llave (bota el agua) */
+  valve('VF', 145, 1480, 'h', false),            /* llave de la fuente, pegada a su pico */
+  junction('JTL', 388, 665), junction('JV3', 388, 785), junction('JV1', 388, 948),
+  junction('JLt2', 553, 985), junction('JLb2', 553, 1520), junction('JU', 585, 665), junction('JRB', 585, 1160),
   junction('JR2', 457, 985),
-  junction('JT', 405, 1388), junction('JD', 835, 1330), junction('J4', 835, 1213), junction('JE', 835, 1160),
-  junction('JA', 57, 1377), junction('JB', 57, 948),
-  end('END3', 253, 773, 'r'), end('END4', 723, 1201, 'r'),
-  { id: 'SUPPLY', type: 'supply', position: { x: 87, y: 1319 }, data: { side: 'l' }, ...fixed },
+  junction('JT', 405, 1678), junction('JD', 835, 1520), junction('J4', 835, 1320), junction('JE', 835, 1160),
+  junction('JF', 95, 948), junction('JFB', 95, 1480),
+  end('END3', 253, 773, 'r'), end('END4', 723, 1308, 'r'),
+  { id: 'SUPPLY', type: 'supply', position: { x: 187, y: 1422 }, data: { side: 'l' }, ...fixed },
 ];
 
 const ed = (id: string, source: string, sh: string, target: string, th: string, type: 'pipe' | 'hose' = 'pipe'): Edge => ({
@@ -397,10 +401,13 @@ const ed = (id: string, source: string, sh: string, target: string, th: string, 
 
 const EDGES: Edge[] = [
   ed('o1', 't1', 'out', 'JT', 't'), ed('o2', 'JT', 'r', 'pump', 'suction'),
-  ed('o4', 'SUPPLY', 'l', 'JA', 'r'),
-  ed('o5', 'JA', 't', 'V7', 'b'),
-  ed('o6', 'V7', 't', 'JB', 'b'),
-  ed('o7', 'JB', 'r', 'V1', 'l'),
+  /* llenado de T1: fuente → VF → sube → V1 → T1 */
+  ed('o4', 'SUPPLY', 'l', 'VF', 'r'),
+  ed('o5', 'VF', 'l', 'JFB', 'r'),
+  ed('o6', 'JFB', 't', 'JF', 'b'),
+  ed('o7', 'JF', 'r', 'V1', 'l'),
+  /* descarga de T1 por V7 */
+  ed('d1', 'JT', 'b', 'V7', 't'),
   ed('u1', 'pump', 'discharge', 'JD', 'b'),
   ed('l1', 'JD', 'l', 'V6', 'r'), ed('l2', 'V6', 'l', 'JLb2', 'r'), ed('l3', 'JLb2', 't', 'JLt2', 'b'),
   ed('l4', 'JLt2', 'l', 'JR2', 'r'), ed('l5', 'JR2', 'b', 't1', 'inR'),
@@ -416,13 +423,20 @@ const EDGES: Edge[] = [
   ed('n1', 'JV1', 'b', 't1', 'in'),
 ];
 
-/* Válvula que gobierna cada tramo: si está cerrada, el agua no circula por él. */
-const EDGE_VALVE: Record<string, string> = {
-  o4: 'V7', o5: 'V7', o6: 'V7', o7: 'V7',
-  l1: 'V6', l2: 'V6', l3: 'V6', l4: 'V6', l5: 'V6',
-  s1: 'V4', s2: 'V4',
-  v1: 'V3', v2: 'V3',
+/* Válvulas que gobiernan cada tramo: si alguna está cerrada, el agua no circula por él. */
+const EDGE_VALVE: Record<string, string[]> = {
+  o4: ['VF'], o5: ['VF'], o6: ['VF'], o7: ['VF'], f2: ['VF', 'V1'],
+  d1: ['V7'],
+  l1: ['V6'], l2: ['V6'], l3: ['V6'], l4: ['V6'], l5: ['V6'],
+  s1: ['V4'], s2: ['V4'],
+  t1: ['V5'], t2: ['V5'], t3: ['V5'], t4: ['V5'],
+  v1: ['V3'], v2: ['V3'],
+  v3: ['V2'], v4: ['V2'], n1: ['V2'],
 };
+/* Tramos que mueve la bomba vs. los que mueve la presión de T2 (retorno) vs. gravedad/fuente. */
+const POR_BOMBA = new Set(['o1', 'o2', 'u1', 'h1', 't1', 't2', 't3', 't4', 't6a', 't6b', 'l1', 'l2', 'l3', 'l4', 'l5', 's1', 's2']);
+const FUENTE = new Set(['o4', 'o5', 'o6', 'o7', 'f2']);
+const POR_RETORNO = new Set(['r1', 'r2', 'r3', 'r4', 'r5', 'v1', 'v2', 'v3', 'v4', 'n1']);
 
 const HORIZONTAL_TAG_PLAN = { open: 'top', closed: 'right', unknown: 'right' } as const;
 const VERTICAL_TAG_PLAN = { open: 'top', closed: 'top', unknown: 'top' } as const;
@@ -434,14 +448,35 @@ const TAG_PLAN = {
   V5: VERTICAL_TAG_PLAN,
   V6: HORIZONTAL_TAG_PLAN,
   V7: VERTICAL_TAG_PLAN,
+  VF: HORIZONTAL_TAG_PLAN,
 } as const;
 
 const edgeTypes = { pipe: PipeEdge, hose: HoseEdge };
 
 /* ───────────── Lienzo con re-encaje automático ───────────── */
-function Flow({ senal }: { senal: PresionSenal }) {
+function Flow({ senal, interactivo = false, onValvulas, onLlave }: { senal: PresionSenal; interactivo?: boolean; onValvulas?: (v: Record<string, boolean | null>) => void; onLlave?: (id: string, abierta: boolean) => void }) {
   const rf = useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
+  /* SIMULADOR: las llaves se abren/cierran con clic (solo visual, nunca órdenes al PLC). En REAL son fijas. */
+  const [manual, setManual] = useState<Record<string, boolean>>({});
+  const abierta = (id: string): boolean | null => {
+    if (interactivo && id in manual) return manual[id];
+    const nodo = BASE_NODES.find((x) => x.id === id);
+    const nom = (nodo?.data as Data | undefined)?.nominal;
+    return senal.valvulas[id] ?? (typeof nom === 'boolean' ? nom : null);
+  };
+  /* SIMULADOR del navegador: estado local. PLANTA SIMULADA (onLlave): la llave la mueve el simulador Python. */
+  const alternar = (id: string) => {
+    if (interactivo) setManual((m) => ({ ...m, [id]: !(abierta(id) === true) }));
+    else onLlave?.(id, !(abierta(id) === true));
+  };
+  const clicable = interactivo || !!onLlave;
+  const IDS_VALV = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'VF'];
+  const firmaValv = IDS_VALV.map((v) => String(abierta(v))).join(',');
+  useEffect(() => {
+    onValvulas?.(Object.fromEntries(IDS_VALV.map((v) => [v, abierta(v)])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmaValv]);
 
   const nodes = useMemo<Node[]>(() => {
     const activo = senal.online && senal.bomba === true;
@@ -453,44 +488,60 @@ function Flow({ senal }: { senal: PresionSenal }) {
       if (n.type === 'propValve') data.pct = senal.valvulaPct;
       if (n.type === 'valve') {
         const nom = (n.data as Data).nominal;
-        data.open = senal.valvulas[String(n.id)] ?? (typeof nom === 'boolean' ? nom : null);
+        void nom;
+        data.open = abierta(String(n.id));
+        if (clicable) data.onToggle = () => alternar(String(n.id));
         data.tagPlan = TAG_PLAN[String(n.id) as keyof typeof TAG_PLAN];
       }
-      if (n.type === 'supply') data.active = senal.online && senal.valvulas.V7 === true;
+      if (n.type === 'supply') data.active = (interactivo || senal.online) && abierta('VF') === true;
       if (n.type === 'end') data.active = activo;
       return { ...n, data };
     });
-  }, [senal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senal, manual, interactivo, onLlave]);
 
   const edges = useMemo<Edge[]>(() => EDGES.map((e) => {
-    const gate = EDGE_VALVE[e.id];
-    const active = senal.online && (gate ? senal.valvulas[gate] === true : senal.bomba === true);
+    const gates = EDGE_VALVE[e.id] ?? [];
+    const abiertas = gates.every((g) => abierta(g) === true);
+    const motor = POR_BOMBA.has(e.id) ? senal.bomba === true
+      : POR_RETORNO.has(e.id) ? (senal.presion ?? 0) > 0.5 && (senal.valvulaPct ?? 0) > 0
+      : true;
+    /* Tramos de la fuente (VF → V1 → T1) y de la descarga V7: van por gravedad/red, no dependen del PLC.
+       El agua avanza hasta la primera llave cerrada: con V1 cerrada se queda en V1. */
+    const llenando = abierta('VF') === true && abierta('V1') === true;
+    let active: boolean;
+    if (e.id === 'n1') active = llenando || (senal.online && abiertas && motor);       // JV1 → T1: llenado o retorno por V2
+    else if (FUENTE.has(e.id)) active = (interactivo || senal.online) && abiertas;
+    else if (e.id === 'd1') active = (interactivo || senal.online) && abiertas && (senal.nivelPct ?? 0) > 0.5;
+    else active = senal.online && abiertas && motor;
     return { ...e, data: { active } };
-  }), [senal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [senal, manual, interactivo]);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => rf.fitView({ padding: 0.2 }));
-    ro.observe(el);
+    const ro = observarEncuadre(el, () => void rf.fitView({ padding: 0.2 }));
     return () => ro.disconnect();
   }, [rf]);
 
+  const estables = useMedidasEstables(nodes);   // evita que los nodos queden ocultos tras cada dato en vivo
+
   return (
     <div className="ca-canvas" ref={ref}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
+      <ReactFlow nodes={estables.nodes} onNodesChange={estables.onNodesChange} edges={edges} onNodeClick={(_, n) => { if (clicable && n.type === 'valve') alternar(n.id); }} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3} maxZoom={2} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false}>
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
-        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }} />
+        <Controls showInteractive={false} position="top-right" fitViewOptions={{ padding: 0.2 }}><CatalogoBoton /></Controls>
       </ReactFlow>
     </div>
   );
 }
 
-export function PressureFlow({ senal }: { senal: PresionSenal }) {
+export function PressureFlow({ senal, interactivo = false, onValvulas, onLlave }: { senal: PresionSenal; interactivo?: boolean; onValvulas?: (v: Record<string, boolean | null>) => void; onLlave?: (id: string, abierta: boolean) => void }) {
   return (
     <ReactFlowProvider>
-      <Flow senal={senal} />
+      <Flow key={interactivo ? 'sim' : 'real'} senal={senal} interactivo={interactivo} onValvulas={onValvulas} onLlave={onLlave} />
     </ReactFlowProvider>
   );
 }

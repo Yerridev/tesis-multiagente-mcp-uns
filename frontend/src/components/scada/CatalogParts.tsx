@@ -1,7 +1,7 @@
 import { Handle, Position, useEdges, useNodeId, type NodeProps } from '@xyflow/react';
 import type { CSSProperties } from 'react';
 import { PumpTag } from './PumpTag';
-import { stateKey, tagStyle as plannedTagStyle, type TagPlan } from './valveTag';
+import { tagStyle as tagStyleCatalogo } from './catalogo/valveTagCatalogo';
 
 type Data = Record<string, unknown>;
 type Box = [number, number, number, number];
@@ -19,7 +19,7 @@ export function CatalogJunctionNode() {
   const id=useNodeId(), edges=useEdges();
   const arms=[...new Set(edges.filter(e=>e.source===id||e.target===id).map(e=>e.source===id?e.sourceHandle:e.targetHandle).filter((h):h is string=>!!h))];
   return <div className="junction">{arms.length>=2&&<svg width="44" height="44" viewBox="0 0 44 44" className="ca-fitting" aria-hidden>
-    {['ca-fit-outline','ca-fit-body'].map(cls=><g className={cls} key={cls}><rect x="17" y="17" width="10" height="10" rx="3"/>{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}</g>)}
+    {['ca-fit-outline','ca-fit-body'].map(cls=><g className={cls} key={cls}>{arms.map(a=>ARM[a]&&<g key={a}><rect x={ARM[a].body[0]} y={ARM[a].body[1]} width={ARM[a].body[2]} height={ARM[a].body[3]}/><rect x={ARM[a].flange[0]} y={ARM[a].flange[1]} width={ARM[a].flange[2]} height={ARM[a].flange[3]} rx="1.5"/></g>)}<rect x="12" y="12" width="20" height="20" rx="4"/></g>)}
   </svg>}<Port id="t" position={Position.Top}/><Port id="b" position={Position.Bottom}/><Port id="l" position={Position.Left}/><Port id="r" position={Position.Right}/></div>;
 }
 
@@ -34,8 +34,11 @@ function ValveGlyph({open}:{open:boolean|null}) {
 }
 
 export function CatalogValveNode({data}:NodeProps) {
-  const d=data as Data, orientation=String(d.orientation) as 'h'|'v', open=(d.open as boolean|null)??null, vertical=orientation==='v', leverLeft=d.lever==='left', tag=d.tag?String(d.tag):(vertical?(leverLeft?'left':'right'):'left'), plan=d.tagPlan as TagPlan|undefined, plannedStyle=plan?plannedTagStyle(vertical,plan[stateKey(open)],open,leverLeft):undefined, tagStyle=plannedStyle??(tag==='lever-top-h'?{left:'calc(50% + 30px)',top:-20,transform:'translate(-50%,-100%)'}:tag==='lever-top-v'?{left:'calc(50% + 30px)',top:10,transform:'translate(-50%,-100%)'}:tag==='side-right'?{left:'100%',marginLeft:6,top:'50%',transform:'translateY(-50%)'}:tag==='lever-right'?{left:'100%',marginLeft:6,top:'calc(50% + 34px)',transform:'translateY(-50%)'}:vertical?(tag==='left'?{right:'100%',marginRight:6,top:'50%',transform:'translateY(-50%)'}:{left:'100%',marginLeft:6,top:'50%',transform:'translateY(-50%)'}):(tag==='right'?{right:0,top:-18}:{left:0,top:-18}));
-  return <div className="valve nodrag nopan" title="Solo lectura · sin órdenes al PLC" style={{width:vertical?40:70,height:vertical?70:40}}><div className="valve__hit" style={vertical?{left:-15,top:15,width:70,height:40,transform:leverLeft?'rotate(270deg)':'rotate(90deg)'}:{left:0,top:0,width:70,height:40}}><ValveGlyph open={open}/></div><span className="valve__tag" style={tagStyle}>{String(d.label??'')}</span>{vertical?<><Port id="t" position={Position.Top}/><Port id="b" position={Position.Bottom}/></>:<><Port id="l" position={Position.Left}/><Port id="r" position={Position.Right}/></>}</div>;
+  /* Llave del catálogo: palanca que gira y rótulo (con fondo) que se mueve al lado libre.
+     En SIMULADOR (data.onToggle) se abre/cierra con clic; en REAL es solo lectura. */
+  const d=data as Data, orientation=String(d.orientation) as 'h'|'v', open=(d.open as boolean|null)??null, vertical=orientation==='v', leverLeft=d.lever==='left'||d.tag==='left', clic=typeof d.onToggle==='function';
+  const tagStyle=tagStyleCatalogo(vertical,'top',open,vertical&&leverLeft,String(d.label??'V1'));
+  return <div className="valve nodrag nopan" title={clic?'Clic para abrir/cerrar (simulador)':'Solo lectura · sin órdenes al PLC'} style={{width:vertical?40:70,height:vertical?70:40,cursor:clic?'pointer':undefined}}><div className="valve__hit" style={vertical?{left:-15,top:15,width:70,height:40,transform:leverLeft?'rotate(270deg)':'rotate(90deg)'}:{left:0,top:0,width:70,height:40}}><ValveGlyph open={open}/></div><span className="valve__tag" style={tagStyle}>{String(d.label??'')}</span>{vertical?<><Port id="t" position={Position.Top}/><Port id="b" position={Position.Bottom}/></>:<><Port id="l" position={Position.Left}/><Port id="r" position={Position.Right}/></>}</div>;
 }
 
 export function CatalogPumpNode({data}:NodeProps) {

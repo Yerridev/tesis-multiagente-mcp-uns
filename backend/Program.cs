@@ -290,8 +290,55 @@ if (!agentsOnly)
     });
 }
 
+/* ------------------------- PLANTA SIMULADA (MODO_PLANTA=simulado) -------------------------
+   Una sola planta simulada (simulador/*.py) para SCADA, lienzos y agentes. En modo simulado las
+   llaves manuales del mimico (V1..V7, VF) se mandan al simulador por MQTT (broker Windows, el mismo
+   del control de caudal). En modo real este endpoint rechaza: las llaves reales son de mano. */
+var modoPlanta = string.Equals((Environment.GetEnvironmentVariable("MODO_PLANTA") ?? app.Configuration["Planta:Modo"] ?? "real").Trim(),
+    "simulado", StringComparison.OrdinalIgnoreCase) ? "simulado" : "real";
+var basesSim = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+{
+    ["nivel-mcn09"] = NivelState.Base, ["caudal-mcc09"] = CaudalState.Base,
+    ["presion-mcp09"] = PresionState.Base, ["temp-mct09"] = TemperaturaState.Base, ["temperatura-mct09"] = TemperaturaState.Base,
+};
+async Task<bool> PublicarSim(IConfiguration cfg, string topico, string cuerpo, CancellationToken ct)
+{
+    try
+    {
+        var host = cfg["Mqtt:CaudalControlHost"] ?? cfg["Mqtt:Host"] ?? "127.0.0.1";
+        var port = int.TryParse(cfg["Mqtt:CaudalControlPort"], out var p) ? p : 1883;
+        var factory = new MQTTnet.MqttFactory(); using var client = factory.CreateMqttClient();
+        await client.ConnectAsync(new MQTTnet.Client.MqttClientOptionsBuilder().WithTcpServer(host, port)
+            .WithClientId($"sim-llave-{Guid.NewGuid():N}").Build(), ct);
+        await client.PublishAsync(new MQTTnet.MqttApplicationMessageBuilder().WithTopic(topico).WithPayload(cuerpo)
+            .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce).Build(), ct);
+        await client.DisconnectAsync(new MQTTnet.Client.MqttClientDisconnectOptions(), ct);
+        return true;
+    }
+    catch { return false; }
+}
+app.MapGet("/api/planta/modo", () => Results.Ok(new { modo = modoPlanta }));
+if (!agentsOnly) app.MapPost("/api/sim/llave", async (SolicitudLlave sol, IConfiguration cfg, CancellationToken ct) =>
+{
+    if (modoPlanta != "simulado") return Results.Json(new { error = "PLANTA_REAL: las llaves reales son manuales" }, statusCode: 409);
+    if (sol.Modulo is null || !basesSim.TryGetValue(sol.Modulo, out var b)) return Results.BadRequest(new { error = "MODULO_DESCONOCIDO" });
+    var id = (sol.Id ?? "").Trim().ToUpperInvariant();
+    if (!System.Text.RegularExpressions.Regex.IsMatch(id, "^(V[1-7]|VF)$")) return Results.BadRequest(new { error = "LLAVE_DESCONOCIDA" });
+    var cuerpo = System.Text.Json.JsonSerializer.Serialize(new { id, abierta = sol.Abierta, ts = DateTimeOffset.Now });
+    return await PublicarSim(cfg, b + "/sim/cmd/llave", cuerpo, ct)
+        ? Results.Ok(new { ok = true, modulo = sol.Modulo, id, abierta = sol.Abierta })
+        : Results.Json(new { error = "MQTT_NO_DISPONIBLE" }, statusCode: 503);
+});
+if (!agentsOnly) app.MapPost("/api/sim/reiniciar", async (SolicitudLlave sol, IConfiguration cfg, CancellationToken ct) =>
+{
+    if (modoPlanta != "simulado") return Results.Json(new { error = "PLANTA_REAL" }, statusCode: 409);
+    if (sol.Modulo is null || !basesSim.TryGetValue(sol.Modulo, out var b)) return Results.BadRequest(new { error = "MODULO_DESCONOCIDO" });
+    return await PublicarSim(cfg, b + "/sim/cmd/reiniciar", "{}", ct) ? Results.Ok(new { ok = true }) : Results.Json(new { error = "MQTT_NO_DISPONIBLE" }, statusCode: 503);
+});
+
 app.MapHub<PlantHub>("/hubs/plant");
 app.MapFallbackToFile("index.html", new StaticFileOptions { OnPrepareResponse = SinCacheHtml });
 app.Run();
 
 public record AgentAskRequest(string? Message);
+public record SolicitudLlave(string? Modulo, string? Id, bool Abierta);

@@ -51,8 +51,8 @@ class S7200Caudal:
         self._t_pid = 0.0
         self._pv_prev: float | None = None
         V = self.V
-        set_real(V, 171, 1.0); set_real(V, 175, 0.2); set_real(V, 179, 0.01); set_real(V, 183, 0.0)
-        set_real(V, 100, 1.0); set_real(V, 108, 0.01); set_real(V, 116, 0.0)
+        set_real(V, 171, 1.0); set_real(V, 175, 0.2); set_real(V, 179, 0.05); set_real(V, 183, 0.0)
+        set_real(V, 100, 1.0); set_real(V, 108, 0.05); set_real(V, 116, 0.0)
         set_real(V, 400, 20.0); set_real(V, 408, 0.0)
         set_int(self.M, 25, CUENTAS_AQ)   # valvula abierta al iniciar (supuesto)
 

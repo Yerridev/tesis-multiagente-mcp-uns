@@ -25,6 +25,7 @@ class ParametrosPresion:
     capacidad: float = 20.0
     p_max: float = 80.0
     ruido_psi: float = 0.15
+    rampa_variador_s: float = 8.0    # s de 0 a 10 V (rampa de aceleracion del Altivar)
 
 
 @dataclass
@@ -41,12 +42,17 @@ class PlantaPresion:
         self.p = p or ParametrosPresion()
         self.e = EstadoPresion()
         self.rng = random.Random(semilla)
+        self.var_real = 0.0          # tension que de verdad sigue el variador (con rampa)
+        self.camino_bomba = 1.0      # 0 = llave V5 cerrada (planta simulada con llaves)
+        self.camino_retorno = 1.0    # 0 = V2 y V3 cerradas: T2 no descarga
 
     def paso(self, dt: float, variador_v: float, valvula_v: float):
         p, e = self.p, self.e
-        s = max(0.0, min(10.0, variador_v)) / 10.0
-        i = p.i_max * (s - p.velocidad_minima) / (1 - p.velocidad_minima) if (s > p.velocidad_minima and e.agua_t1) else 0.0
-        ap = min(1.0, max(0.0, valvula_v) / 10.0 + e.fuga)
+        paso_v = 10.0 / p.rampa_variador_s * dt
+        self.var_real += max(-paso_v, min(paso_v, max(0.0, min(10.0, variador_v)) - self.var_real))
+        s = self.var_real / 10.0
+        i = self.camino_bomba * p.i_max * (s - p.velocidad_minima) / (1 - p.velocidad_minima) if (s > p.velocidad_minima and e.agua_t1) else 0.0
+        ap = min(1.0, max(0.0, valvula_v) / 10.0 * self.camino_retorno + e.fuga)
         o = p.k_valvula * max(ap, 0.02) * math.sqrt(max(0.0, e.presion))   # 2 % de fuga natural
         e.presion = max(0.0, min(p.p_max, e.presion + dt * (i - o) / p.capacidad))
 

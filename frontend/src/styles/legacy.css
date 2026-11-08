@@ -761,3 +761,10 @@
 /* Dashboard: módulos y tarjetas en vivo de 2 en 2 (Caudal | Nivel / Presión | Temperatura) */
 .eq-grid, .cards-live { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 @media (max-width: 760px) { .eq-grid, .cards-live { grid-template-columns: 1fr !important; } }
+
+/* Sidebar cerrado: submenu flotante con el color de marca (antes quedaba verde) */
+@media (min-width: 0px) {
+  .app[data-collapsed='true'] .nav-groupwrap .nav-sub .nav-item.active { background: #ee3f3a; color: #fff; }
+  .app[data-collapsed='true'] .nav-groupwrap .nav-sub .nav-item.active > .nav-txt,
+  .app[data-collapsed='true'] .nav-groupwrap .nav-sub .nav-item.active .nav-ico { color: #fff; }
+}

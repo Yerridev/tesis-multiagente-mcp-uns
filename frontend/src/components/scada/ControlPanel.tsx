@@ -1,4 +1,6 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { ConfirmarOrden } from '../common/Emergente';
+import { usePlantaModo } from './plantaSimulada';
+import { useEffect, useMemo, useState } from 'react';
 import { usePlant } from '../../context/PlantContext';
 import { controlEstado, enviarControl, tokenControl, CONTROL_TOKEN_DEFECTO, type EstadoControlDatos } from '../../services/control';
 import { KnobRO } from './KnobRO';
@@ -85,12 +87,15 @@ function bloqueosDe(datos: EstadoControlDatos | undefined, rol: string, estadoDi
  * de las órdenes (Enviado → Aceptado → Escrito → Confirmado | Rechazado | Timeout) y
  * motivo de cada rechazo. En modo REAL solo se habilitan marcha y parada verificadas.
  */
-export function ControlPanel() {
+/** bloqueoIniciar: planta simulada con enclavamientos sin cumplir (llaves/niveles). Detener sigue disponible. */
+export function ControlPanel({ bloqueoIniciar = false }: { bloqueoIniciar?: boolean } = {}) {
   const { controlOrdenes, controlRecargar } = usePlant();
   const [estado, setEstado] = useState<{ usuario?: string; datos?: EstadoControlDatos } | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
+  const [confirmar, setConfirmar] = useState<'Iniciar' | 'Detener' | null>(null);
+  const simulada = usePlantaModo() === 'simulado';
   const token = tokenControl();
   const rol = rolDeToken(token);
 
@@ -142,22 +147,18 @@ export function ControlPanel() {
     if (!r.ok) setAviso(`${sol.tipo}: ${r.error ?? 'error'}`);
   };
 
-  const confirmarMando = (tipo: string, bombaMarcha: boolean | null): boolean =>
-    window.confirm(
-      `${tipo} · nivel-mcn09\n\n` +
-        'Condiciones verificadas antes de enviar:\n' +
-        `· PLC: ${datos?.proceso.plc ?? 'sin dato'}\n` +
-        `· Selector: ${datos?.proceso.selector ?? 'sin dato'}\n` +
-        `· Propietario del mando: ${datos?.proceso.fuenteControl ?? 'sin dato'}\n` +
-        `· Bomba: ${bombaMarcha == null ? 'sin dato' : bombaMarcha ? 'en marcha' : 'detenida'}\n` +
-        `· Modo del backend: ${modo}\n\n` +
-        (real
-          ? 'MODO REAL: esta orden escribirá B3:0/4 y accionará físicamente la bomba. ¿Enviar?'
-          : 'La orden NO escribe en el PLC en modo DRY-RUN. ¿Enviar?'),
-    );
-
   return (
     <>
+      <ConfirmarOrden abierto={confirmar != null} accion={confirmar ?? 'Iniciar'} equipo="nivel-mcn09" simulada={simulada}
+        condiciones={[
+          { etiqueta: 'PLC MicroLogix', valor: datos?.proceso.plc ?? 'sin dato', ok: datos ? datos.proceso.plc === 'CONECTADO' : null },
+          { etiqueta: 'Selector', valor: datos?.proceso.selector ?? 'sin dato', ok: datos ? datos.proceso.selector === 'REMOTO' : null },
+          { etiqueta: 'Propietario del mando', valor: datos?.proceso.fuenteControl ?? 'sin dato' },
+          { etiqueta: 'Modo del backend', valor: modo, ok: real },
+        ]}
+        efecto={confirmar === 'Detener' ? 'escribe B3:0/4 = 0 y detiene la bomba' : real ? 'escribe B3:0/4 (START_PC) y arranca la bomba' : 'se registra en DRY-RUN (sin escritura) y no arranca la bomba'}
+        onCancelar={() => setConfirmar(null)}
+        onConfirmar={() => { const a = confirmar; setConfirmar(null); if (a) void enviar({ tipo: a }); }} />
       <div className="co-top">
         <span
           className={`pill ${real ? 'pill-err' : simulador ? 'pill-warn' : 'pill-ok'}`}
@@ -186,11 +187,10 @@ export function ControlPanel() {
 
       <div className="lv-opt-btns">
         <button
-          disabled={bloqueado}
+          disabled={bloqueado || bloqueoIniciar}
           title={bloqueos[0] ?? 'Envía la orden en DRY-RUN (sin escritura)'}
           onClick={() => {
-            const bomba = null;
-            if (confirmarMando('Iniciar', bomba)) void enviar({ tipo: 'Iniciar' });
+            setConfirmar('Iniciar');
           }}
         >
           Iniciar
@@ -199,7 +199,7 @@ export function ControlPanel() {
           disabled={bloqueado}
           title={bloqueos[0] ?? 'Envía la orden en DRY-RUN (sin escritura)'}
           onClick={() => {
-            if (confirmarMando('Detener', null)) void enviar({ tipo: 'Detener' });
+            setConfirmar('Detener');
           }}
         >
           Detener
@@ -361,7 +361,8 @@ export function SetpointPerilla({ actual, max = 40, deshabilitado = false, motiv
     setAviso('Enviando.');
     const r = await enviarControl({ tipo: 'Setpoint', valor, unidad: 'cm' });
     controlRecargar();
-    setAviso(r.ok ? `Setpoint confirmado: ${valor} cm` : (r.error ?? 'No se pudo cambiar el setpoint'));
+    // la confirmación (Confirmado / Rechazado / Timeout) se ve en el emergente de Órdenes; aquí solo errores de envío
+    setAviso(r.ok ? null : (r.error ?? 'No se pudo cambiar el setpoint'));
   };
   return <div>
     <KnobRO value={deshabilitado ? null : actual == null ? null : Math.max(0, Math.min(max, actual))} max={max} ticks={[0, 10, 20, 30, 40]} label="Setpoint cm" onCommit={(v) => void confirmar(v)} />

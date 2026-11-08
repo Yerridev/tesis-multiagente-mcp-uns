@@ -92,7 +92,14 @@ export function PlantProvider({ children }: { children: ReactNode }) {
 
     conn.on('telemetry', (items: Equipment[]) => {
       if (!Array.isArray(items)) return;
-      setEquipment(items);
+      /* Fusionar en vez de reemplazar: si un paquete llega sin algún equipo (p. ej. PLC apagado),
+         se conserva el último conocido y su SCADA no desaparece de la pantalla. */
+      setEquipment((prev) => {
+        const nuevos = new Map(items.map((i) => [i.id, i]));
+        const fusion = prev.map((p) => nuevos.get(p.id) ?? p);
+        for (const i of items) if (!prev.some((p) => p.id === i.id)) fusion.push(i);
+        return fusion;
+      });
       setHistory((prev) => {
         const next = prev.slice();
 for (const item of items) {

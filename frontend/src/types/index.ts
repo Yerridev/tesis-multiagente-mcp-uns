@@ -73,6 +73,8 @@ export interface AgentStatus {
   mode: 'llm' | 'rules';
   enabled: boolean;
   model: string;
+  /** modelos elegibles desde el chat */
+  models?: { id: string; nombre: string; gratis: boolean }[];
   provider: string;
   scope: string;
 }

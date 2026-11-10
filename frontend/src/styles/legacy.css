@@ -768,3 +768,53 @@
   .app[data-collapsed='true'] .nav-groupwrap .nav-sub .nav-item.active > .nav-txt,
   .app[data-collapsed='true'] .nav-groupwrap .nav-sub .nav-item.active .nav-ico { color: #fff; }
 }
+
+/* Chat de agentes: cabecera | contenido con su propio scroll | pie para escribir (separados por líneas) */
+.agents-grid > .ag-chat { overflow: hidden; }
+.agents-grid > .ag-chat > .panel-head { flex: none; margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
+.agents-grid .ag-chat .chat-log { flex: 1 1 0; min-height: 0; overflow-y: auto; margin: 0; padding: 14px 6px 14px 0; scrollbar-width: thin; }
+.agents-grid .ag-chat .chat-log::-webkit-scrollbar { width: 6px; }
+.agents-grid .ag-chat .chat-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.agents-grid .ag-chat .chat-pie { flex: none; padding-top: 12px; border-top: 1px solid #e5e7eb; }
+.agents-grid .ag-chat .chat-pie .chat-form { margin: 0; }
+
+/* ---------- Selector de modelo (junto a Enviar) ---------- */
+.sm-wrap { position: relative; flex: none; }
+.sm-btn { display: inline-flex; align-items: center; gap: 6px; max-width: 170px; padding: 7px 10px; border: 0; border-radius: 999px; background: transparent; color: #4b5563; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.sm-btn:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+.sm-btn:disabled { opacity: .5; cursor: default; }
+.sm-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-flecha { font-size: 10px; color: #9ca3af; }
+.sm-menu { position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 50; width: 300px; padding: 6px; background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.18); }
+.sm-cab { padding: 6px 10px 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; }
+.sm-op { width: 100%; display: grid; grid-template-columns: 1fr auto 16px; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; text-align: left; cursor: pointer; }
+.sm-op:hover { background: #f3f4f6; }
+.sm-op.activo { background: #fef2f2; }
+.sm-op-txt { min-width: 0; display: grid; }
+.sm-op-txt b { font-size: 13px; color: #111827; }
+.sm-op-txt small { font: 10.5px var(--mono, monospace); color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-gratis, .sm-pago { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; }
+.sm-gratis { background: #dcfce7; color: #166534; }
+.sm-pago { background: #fef3c7; color: #92400e; }
+.sm-check { color: #ee3f3a; font-weight: 900; }
+.sm-pie { margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid #f1f5f9; font-size: 10.5px; color: #6b7280; line-height: 1.35; }
+/* panel de agente dentro del lienzo (nodo angosto): menú compacto que no se corta */
+.lz-panel-agente .sm-menu { width: 210px; right: -4px; }
+.lz-panel-agente .sm-op-txt small { display: none; }
+.lz-panel-agente .sm-btn { max-width: 92px; padding: 6px 6px; font-size: 11.5px; }
+
+/* ---------- Caja de chat que crece con el texto (todos los chats) ---------- */
+.cc-caja { display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 8px 16px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: border-color .15s, box-shadow .15s; }
+.cc-caja:focus-within { border-color: #ee3f3a; box-shadow: 0 0 0 4px rgba(238, 63, 58, .14); }
+.cc-caja textarea { width: 100%; min-height: 24px; max-height: 210px; overflow-y: auto; resize: none; border: 0 !important; outline: none; box-shadow: none !important; background: transparent; padding: 4px 4px 0 0; font: inherit; font-size: 14px; line-height: 1.5; color: #111827; scrollbar-width: thin; }
+.cc-caja textarea::placeholder { color: #9ca3af; }
+.cc-barra { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.cc-ayuda { margin-right: auto; font-size: 10.5px; color: #b0b6bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-enviar { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 8px 16px; border: 0; border-radius: 999px; background: #ee3f3a; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
+.cc-enviar:hover:not(:disabled) { background: #c62f2b; }
+.cc-enviar:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+/* panel angosto del lienzo: sin texto de ayuda, más compacto */
+.lz-panel-agente .cc-caja { padding: 8px 8px 6px 12px; border-radius: 14px; }
+.lz-panel-agente .cc-caja textarea { font-size: 13px; max-height: 150px; }
+.lz-panel-agente .cc-ayuda { display: none; }
+.lz-panel-agente .cc-enviar { padding: 6px 12px; font-size: 12px; }

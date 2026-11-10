@@ -85,8 +85,20 @@ export function chequeosPlanta(
       ? { id: t, texto: `${t.toUpperCase()} sin nivel bajo`, ok: bajo === false }
       : { id: t, texto: `${t.toUpperCase()} sin nivel alto ni nivel bajo`, ok: alto === false && bajo === false });
   }
-  if (reglas.abiertas.length) lista.push({ id: 'ab', texto: `${reglas.abiertas.join(' y ')} abierta${reglas.abiertas.length > 1 ? 's' : ''}`, ok: reglas.abiertas.every((v) => s.valvulas[v] === true) });
-  if (reglas.cerradas.length) lista.push({ id: 'ce', texto: `${reglas.cerradas.join(', ')} cerradas`, ok: reglas.cerradas.every((v) => s.valvulas[v] === false) });
+  /* El texto dice QUÉ llave falla. Si el simulador no publica una llave (p. ej. simulador viejo
+     sin reiniciar tras renombrarla) se dice "sin dato", no "ciérrala". */
+  const grupo = (ids: string[], quiere: boolean, id: string, nombre: string) => {
+    if (!ids.length) return;
+    const sinDato = ids.filter((v) => s.valvulas[v] == null);
+    const mal = ids.filter((v) => s.valvulas[v] != null && s.valvulas[v] !== quiere);
+    const ok = !sinDato.length && !mal.length;
+    const partes: string[] = [];
+    if (mal.length) partes.push(`${quiere ? 'abre' : 'cierra'} ${mal.join(', ')}`);
+    if (sinDato.length) partes.push(`${sinDato.join(', ')} sin dato del simulador (reinicia simular-planta)`);
+    lista.push({ id, texto: ok ? `${ids.join(', ')} ${nombre}` : partes.join(' · '), ok });
+  };
+  grupo(reglas.abiertas, true, 'ab', reglas.abiertas.length > 1 ? 'abiertas' : 'abierta');
+  grupo(reglas.cerradas, false, 'ce', 'cerradas');
   return lista;
 }
 

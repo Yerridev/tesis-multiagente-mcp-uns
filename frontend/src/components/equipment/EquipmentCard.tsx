@@ -11,6 +11,9 @@ const ICONS: Record<string, typeof IconFlow> = {
   'temp-mct09': IconThermometer,
 };
 
+/** Fondo de escala de cada módulo (para la barra cuando no hay consigna). */
+const FONDO_ESCALA: Record<string, number> = { 'caudal-mcc09': 140, 'nivel-mcn09': 60, 'presion-mcp09': 60, 'temp-mct09': 60 };
+
 interface Props {
   equipment: Equipment;
   now: number;
@@ -32,7 +35,11 @@ export function EquipmentCard({ equipment, now, points, action }: Props) {
   const hasData = !offline && medible && Number.isFinite(equipment.value);
   const sinDatoAlarma = sinConsigna || offline || !medible;
 
-  const scaleMax = Math.max(equipment.setpoint * 1.5, equipment.value ?? 0, 1);
+  /* Escala de la barra: con consigna, 1,5 × consigna; sin consigna, el fondo de escala del módulo
+     (antes era el propio valor y la barra salía llena al 100 %). */
+  const scaleMax = sinConsigna
+    ? Math.max(FONDO_ESCALA[equipment.id] ?? 100, equipment.value ?? 0)
+    : Math.max(equipment.setpoint * 1.5, equipment.value ?? 0, 1);
   const width = clamp(((equipment.value ?? 0) / scaleMax) * 100);
   const marker = clamp((equipment.setpoint / scaleMax) * 100);
 

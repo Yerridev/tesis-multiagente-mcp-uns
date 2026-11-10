@@ -140,7 +140,9 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
                 const bomba = config.id === 'nivel-mcn09' && detalle;
                 /* Sin telemetría viva no se muestra un 0.00 engañoso: va "--" */
                 const conDato = Boolean(eq) && eq!.status === 'ONLINE' && sev !== 'sin_datos';
-                const setpoint = eq && eq.setpoint > 0 ? num(eq.setpoint, config.secundario.decimales) : null;
+                /* la consigna está en la MISMA unidad que la variable principal (cm, L/min, psi, °C);
+                   'secundario' es otra señal (p. ej. la frecuencia del variador en Hz) */
+                const setpoint = eq && eq.setpoint > 0 ? num(eq.setpoint, config.principal.decimales) : null;
                 return (
                   <article className={`lz-tarjeta sev-${sev}`} key={config.id}>
                     <header className="lz-tj-cab">
@@ -166,7 +168,7 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
                       </div>
                       <div className="lz-tj-sec">
                         <small>Setpoint</small>
-                        <b>{setpoint ? `${setpoint} ${config.secundario.unidad}` : '--'}</b>
+                        <b>{setpoint ? `${setpoint} ${config.principal.unidad}` : 'Sin datos'}</b>
                       </div>
                     </div>
 

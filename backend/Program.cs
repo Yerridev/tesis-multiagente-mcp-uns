@@ -186,7 +186,7 @@ app.MapGet("/api/agent/tools", () => Results.Ok(PlantState.Tools()));
 app.MapGet("/api/agent/status", (AgentService agent) => Results.Ok(agent.Status()));
 app.MapPost("/api/agent/ask", async (AgentAskRequest request, AgentService agent, CancellationToken token) =>
 {
-    var reply = await agent.AskAsync(request.Message, token);
+    var reply = await agent.AskAsync(request.Message, token, request.Model);
     return Results.Ok(reply);
 });
 
@@ -340,5 +340,5 @@ app.MapHub<PlantHub>("/hubs/plant");
 app.MapFallbackToFile("index.html", new StaticFileOptions { OnPrepareResponse = SinCacheHtml });
 app.Run();
 
-public record AgentAskRequest(string? Message);
+public record AgentAskRequest(string? Message, string? Model = null);
 public record SolicitudLlave(string? Modulo, string? Id, bool Abierta);

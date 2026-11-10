@@ -36,7 +36,7 @@ class CFP2200Presion:
         self.vars: dict[str, object] = {
             "DATOS_PAC/PC_TPM": True,
             "DATOS_PAC/INICIO_PC": False, "DATOS_PAC/SALIR_PC": False,
-            "pid/setpoint_pc": 10.0, "pid/SETPOINT_TPM": 10.0,
+            "pid/setpoint_pc": 0.0, "pid/SETPOINT_TPM": 0.0,   # sin consigna hasta que la carguen
             "pid/Kp_PC": 3.0, "pid/Ti_PC": 0.05, "pid/Td_PC": 0.0,
             "pid/valvula_pc": 3.0, "pid/salida_pid": 0.0,
         }

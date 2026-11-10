@@ -75,6 +75,7 @@ services:
       CONTROL_TEMPERATURA_REAL: "1"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
       Health__DatabaseEnabled: "true"
       Health__DatabaseHost: timescaledb
       Health__DatabasePort: "5432"
@@ -279,6 +280,7 @@ services:
       Mqtt__Port: "1883"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
       ASPNETCORE_URLS: http://+:8080
     networks:
       - application_net

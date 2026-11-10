@@ -4,6 +4,8 @@ import logoMini from '../../assets/logo-40x40.svg';
 import { NAV, type Route } from '../../router';
 import {
   IconAgent,
+  IconCanvas,
+  IconRobot,
   IconBarChart,
   IconBranch,
   IconChart,
@@ -27,6 +29,8 @@ const ICONS: Record<string, ComponentType<IconProps>> = {
   grid: IconGrid,
   monitor: IconMonitor,
   agent: IconAgent,
+  robot: IconRobot,
+  canvas: IconCanvas,
   server: IconServer,
   topology: IconTopology,
   branch: IconBranch,

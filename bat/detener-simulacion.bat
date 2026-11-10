@@ -11,6 +11,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 echo.
 echo === Backend y control de nivel de vuelta a la planta REAL (Docker) ===
 set MODO_PLANTA=real
+> "%~dp0.modo-planta" echo real
+echo   modo guardado en bat\.modo-planta = real
 set PLC_NIVEL_IP=192.168.114.9
 set CONECTOR_MODO=dry-run
 set CONTROL_REAL=0

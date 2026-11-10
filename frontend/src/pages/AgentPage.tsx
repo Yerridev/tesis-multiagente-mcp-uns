@@ -5,6 +5,8 @@ import type { AgentCall, AgentStatus } from '../types';
 import { ErrorBlock, LoadingBlock } from '../components/common/States';
 import { IconArrow } from '../components/common/Icons';
 import { AgentFlow } from '../components/agents/AgentFlow';
+import { SelectorModelo, useModeloElegido } from '../components/agents/SelectorModelo';
+import { CajaChat } from '../components/agents/CajaChat';
 
 interface ChatMessage {
   id: number;
@@ -55,6 +57,7 @@ export function AgentPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<AgentStatus | null>(null);
+  const ia = useModeloElegido(status);   // modelo elegido junto a Enviar
   const [activos, setActivos] = useState<Set<string>>(new Set());
   const apagar = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -108,7 +111,7 @@ export function AgentPage() {
 
   const llm = status?.mode === 'llm';
   const modeText = llm
-    ? `IA activa · OpenRouter · ${status?.model} · límite 50 consultas/día`
+    ? `IA activa · OpenRouter · ${ia.actual?.nombre ?? status?.model}${ia.actual?.gratis ? ' · gratis (límite diario)' : ''}`
     : 'Motor de reglas · sin modelo LLM conectado';
 
   const toggleCard = (key: string) => {
@@ -131,7 +134,7 @@ export function AgentPage() {
     setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: message }]);
     setBusy(true);
     try {
-      const reply = await api.agentAsk(message);
+      const reply = await api.agentAsk(message, ia.modelo);
       setMessages((prev) => [...prev, { id: nextId.current++, role: 'agent', text: reply.reply, tools: reply.tools, model: reply.model ?? null }]);
       {
         const on = new Set<string>(['orquestador']);
@@ -244,7 +247,7 @@ export function AgentPage() {
             </div>
           </div>
           <AgentFlow agentes={AGENTES} estado={dotState} tarea={lastTask} activos={activos} ocupado={busy}
-            llm={{ activo: llm, modelo: status?.model }} />
+            llm={{ activo: llm, modelo: ia.modelo ?? status?.model }} />
         </section>
 
         {/* Chat (atendido por el Agente Orquestador) */}
@@ -301,48 +304,28 @@ export function AgentPage() {
             ) : null}
           </div>
 
+          <div className="chat-pie">
           {failure ? (
             <div className="banner banner-err" style={{ marginBottom: 10 }}>
               {failure}
             </div>
           ) : null}
 
-          <form
-            className="chat-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(input);
-            }}
-          >
-            <input
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="Ej: ¿Cuál es la temperatura actual?"
-              aria-label="Consulta al asistente"
-            />
-            <button type="submit" className="btn chat-send" disabled={busy || !input.trim()}>
-              Enviar <IconArrow width="15" height="15" />
-            </button>
-          </form>
+          <CajaChat
+            valor={input}
+            onCambio={setInput}
+            onEnviar={() => void send(input)}
+            placeholder="Ej: ¿Cuál es la temperatura actual?"
+            etiqueta="Consulta al asistente"
+            ocupado={busy}
+            extras={llm ? <SelectorModelo modelos={ia.modelos} valor={ia.modelo} onElegir={ia.elegir} disabled={busy} /> : null}
+            textoBoton={<>Enviar <IconArrow width="15" height="15" /></>}
+          />
+          </div>
         </section>
 
       </div>
 
-      <p className="agents-note">
-        {llm ? (
-          <>
-            <b>IA ACTIVA · OPENROUTER:</b> el asistente consulta el modelo <code>{status?.model}</code> con los datos en
-            vivo de <code>/api/equipment</code>, <code>/api/history</code> y <code>/hubs/plant</code> (50 consultas
-            gratis al día). Las herramientas son deterministas y de solo lectura: <b>sin escritura al PLC</b>. 
-          </>
-        ) : (
-          <>
-            <b>MOTOR DE REGLAS:</b> punto de estado = señal real del equipo (verde activo · naranja ocupado · rojo caído
-            · gris sin verificar). Las respuestas se resuelven con reglas deterministas sobre los datos en vivo; el
-            modelo LLM se activa al configurar <code>OPENROUTER_API_KEY</code>.
-          </>
-        )}
-      </p>
 
     </div>
   );

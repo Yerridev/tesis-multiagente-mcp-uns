@@ -51,3 +51,4 @@ tools/ejecutor.ps1
 frontend/_respaldo_estilo_*/
 simulador/.paquete.tgz
 __pycache__/
+bat/.modo-planta

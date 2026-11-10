@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { usePlant } from '../context/PlantContext';
-import { LEVEL_ID } from '../services/api';
 import type { Route } from '../router';
 import { Banner, ErrorBlock, LoadingBlock } from '../components/common/States';
 import { EquipmentCard } from '../components/equipment/EquipmentCard';
@@ -11,6 +10,9 @@ import { ageSeconds, formatAge, isStale, moduleMeta, num, timeOnly, valorMedible
 interface Props {
   onNavigate: (route: Route) => void;
 }
+
+/** SCADA de cada módulo (botón «Ver SCADA» de las tarjetas). */
+const SCADA_DE: Record<string, Route> = { 'caudal-mcc09': 'mod-caudal', 'nivel-mcn09': 'nivel', 'presion-mcp09': 'mod-presion', 'temp-mct09': 'mod-temp' };
 
 export function DashboardPage({ onNavigate }: Props) {
   const { equipment, historyFor, link, load, error, health, now, lastUpdate, reload } = usePlant();
@@ -149,8 +151,9 @@ export function DashboardPage({ onNavigate }: Props) {
             now={now}
             points={historyFor(item.id).slice(-40).map((s) => ({ t: Date.parse(s.ts), v: s.value }))}
             action={
-              item.id === LEVEL_ID ? (
-                <button type="button" className="eq-link" onClick={() => onNavigate('nivel')}>
+              /* Ver SCADA en los 4 módulos (antes solo nivel) */
+              SCADA_DE[item.id] ? (
+                <button type="button" className="eq-link" onClick={() => onNavigate(SCADA_DE[item.id])}>
                   Ver SCADA <IconArrow width="14" height="14" />
                 </button>
               ) : null

@@ -136,7 +136,7 @@ public sealed class PlantState
             Mode: n.Modo(),
             Level: medible ? n.Numero("nivel/cm") : null,
             Unit: "cm",
-            Setpoint: null,                       // no hay consigna en cm confirmada en el conector
+            Setpoint: n.SetpointCm(),             // N7:5 / N7:6 convertido a cm
             TankHeight: n.AlturaTanqueCm,          // 60 cm publicados en descriptivo/equipo
             Percent: medible ? n.Numero("nivel/pct") : null,
             PumpOn: n.Bool("estado/bomba_marcha"),
@@ -190,7 +190,8 @@ public sealed class PlantState
             }
 
             var valor = cm is null ? cur.Value : Math.Round(cm.Value, 2);
-            _items[NivelId] = cur with { Value = valor, Timestamp = ts.Value, Calidad = CalidadDato.Buena };
+            var consigna = n.SetpointCm() ?? cur.Setpoint;   // consigna real del PLC en cm
+            _items[NivelId] = cur with { Value = valor, Setpoint = consigna, Timestamp = ts.Value, Calidad = CalidadDato.Buena };
             if (cm is not null && _ultimoPushNivel != ts)
             {
                 _ultimoPushNivel = ts;
@@ -210,18 +211,18 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(CaudalId, out var cur)) return;
-            var valor = pv ?? med ?? cur.Value ?? 0;
+            double? valor = pv ?? med ?? cur.Value;          // sin lectura: null ("Sin datos"), nunca un 0 inventado
             var consigna = sp ?? cur.Setpoint;
             _items[CaudalId] = cur with
             {
-                Value = Math.Round(valor, 2),
+                Value = valor is double vc ? Math.Round(vc, 2) : null,
                 Setpoint = Math.Round(consigna, 2),
                 Timestamp = ts.Value
             };
-            if (_ultimoPushCaudal != ts)
+            if (valor is double vq && _ultimoPushCaudal != ts)
             {
                 _ultimoPushCaudal = ts;
-                Push(CaudalId, cur.Variable, cur.Unit, Math.Round(valor, 2), ts.Value);
+                Push(CaudalId, cur.Variable, cur.Unit, Math.Round(vq, 2), ts.Value);
             }
         }
     }
@@ -236,18 +237,18 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(PresionId, out var cur)) return;
-            var valor = psi ?? cur.Value ?? 0;
+            double? valor = psi ?? cur.Value;                // sin lectura: null ("Sin datos")
             var consigna = sp ?? cur.Setpoint;
             _items[PresionId] = cur with
             {
-                Value = Math.Round(valor, 3),
+                Value = valor is double vp ? Math.Round(vp, 3) : null,
                 Setpoint = Math.Round(consigna, 2),
                 Timestamp = ts.Value
             };
-            if (_ultimoPushPresion != ts)
+            if (valor is double vq && _ultimoPushPresion != ts)
             {
                 _ultimoPushPresion = ts;
-                Push(PresionId, cur.Variable, cur.Unit, Math.Round(valor, 3), ts.Value);
+                Push(PresionId, cur.Variable, cur.Unit, Math.Round(vq, 3), ts.Value);
             }
         }
     }
@@ -262,18 +263,18 @@ public sealed class PlantState
         lock (_sync)
         {
             if (!_items.TryGetValue(TemperaturaId, out var cur)) return;
-            var valor = principal ?? cur.Value ?? 0;
+            double? valor = principal ?? cur.Value;          // sin lectura: null ("Sin datos")
             var consigna = setpoint ?? cur.Setpoint;
             _items[TemperaturaId] = cur with
             {
-                Value = Math.Round(valor, 2),
+                Value = valor is double vt ? Math.Round(vt, 2) : null,
                 Setpoint = Math.Round(consigna, 2),
                 Timestamp = ts.Value
             };
-            if (principal is not null && _ultimoPushTemperatura != ts)
+            if (principal is double vq && _ultimoPushTemperatura != ts)
             {
                 _ultimoPushTemperatura = ts;
-                Push(TemperaturaId, cur.Variable, cur.Unit, Math.Round(valor, 2), ts.Value);
+                Push(TemperaturaId, cur.Variable, cur.Unit, Math.Round(vq, 2), ts.Value);
             }
         }
     }

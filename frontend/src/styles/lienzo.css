@@ -1836,3 +1836,17 @@
   .lz-planta-cuerpo { overflow: visible; }
   .lz-planta-agente { height: 560px; }
 }
+
+/* ---------- Agente de IA: cabecera | mensajes con scroll propio | pie para escribir ----------
+   Igual que el chat de Agentes de IA: tres zonas separadas por líneas. */
+.lz-panel-agente .lz-panel-cuerpo { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.lz-agente { flex: 1; min-height: 0; height: 100%; gap: 0 !important; display: flex; flex-direction: column; }
+.lz-agente-cab { flex: none; padding: 10px 12px; border-bottom: 1px solid var(--border-soft, #e5e7eb); }
+.lz-agente .lz-agente-log, .lz-planta-agente .lz-agente-log {
+  flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; padding: 12px; scrollbar-width: thin;
+}
+.lz-agente-log::-webkit-scrollbar { width: 6px; }
+.lz-agente-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.lz-agente-pie { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--border-soft, #e5e7eb); }
+.lz-agente-pie .lz-agente-sug { margin: 0; }
+.lz-agente-pie .lz-agente-form { margin: 0; }

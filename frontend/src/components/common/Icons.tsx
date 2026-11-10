@@ -64,6 +64,33 @@ export const IconAgent = (p: IconProps) => (
   </Icon>
 );
 
+/** Cabeza de robot (Agentes de IA): relleno simple, diseño indicado por el usuario. */
+export const IconRobot = (p: IconProps) => (
+  <Icon fill="currentColor" stroke="none" className="ico-relleno" {...p}>
+    <g transform="translate(0 1.3)">
+      <path fillRule="evenodd" d="M9.5 7H14.5A5.5 5.5 0 0 1 20 12.5V14A5.5 5.5 0 0 1 14.5 19.5H9.5A5.5 5.5 0 0 1 4 14V12.5A5.5 5.5 0 0 1 9.5 7ZM9.8 9H14.2A3.8 3.8 0 0 1 18 12.8V13.7A3.8 3.8 0 0 1 14.2 17.5H9.8A3.8 3.8 0 0 1 6 13.7V12.8A3.8 3.8 0 0 1 9.8 9Z" />
+      <rect x="8.7" y="11.75" width="1.6" height="3" rx="0.8" />
+      <rect x="13.7" y="11.75" width="1.6" height="3" rx="0.8" />
+      <rect x="1.6" y="11.5" width="2.6" height="5.5" rx="1.3" />
+      <rect x="19.8" y="11.5" width="2.6" height="5.5" rx="1.3" />
+      <rect x="11.6" y="3.8" width="0.8" height="3.4" />
+      <circle cx="12" cy="3.2" r="1.3" />
+    </g>
+  </Icon>
+);
+
+/** Lienzo: marco con un pequeño diagrama de nodos (distinto al de arquitectura). */
+export const IconCanvas = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="13" rx="2" />
+    <circle cx="8" cy="9" r="1.6" />
+    <circle cx="16" cy="9" r="1.6" />
+    <circle cx="12" cy="13.2" r="1.6" />
+    <path d="M9.4 9.8l1.4 2.3M14.6 9.8l-1.4 2.3M9.6 9h4.8" />
+    <path d="M9 21l3-4 3 4" />
+  </Icon>
+);
+
 export const IconFlow = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3 8.5c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />

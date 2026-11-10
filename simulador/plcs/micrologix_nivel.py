@@ -40,8 +40,8 @@ class MicroLogixNivel:
         self.planta = planta
         t = self.t = tabla or TablaDatos()
         t.crear(B3, 8); t.crear(N7, 64); t.crear(F8, 2 * 16); t.crear(T4, 3 * 4)
-        t.poner(N7, 5, 16348 - 400 * 20)     # SP 20 cm
-        t.poner(N7, 6, 16348 - 400 * 20)
+        t.poner(N7, 5, 16348)                # SP 0 cm = sin consigna hasta que la PC/HMI la cargue
+        t.poner(N7, 6, 16348)
         t.poner(N7, 8, 300); t.poner(N7, 9, 50); t.poner(N7, 10, 0)   # Kc 3.0, Ti 0.5 min, Td 0
         t.poner(N7, 11, 300); t.poner(N7, 12, 50); t.poner(N7, 13, 0)
         self.ent = Entradas()

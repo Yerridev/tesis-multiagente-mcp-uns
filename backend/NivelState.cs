@@ -188,6 +188,19 @@ public sealed class NivelState
         return fuente is "PC" or "HMI" ? fuente : null;
     }
 
+    /// <summary>
+    /// Consigna activa en cm: N7:5 (PC) o N7:6 (HMI) según el propietario del mando.
+    /// Misma escala que la medida: cm = (16348 − cuentas) / 400 (verificado con la lectura
+    /// posterior de las órdenes de setpoint). Fuera de 0–60 cm se considera sin dato.
+    /// </summary>
+    public double? SetpointCm()
+    {
+        var raw = FuenteControl() == "HMI" ? Numero("pid/setpoint_b_raw") : Numero("pid/setpoint_a_raw");
+        if (raw is null) return null;
+        var cm = (16348 - raw.Value) / 400.0;
+        return cm is >= 0 and <= 60 ? Math.Round(cm, 2) : null;
+    }
+
     /// <summary>Frecuencia del variador en % sobre su escala 0–50 Hz (derivado del dato real).</summary>
     public double? VfdPercent()
     {

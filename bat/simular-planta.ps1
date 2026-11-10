@@ -1,3 +1,4 @@
+param([switch]$SoloDocker)   # -SoloDocker: repite solo el paso 6 (Docker) sin tocar simuladores ni conectores
 # =====================================================================
 #  PLANTA SIMULADA: 4 PLC virtuales (Python) + conectores apuntando a 127.0.0.1
 #  Los agentes, el backend, los lienzos y los mimicos (modo REAL) reciben estos
@@ -21,9 +22,25 @@ function Ventana($titulo, $argumentos) {
   Write-Host "  abierto: $titulo"
 }
 
+function DockerListo {
+  docker info *> $null
+  if ($LASTEXITCODE -eq 0) { return $true }
+  Write-Host '  Docker Desktop no esta corriendo: lo abro y espero (hasta 3 min)...' -ForegroundColor Yellow
+  $exe = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
+  if (Test-Path $exe) { Start-Process $exe | Out-Null } else { Write-Host "  No encuentro $exe : abre Docker Desktop a mano" -ForegroundColor Red }
+  for ($i = 1; $i -le 36; $i++) {
+    Start-Sleep -Seconds 5
+    docker info *> $null
+    if ($LASTEXITCODE -eq 0) { Write-Host "  Docker listo ($($i*5) s)" -ForegroundColor Green; return $true }
+    Write-Host "  ...esperando Docker ($($i*5) s)"
+  }
+  return $false
+}
+
 Write-Host "PLANTA SIMULADA - MCP Industrial" -ForegroundColor Yellow
 Write-Host "Proyecto: $raiz"
 
+if (-not $SoloDocker) {
 Paso '1/6 Comprobando Python y archivos'
 if (-not (Test-Path $py)) { Write-Host "  NO existe el Python del venv: $py" -ForegroundColor Red; exit 1 }
 Write-Host "  Python OK: $py"
@@ -91,17 +108,25 @@ Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
 Write-Host '  caudal: control incluido en su conector EDGE (unificado)'
 Write-Host '  nivel: su control corre en Docker (connector-nivel): se apunta al simulador en el paso 6'
 
+}  # fin de pasos 1-5
+
 Paso '6/6 Backend y control de nivel en MODO_PLANTA=simulado (Docker)'
+Set-Content -Path (Join-Path $PSScriptRoot '.modo-planta') -Value 'simulado' -Encoding ascii   # lo usan los bat de reconstruir
+Write-Host '  modo guardado en bat\.modo-planta = simulado'
 $env:MODO_PLANTA = 'simulado'                    # el SCADA muestra PLANTA SIMULADA y permite mover llaves
 $env:PLC_NIVEL_IP = 'host.docker.internal'       # el conector de nivel (Docker) habla con el MicroLogix virtual
 $env:CONECTOR_MODO = 'real'; $env:CONTROL_REAL = '1'          # escribe, pero SOLO al simulador
 $env:CONTROL_MODO = 'Real'; $env:CONTROL_HABILITADOESCRITURA = 'true'
 $env:PRESION_CONTROL_HOST = 'host.docker.internal'; $env:TEMP_CONTROL_HOST = 'host.docker.internal'   # ordenes al broker Windows
+if (-not (DockerListo)) {
+  Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\docker-planta-simulada.bat' -ForegroundColor Red
+  exit 1
+}
+Push-Location $raiz
 Write-Host '  deteniendo el conector de temperatura REAL de Docker (si existe) para que no tome las ordenes'
 docker stop mcp-connector-temperatura 2>$null | Out-Null
 Write-Host '  reiniciando el espejo MQTT (ya no copia ordenes /cmd al broker Docker)'
 docker restart mcp-mirror-tesis 2>$null | Out-Null
-Push-Location $raiz
 Write-Host '  docker compose up -d --build backend connector-nivel frontend  (la primera vez tarda)'
 docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend
 if ($LASTEXITCODE -eq 0) { Write-Host '  backend en MODO_PLANTA=simulado' -ForegroundColor Green } else { Write-Host '  ERROR al levantar Docker: revisa arriba' -ForegroundColor Red }

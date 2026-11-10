@@ -12,11 +12,12 @@ public sealed class AgentService(PlantState plant, OpenRouterAgent llm)
         mode = llm.Enabled ? "llm" : "rules",
         enabled = llm.Enabled,
         model = llm.Model,
+        models = llm.Modelos.Select(m => new { id = m.Id, nombre = m.Nombre, gratis = m.Gratis }),
         provider = "OpenRouter",
         scope = "solo lectura · sin escritura al PLC",
     };
 
-    public async Task<AgentReply> AskAsync(string? message, CancellationToken token)
+    public async Task<AgentReply> AskAsync(string? message, CancellationToken token, string? modelo = null)
     {
         var rules = plant.Ask(message);
         if (!llm.Enabled) return rules with { Mode = "rules" };
@@ -24,7 +25,7 @@ public sealed class AgentService(PlantState plant, OpenRouterAgent llm)
         var user = (message ?? string.Empty).Trim();
         if (user.Length == 0) user = "Resume el estado actual de la planta.";
 
-        var result = await llm.CompleteAsync(plant.BuildSystemContext(), user, token);
+        var result = await llm.CompleteAsync(plant.BuildSystemContext(), user, token, modelo);
 
         var trace = rules.Tools.ToList();
         trace.Add(new AgentCall(

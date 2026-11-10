@@ -585,3 +585,7 @@
 /* sidebar cerrado: logo centrado en el espacio libre bajo el boton de menu (44px) */
 .app[data-collapsed="true"] .sidebar-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 44px 0 0; box-sizing: border-box; }
 .app[data-collapsed="true"] .brand-logo-sm { margin: 0; }
+
+/* Íconos de relleno (p. ej. robot de Agentes): el menú no debe convertirlos en contorno */
+.nav-ico svg.ico-relleno, svg.ico-relleno { fill: currentColor !important; stroke: none !important; }
+.nav-ico svg.ico-relleno { width: 19px; height: 19px; }

@@ -15,6 +15,9 @@ public sealed class OpenRouterOptions
 
 public sealed record LlmResult(bool Ok, string? Model, string? Text, string? Error, long Ms);
 
+/// <summary>Modelo que el operador puede elegir en el chat (lista cerrada: el navegador no puede pedir otro).</summary>
+public sealed record ModeloIa(string Id, string Nombre, bool Gratis);
+
 /// <summary>
 /// Cliente mínimo de OpenRouter. La clave vive SOLO en el backend
 /// (appsettings.json o la variable de entorno OPENROUTER_API_KEY): jamás se expone al navegador.
@@ -32,23 +35,51 @@ public sealed class OpenRouterAgent
         var modelEnv = Environment.GetEnvironmentVariable("OPENROUTER_MODEL");
         if (!string.IsNullOrWhiteSpace(modelEnv)) _options.Model = modelEnv;
 
+        /* Catálogo elegible desde el chat. OPENROUTER_MODELS = "id|Nombre,id2|Nombre2".
+           El primero es el predeterminado si OPENROUTER_MODEL no está en la lista. */
+        var lista = Environment.GetEnvironmentVariable("OPENROUTER_MODELS");
+        if (string.IsNullOrWhiteSpace(lista))
+            lista = $"{_options.Model}|{Corto(_options.Model)},nvidia/nemotron-3-ultra-550b-a55b:free|Nemotron 3 Ultra,google/gemma-4-31b-it:free|Gemma 4 31B,openrouter/free|Auto gratis";
+        foreach (var item in lista.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var partes = item.Split('|', 2, StringSplitOptions.TrimEntries);
+            var id = partes[0];
+            if (id.Length == 0 || Modelos.Any(x => x.Id == id)) continue;
+            Modelos.Add(new ModeloIa(id, partes.Length > 1 && partes[1].Length > 0 ? partes[1] : Corto(id), id.EndsWith(":free") || id == "openrouter/free"));
+        }
+        if (!Modelos.Any(x => x.Id == _options.Model)) Modelos.Insert(0, new ModeloIa(_options.Model, Corto(_options.Model), _options.Model.EndsWith(":free")));
+
         _http = httpClientFactory.CreateClient("openrouter");
         _http.Timeout = TimeSpan.FromSeconds(Math.Max(10, _options.TimeoutSeconds));
     }
 
     public bool Enabled => !string.IsNullOrWhiteSpace(_options.ApiKey);
     public string Model => _options.Model;
+    public List<ModeloIa> Modelos { get; } = [];
 
-    public async Task<LlmResult> CompleteAsync(string system, string user, CancellationToken token)
+    /// <summary>Nombre legible a partir del id del modelo.</summary>
+    private static string Corto(string id)
     {
-        if (!Enabled) return new LlmResult(false, _options.Model, null, "sin clave de OpenRouter configurada", 0);
+        var c = (id.Contains('/') ? id[(id.LastIndexOf('/') + 1)..] : id).Replace(":free", "");
+        return string.Join(' ', c.Split('-', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => char.IsLetter(p[0]) ? char.ToUpperInvariant(p[0]) + p[1..] : p));   // "claude-haiku-5.5" → "Claude Haiku 5.5"
+    }
+
+    /// <summary>Solo modelos del catálogo; cualquier otro valor usa el predeterminado.</summary>
+    public string Resolver(string? pedido) =>
+        !string.IsNullOrWhiteSpace(pedido) && Modelos.Any(x => x.Id == pedido) ? pedido : _options.Model;
+
+    public async Task<LlmResult> CompleteAsync(string system, string user, CancellationToken token, string? modelo = null)
+    {
+        var elegido = Resolver(modelo);
+        if (!Enabled) return new LlmResult(false, elegido, null, "sin clave de OpenRouter configurada", 0);
 
         var started = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             var payload = new
             {
-                model = _options.Model,
+                model = elegido,
                 max_tokens = _options.MaxTokens,
                 messages = new object[]
                 {
@@ -73,11 +104,11 @@ public sealed class OpenRouterAgent
             started.Stop();
 
             if (!response.IsSuccessStatusCode)
-                return new LlmResult(false, _options.Model, null, $"OpenRouter respondió {(int)response.StatusCode}", started.ElapsedMilliseconds);
+                return new LlmResult(false, elegido, null, (int)response.StatusCode == 429 ? "límite de consultas del modelo alcanzado (429): elige otro modelo" : $"OpenRouter respondió {(int)response.StatusCode}", started.ElapsedMilliseconds);
 
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            var model = root.TryGetProperty("model", out var m) ? m.GetString() : _options.Model;
+            var model = root.TryGetProperty("model", out var m) ? m.GetString() : elegido;
             string? text = null;
             if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
             {
@@ -94,12 +125,12 @@ public sealed class OpenRouterAgent
         catch (OperationCanceledException)
         {
             started.Stop();
-            return new LlmResult(false, _options.Model, null, "tiempo de espera agotado", started.ElapsedMilliseconds);
+            return new LlmResult(false, elegido, null, "tiempo de espera agotado", started.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
             started.Stop();
-            return new LlmResult(false, _options.Model, null, ex.Message, started.ElapsedMilliseconds);
+            return new LlmResult(false, elegido, null, ex.Message, started.ElapsedMilliseconds);
         }
     }
 }

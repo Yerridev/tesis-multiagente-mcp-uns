@@ -50,13 +50,13 @@ export const NAV: NavSection[] = [
     header: 'Principal',
     entries: [
       item('dashboard', 'Dashboard', 'grid'),
-      item('agents', 'Agentes de IA', 'agent'),
+      item('agents', 'Agentes de IA', 'robot'),
       item('mcp', 'Servidores MCP', 'server'),
       {
         kind: 'group',
         key: 'lienzos',
         label: 'Lienzos',
-        icon: 'topology',
+        icon: 'canvas',
         children: [
           { id: 'lienzo-planta', label: 'Vista general', icon: 'grid' },
           { id: 'lienzo-caudal', label: 'Control de caudal', icon: 'flow' },

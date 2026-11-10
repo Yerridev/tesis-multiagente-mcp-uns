@@ -51,11 +51,11 @@ export const api = {
 
   agentStatus: () => request<AgentStatus>('/api/agent/status'),
 
-  agentAsk: (message: string) =>
+  agentAsk: (message: string, model?: string | null) =>
     request<AgentReply>('/api/agent/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, model: model ?? undefined }),
     }),
 };
 

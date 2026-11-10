@@ -1,6 +1,14 @@
 @echo off
+chcp 65001 >nul
+echo ============================================================
+echo  RECONSTRUIR SOLO EL FRONTEND (no toca backend ni simulacion)
+echo ============================================================
 cd /d "%~dp0.."
-docker compose -f compose.yaml -f compose.override.yaml up -d --build frontend
+call "%~dp0_modo-planta.bat"
 echo.
-echo LISTO. Revisa arriba si hubo errores.
+echo Construyendo y reiniciando el contenedor del frontend...
+rem --no-deps: NO recrea el backend (si no, volveria a planta REAL)
+docker compose -f compose.yaml -f compose.override.yaml up -d --build --no-deps frontend
+echo.
+echo LISTO. Refresca el navegador (Ctrl+F5). El modo sigue en: %MODO_ACTUAL%
 pause

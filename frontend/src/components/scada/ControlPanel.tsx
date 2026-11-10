@@ -222,11 +222,8 @@ export function ControlPanel({ bloqueoIniciar = false }: { bloqueoIniciar?: bool
       {/* Última orden con su ciclo de vida y confirmación */}
       {ultima && (
         <p className="co-aviso" style={{ color: '#555' }}>
-          Última orden: <b className={COLOR[ultima.estado] ?? 'wait'}>{ultima.estado}</b> · {ultima.tipo}
-          {ultima.valor != null ? ` ${ultima.valor}${ultima.unidad ? ` ${ultima.unidad}` : ''}` : ''}
-          {ultima.motivo ? ` · ${ultima.motivo}` : ''}
-          {ultima.escrito != null ? ` · escritura: ${ultima.escrito ? 'ejecutada' : 'no ejecutada'}` : ''}
-          {ultima.valorLeido != null ? ` · lectura posterior: ${ultima.valorLeido}` : ''}
+          {/* resumen corto; el detalle (escritura, lectura posterior) está en Órdenes */}
+          {ultima.tipo}{ultima.valor != null ? ` ${ultima.valor}${ultima.unidad ? ` ${ultima.unidad}` : ''}` : ''} · <b className={COLOR[ultima.estado] ?? 'wait'}>{ultima.estado}</b>
         </p>
       )}
 

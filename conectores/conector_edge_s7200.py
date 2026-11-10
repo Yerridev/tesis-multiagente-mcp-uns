@@ -136,6 +136,27 @@ TAGS = [
      "desc": "Orden de arranque remota"},
     {"n": "HMI_PC", "dir": "M0.3", "area": "M", "off": 0, "bit": 3, "tipo": "bool", "topic": "estado/modo_hmi_pc",
      "desc": "1 = mando desde HMI, 0 = mando desde PC"},
+    # --- E/S sin documentar (relevamiento de LEDs 10-nov-2026: I0.5 y Q1.1 encendidos con la bomba en marcha).
+    #     Solo lectura, mismos bytes IB0/QB0-QB1 que ya se leen: sirven para identificar en campo
+    #     guardamotor, paro de emergencia, piloto de marcha, etc. ---
+    {"n": "I0_3", "dir": "I0.3", "area": "I", "off": 0, "bit": 3, "tipo": "bool", "topic": "io/i0_3", "estado": "hipotesis", "desc": "Entrada sin documentar"},
+    {"n": "I0_4", "dir": "I0.4", "area": "I", "off": 0, "bit": 4, "tipo": "bool", "topic": "io/i0_4", "estado": "hipotesis", "desc": "Entrada sin documentar"},
+    {"n": "I0_5", "dir": "I0.5", "area": "I", "off": 0, "bit": 5, "tipo": "bool", "topic": "io/i0_5", "estado": "hipotesis", "desc": "Entrada sin documentar; encendida en marcha (candidata: contacto auxiliar del guardamotor o paro de emergencia NC)"},
+    {"n": "I0_6", "dir": "I0.6", "area": "I", "off": 0, "bit": 6, "tipo": "bool", "topic": "io/i0_6", "estado": "hipotesis", "desc": "Entrada sin documentar"},
+    {"n": "I0_7", "dir": "I0.7", "area": "I", "off": 0, "bit": 7, "tipo": "bool", "topic": "io/i0_7", "estado": "hipotesis", "desc": "Entrada sin documentar"},
+    {"n": "Q0_3", "dir": "Q0.3", "area": "Q", "off": 0, "bit": 3, "tipo": "bool", "topic": "io/q0_3", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q0_4", "dir": "Q0.4", "area": "Q", "off": 0, "bit": 4, "tipo": "bool", "topic": "io/q0_4", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q0_5", "dir": "Q0.5", "area": "Q", "off": 0, "bit": 5, "tipo": "bool", "topic": "io/q0_5", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q0_6", "dir": "Q0.6", "area": "Q", "off": 0, "bit": 6, "tipo": "bool", "topic": "io/q0_6", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q0_7", "dir": "Q0.7", "area": "Q", "off": 0, "bit": 7, "tipo": "bool", "topic": "io/q0_7", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_0", "dir": "Q1.0", "area": "Q", "off": 1, "bit": 0, "tipo": "bool", "topic": "io/q1_0", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_1", "dir": "Q1.1", "area": "Q", "off": 1, "bit": 1, "tipo": "bool", "topic": "io/q1_1", "estado": "hipotesis", "desc": "Salida sin documentar; encendida en marcha (candidata: orden RUN al variador o piloto)"},
+    {"n": "Q1_2", "dir": "Q1.2", "area": "Q", "off": 1, "bit": 2, "tipo": "bool", "topic": "io/q1_2", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_3", "dir": "Q1.3", "area": "Q", "off": 1, "bit": 3, "tipo": "bool", "topic": "io/q1_3", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_4", "dir": "Q1.4", "area": "Q", "off": 1, "bit": 4, "tipo": "bool", "topic": "io/q1_4", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_5", "dir": "Q1.5", "area": "Q", "off": 1, "bit": 5, "tipo": "bool", "topic": "io/q1_5", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_6", "dir": "Q1.6", "area": "Q", "off": 1, "bit": 6, "tipo": "bool", "topic": "io/q1_6", "estado": "hipotesis", "desc": "Salida sin documentar"},
+    {"n": "Q1_7", "dir": "Q1.7", "area": "Q", "off": 1, "bit": 7, "tipo": "bool", "topic": "io/q1_7", "estado": "hipotesis", "desc": "Salida sin documentar"},
     # --- Sintonia PID (tabla del lazo en VB159; formato S7-200: Kc, Ts, Ti, Td, Mx) ---
     {"n": "KC", "dir": "VD171", "area": "V", "off": 171, "tipo": "real", "topic": "pid/kc",
      "desc": "Ganancia proporcional Kc del lazo"},

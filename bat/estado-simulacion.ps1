@@ -32,5 +32,5 @@ $mir = docker inspect mcp-mirror-tesis --format '{{.State.Running}}' 2>$null
 Linea ($mir -eq 'true') 'mirror-tesis corriendo (devuelve los ACK)'
 
 Write-Host ""
-if ($mal -eq 0) { Write-Host "TODO OK. Si aun da Timeout corre diag-ordenes.bat y manda una orden." -ForegroundColor Green }
-else { Write-Host "Hay $mal cosa(s) caida(s). Solucion: detener-simulacion.bat y luego simular-planta.bat" -ForegroundColor Yellow }
+if ($mal -eq 0) { Write-Host "TODO OK. Si aun da Timeout corre 16-diag-ordenes.bat y manda una orden." -ForegroundColor Green }
+else { Write-Host "Hay $mal cosa(s) caida(s). Solucion: 11-detener-simulacion.bat y luego 10-simular-planta.bat" -ForegroundColor Yellow }

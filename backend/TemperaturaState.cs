@@ -36,7 +36,10 @@ public sealed class TemperaturaState
                 default:
                     var dato = Parsear(payload);
                     _valores[sufijo] = dato;
-                    UltimaTelemetria = dato.Ts ?? DateTimeOffset.Now;
+                    // Al (re)conectar llegan mensajes RETENIDOS viejos (p. ej. de la planta simulada) en
+                    // cualquier orden: la ultima telemetria es la MAS RECIENTE, nunca un retenido antiguo.
+                    var cuando = dato.Ts ?? DateTimeOffset.Now;
+                    if (UltimaTelemetria is null || cuando > UltimaTelemetria) UltimaTelemetria = cuando;
                     return;
             }
         }

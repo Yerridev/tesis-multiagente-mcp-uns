@@ -28,7 +28,7 @@ echo   arrancando el control real de temperatura (mcp-connector-temperatura)...
 docker start mcp-connector-temperatura
 echo.
 echo Las ventanas negras de la simulacion quedan abiertas sin proceso: puedes cerrarlas.
-echo Para volver a leer la planta REAL ejecuta: bat\iniciar-lectores.bat
+echo Para volver a leer la planta REAL ejecuta: bat\02-iniciar-lectores-reales.bat
 echo.
 echo LISTO. Revisa arriba lo que hizo. Puedes cerrar esta ventana.
 pause

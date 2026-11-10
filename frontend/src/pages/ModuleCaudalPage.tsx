@@ -5,7 +5,7 @@ import { TrendChart } from '../components/charts/TrendChart';
 import { CaudalFlow, type CaudalSenal, type EstadoMimico } from '../components/scada/CaudalFlow';
 import { usePlcVirtualCaudal } from '../components/scada/plcVirtualCaudal';
 import { KnobControl } from '../components/scada/KnobControl';
-import { CajaPlanta, chequeosPlanta, leerSim, moverLlave, usePlantaModo } from '../components/scada/plantaSimulada';
+import { CajaPlanta, chequeosPlanta, leerSim, moverLlave, nivelPorSwitches, usePlantaModo } from '../components/scada/plantaSimulada';
 import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
 import { ConfirmarOrden } from '../components/common/Emergente';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
@@ -166,7 +166,11 @@ export function ModuleCaudalPage() {
   };
   // PLANTA SIMULADA: llaves y T1 vienen del simulador Python
   const simC = leerSim(caudalSenal?.valores, ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'VF']);
+  // REAL: T1 no tiene sensor de nivel -> nivel aproximado por los switches alto/bajo
+  senal.nivelPct = online ? nivelPorSwitches(senal.nivelAlto, senal.nivelBajo) : null;
+  senal.nivelAprox = true;
   if (simulada && simC.hay) {
+    senal.nivelAprox = false;
     senal.valvulas = simC.valvulas;
     senal.nivelPct = simC.t1;
     senal.nivelAlto = simC.t1Alto;

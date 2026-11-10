@@ -31,21 +31,21 @@ backend/auditoria/*.jsonl
 # ===== Copias locales de respaldo (pueden contener secretos) =====
 _antes_restauracion_*/
 .commitmsg.txt
-subir-github.bat
-recrear-backend.bat
-subir-yerri.bat
-reconstruir-backend.bat
+24-subir-github.bat
+08-recrear-backend.bat
+23-subir-repo-yerri.bat
+07-reconstruir-backend.bat
 tools/*.out
 tools/trabajos/
-ejecutor-mcp.bat
+25-ejecutor-mcp.bat
 
 # ===== .bat locales movidos a bat/ (siguen sin subirse) =====
-bat/subir-github.bat
-bat/subir-yerri.bat
-bat/subir-nuestro.bat
-bat/recrear-backend.bat
-bat/reconstruir-backend.bat
-bat/ejecutor-mcp.bat
+bat/24-subir-github.bat
+bat/23-subir-repo-yerri.bat
+bat/22-subir-nuestro-repo.bat
+bat/08-recrear-backend.bat
+bat/07-reconstruir-backend.bat
+bat/25-ejecutor-mcp.bat
 tools/ejecutor.ps1
 # respaldos de estilo y paquete temporal del simulador
 frontend/_respaldo_estilo_*/

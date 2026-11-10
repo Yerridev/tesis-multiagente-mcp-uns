@@ -1,4 +1,5 @@
 import { observarEncuadre, useMedidasEstables } from './encuadre';
+import { textoNivelAprox } from './plantaSimulada';
 import { CatalogoBoton } from './catalogo/CatalogoBoton';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
@@ -24,6 +25,8 @@ export interface CaudalSenal {
   valvulas: Record<string, boolean | null>;
   nivelAlto: boolean | null;
   nivelBajo: boolean | null;
+  /** true en planta REAL: el nivel de T1 se dibuja con los switches (no hay sensor) */
+  nivelAprox?: boolean;
 }
 
 function Port({ id, position, style }: { id: string; position: Position; style?: CSSProperties }) {
@@ -290,7 +293,7 @@ function TankNode({ data }: NodeProps) {
         <rect x="-10" y="33" width="14" height="16" rx="3" className={high ? 'level-switch-orange on' : 'level-switch-orange'} />
         <rect x="-10" y="213" width="14" height="16" rx="3" className={bajo ? 'level-switch-orange on' : 'level-switch-orange'} />
       </svg>
-      <div className="tank__readout"><strong>{pct == null ? '—' : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : '%'}</span></div>
+      <div className="tank__readout"><strong>{pct == null ? '—' : d.aprox === true ? textoNivelAprox(pct) : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : d.aprox === true ? 'nivel' : '%'}</span></div>
       <span className="tag level-tag" style={{ right: TW + 14, top: 41 }}>NIVEL ALTO <i className={high ? 'led led--alarm' : 'led'} /></span>
       <span className="tag level-tag" style={{ right: TW + 14, top: 221 }}>NIVEL BAJO <i className={bajo ? 'led led--alarm' : 'led'} /></span>
       <span className="tag tank__name" style={{ left: TW / 2, top: 34, transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>TANQUE T1</span>
@@ -473,7 +476,7 @@ function Flow({ senal, onEstado, interactivo = false, onLlave }: { senal: Caudal
       const data: Data = { ...n.data };
       if (n.type === 'pump') data.on = senal.bomba;
       if (n.type === 'gauge') data.value = data.kind === 'flow' ? senal.caudal : senal.presion;
-      if (n.type === 'tank') { data.levelPct = nivelPct; data.alto = nivelAlto; data.bajo = nivelBajo; }
+      if (n.type === 'tank') { data.aprox = !usarSim && senal.nivelAprox === true; data.levelPct = nivelPct; data.alto = nivelAlto; data.bajo = nivelBajo; }
       if (n.type === 'supply') data.active = fuenteAbierta;
       if (n.type === 'propValve') data.pct = senal.valvulaPct;
       if (n.type === 'valve') {

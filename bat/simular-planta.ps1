@@ -119,7 +119,7 @@ $env:CONECTOR_MODO = 'real'; $env:CONTROL_REAL = '1'          # escribe, pero SO
 $env:CONTROL_MODO = 'Real'; $env:CONTROL_HABILITADOESCRITURA = 'true'
 $env:PRESION_CONTROL_HOST = 'host.docker.internal'; $env:TEMP_CONTROL_HOST = 'host.docker.internal'   # ordenes al broker Windows
 if (-not (DockerListo)) {
-  Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\docker-planta-simulada.bat' -ForegroundColor Red
+  Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\13-docker-planta-simulada.bat' -ForegroundColor Red
   exit 1
 }
 Push-Location $raiz
@@ -137,4 +137,4 @@ Write-Host ""
 Write-Host "LISTO: planta simulada en marcha." -ForegroundColor Green
 Write-Host "  - Cada PLC virtual y conector tiene su ventana: ahi ves lo que hace o si falla."
 Write-Host "  - Abre el SCADA en modo REAL: dice PLANTA SIMULADA, puedes mover las llaves y todo pasa por MQTT -> backend -> MCP."
-Write-Host "  - Para volver a la planta real: bat\detener-simulacion.bat"
+Write-Host "  - Para volver a la planta real: bat\11-detener-simulacion.bat"

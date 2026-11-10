@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { useEstado } from './ctx';
 import type { MetaNodo } from './tipos';
@@ -10,6 +10,32 @@ const LADOS: [Position, string][] = [
   [Position.Bottom, 'bottom'],
   [Position.Left, 'left'],
 ];
+
+/** Barra de porcentaje: texto centrado, relleno animado, color según el valor y flecha de tendencia. */
+function Barra({ pct, sev, etiqueta }: { pct: number; sev: string; etiqueta: string }) {
+  const v = Math.max(0, Math.min(100, pct));
+  const previo = useRef<number | null>(null);
+  const [tendencia, setTendencia] = useState<'sube' | 'baja' | null>(null);
+  useEffect(() => {
+    const antes = previo.current;
+    previo.current = v;
+    if (antes == null || Math.abs(v - antes) < 0.2) return;
+    setTendencia(v > antes ? 'sube' : 'baja');
+    const t = window.setTimeout(() => setTendencia(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [v]);
+  /* normal: azul que se oscurece al aumentar; aviso/alarma conservan su color */
+  const fondo = sev === 'aviso' || sev === 'alarma' ? undefined : `hsl(207, 75%, ${86 - v * 0.36}%)`;
+  return (
+    <div className="eq-barra" aria-label={etiqueta}>
+      <div className={`relleno sev-${sev}`} style={{ width: `${v}%`, background: fondo }} />
+      <span className="eq-barra-txt">
+        {tendencia === 'sube' ? <b className="eq-tend sube">▲</b> : tendencia === 'baja' ? <b className="eq-tend baja">▼</b> : null}
+        {etiqueta}
+      </span>
+    </div>
+  );
+}
 
 /** Nodo de equipo portado de la tesis (EquipoNode.tsx): metadatos en data.meta y valores por contexto. */
 function EquipoNode({ data, selected }: NodeProps) {
@@ -62,10 +88,7 @@ function EquipoNode({ data, selected }: NodeProps) {
       ) : null}
 
       {lec.barra ? (
-        <div className="eq-barra" aria-label={lec.barra.etiqueta}>
-          <div className={`relleno sev-${lec.barra.sev}`} style={{ width: `${Math.max(0, Math.min(100, lec.barra.pct))}%` }} />
-          <span>{lec.barra.etiqueta}</span>
-        </div>
+        <Barra pct={lec.barra.pct} sev={lec.barra.sev} etiqueta={lec.barra.etiqueta} />
       ) : null}
 
       {lec.filas.length > 0 ? (

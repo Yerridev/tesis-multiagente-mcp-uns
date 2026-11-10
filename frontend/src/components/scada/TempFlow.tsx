@@ -19,6 +19,8 @@ export interface TempSenal {
   tempCooler: number | null;    // T1 enfriamiento, °C
   nivel1Pct: number | null;
   nivel2Pct: number | null;
+  /** true en planta REAL: el nivel dibujado sale de los switches (no hay sensor de nivel) */
+  nivelAprox?: boolean;
   bomba: boolean | null;
   caudal: number | null;        // L/min
   heaterPct: number | null;     // resistencia 0-100 %
@@ -198,6 +200,12 @@ function SteelTank({ w, h, fill, id, children }: { w: number; h: number; fill: n
 const COIL_PATH = 'M125 -4 V90 H26 V127 H152 V164 H26 V201 H175 V-4';
 const COIL_HALO = 'M125 0 V90 H26 V127 H152 V164 H26 V201 H175 V0';
 
+/** Etiqueta del nivel: % real (simulador) o estado de los switches (planta real). */
+function textoNivel(pct: number, aprox: boolean): string {
+  if (!aprox) return `${pct.toFixed(0)} %`;
+  return pct >= 85 ? 'NIVEL ALTO' : pct <= 15 ? 'NIVEL BAJO' : 'NIVEL NORMAL';
+}
+
 /* T1 · tanque de enfriamiento (con serpentín) */
 function TankT1Node({ data }: NodeProps) {
   const d = data as Data;
@@ -217,7 +225,7 @@ function TankT1Node({ data }: NodeProps) {
         <rect x="-10" y="182" width="14" height="16" rx="3" className={d.bajoTE === true ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
       <div className="tank__readout"><strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
-      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T1 · ENFRIAMIENTO · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
+      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T1 · ENFRIAMIENTO · {pct == null ? 'SIN DATO' : textoNivel(pct, d.aprox === true)}</span>
       <span className="tag level-tag" style={{ right: 224, top: 60 }}>NIVEL ALTO <Sw on={d.altoTE === true} alarma /></span>
       <span className="tag level-tag" style={{ right: 224, top: 190 }}>NIVEL BAJO <Sw on={d.bajoTE === true} alarma /></span>
       <Port id="in" position={Position.Bottom} style={{ left: 30 }} />
@@ -326,7 +334,7 @@ function TankT2Node({ data }: NodeProps) {
         <rect x="206" y="167" width="14" height="16" rx="3" className={d.bajoTP === true ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
       <div className="tank__readout" style={{ top: 88 }}>   {/* centrado entre la etiqueta T2 y la resistencia */}<strong>{temp == null ? '—' : temp.toFixed(0)}</strong><span>{temp == null ? 'sin dato' : '°C'}</span></div>
-      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T2 · PRINCIPAL · {pct == null ? 'SIN DATO' : `${pct.toFixed(0)} %`}</span>
+      <span className="tag" style={{ left: '50%', top: 8, transform: 'translateX(-50%)', textAlign: 'center' }}>T2 · PRINCIPAL · {pct == null ? 'SIN DATO' : textoNivel(pct, d.aprox === true)}</span>
       <span className="tag level-tag level-tag--right" style={{ left: 224, top: 50 }}><Sw on={d.altoTP === true} alarma /> NIVEL ALTO</span>
       <span className="tag level-tag level-tag--right" style={{ left: 224, top: 175 }}><Sw on={d.bajoTP === true} alarma /> NIVEL BAJO</span>
       <span className="tag" style={{ left: 12, top: 190 }}>RESISTENCIA {heater == null ? 'SIN DATO' : `${heater.toFixed(0)} %`}</span>
@@ -501,6 +509,7 @@ function Flow({ senal, interactivo = false, onValvulas, onLlave }: { senal: Temp
       }
       if (n.type === 'tankT1') {
         data.nivelPct = senal.nivel1Pct;
+        data.aprox = senal.nivelAprox;
         data.temp = senal.tempCooler;
         data.coolant = senal.online && senal.coolerOn === true;
         data.altoTE = senal.altoTE;
@@ -508,6 +517,7 @@ function Flow({ senal, interactivo = false, onValvulas, onLlave }: { senal: Temp
       }
       if (n.type === 'tankT2') {
         data.nivelPct = senal.nivel2Pct;
+        data.aprox = senal.nivelAprox;
         data.temp = senal.tempControl;
         data.heaterPct = senal.heaterPct;
         data.altoTP = senal.altoTP;

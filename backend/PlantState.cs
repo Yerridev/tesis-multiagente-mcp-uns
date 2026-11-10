@@ -362,10 +362,10 @@ public sealed class PlantState
             {
                 var level = GetLevel();
                 reply = level.Calidad != CalidadDato.Buena
-                    ? $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp:HH:mm:ss}. " +
+                    ? $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp?.ToOffset(HoraLima):HH:mm:ss}. " +
                       "SENSOR DE NIVEL FUERA DE RANGO: el nivel no es medible (el valor en cm es saturación de la escala); revisa el sensor y el nivel físico antes de controlar."
-                    : $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp:HH:mm:ss}, nivel {level.Level} {level.Unit} (consigna {level.Setpoint} {level.Unit}, {level.Percent} % del tanque).";
-                return $"{level.PlcStatus} · {level.Timestamp:HH:mm:ss} · calidad {level.Calidad}";
+                    : $"PLC {level.Controller} en {level.PlcIp}: {level.PlcStatus}. Última lectura {level.Timestamp?.ToOffset(HoraLima):HH:mm:ss}, nivel {level.Level} {level.Unit} (consigna {level.Setpoint} {level.Unit}, {level.Percent} % del tanque).";
+                return $"{level.PlcStatus} · {level.Timestamp?.ToOffset(HoraLima):HH:mm:ss} · calidad {level.Calidad}";
             }));
         }
         else if (Rx(norm, @"equipo|caudal|nivel|presi|temp|valor|módulo|modulo"))
@@ -432,6 +432,9 @@ public sealed class PlantState
         Regex.IsMatch(Deaccent(input), Deaccent(pattern), RegexOptions.IgnoreCase);
 
     /// <summary>Prompt de sistema con los datos en vivo para el modelo de OpenRouter.</summary>
+    /// <summary>Perú no tiene horario de verano: UTC-5 fijo. Las lecturas llegan con offsets distintos (UTC/local).</summary>
+    private static readonly TimeSpan HoraLima = TimeSpan.FromHours(-5);
+
     public string BuildSystemContext()
     {
         var sb = new StringBuilder();
@@ -447,7 +450,7 @@ public sealed class PlantState
                               "No lo reportes como un nivel ni lo compares con una consigna: dilo así, sin inventar.");
                 continue;
             }
-            sb.AppendLine($"- {e.Name} [{e.Id}] · {e.Controller} ({e.Ip}): {e.Variable} = {e.Value} {e.Unit}, consigna {e.Setpoint} {e.Unit}, desviación {e.Deviation} {e.Unit}, estado {e.Status}, alarma {(e.Alarm ? "ACTIVA" : "sin alarma")}, última lectura {e.Timestamp:HH:mm:ss}.");
+            sb.AppendLine($"- {e.Name} [{e.Id}] · {e.Controller} ({e.Ip}): {e.Variable} = {e.Value} {e.Unit}, consigna {e.Setpoint} {e.Unit}, desviación {e.Deviation} {e.Unit}, estado {e.Status}, alarma {(e.Alarm ? "ACTIVA" : "sin alarma")}, última lectura {e.Timestamp.ToOffset(HoraLima):HH:mm:ss} (hora de Lima).");
         }
 
         var l = GetLevel();

@@ -205,9 +205,10 @@ def main():
                     ver, det = evaluar(p, texto, v)
             except Exception as ex:  # noqa: BLE001
                 ms = round((time.time() - t0) * 1000); modo, texto, ver, det = "error", "", "FALLA_LLM", str(ex)[:200]
-            print(f"  [{ver:<9}] {p['id']:<15} {ms/1000:5.1f}s  {det[:90]}")
+            real_m = r.get('model') if isinstance(r, dict) else None
+            print(f"  [{ver:<9}] {p['id']:<15} {ms/1000:5.1f}s  {det[:90]}" + (f"  ({real_m})" if real_m and real_m != m['id'] else ''))
             resultados.append({"modelo": m["id"], "nombre": m["nombre"], "pregunta": p["id"], "texto": p["texto"],
-                               "respuesta": texto, "ms": ms, "modo": modo, "veredicto": ver, "detalle": det,
+                               "respuesta": texto, "ms": ms, "modo": modo, "modelo_real": r.get("model") if isinstance(r, dict) else None, "veredicto": ver, "detalle": det,
                                "verdad": {k: e["valor"] for k, e in v.items()}})
             time.sleep(a.pausa)
 
@@ -226,7 +227,7 @@ def main():
         md.append(linea); print(f"  {m['nombre']:<28} OK {c('OK')}  revisar {c('REVISAR')}  falla {c('FALLA')}  falla_llm {c('FALLA_LLM')}  latencia {prom}")
     md += ["", "## Respuestas", ""]
     for r in resultados:
-        md += [f"### {r.get('nombre', r['modelo'])} · {r['pregunta']} · **{r['veredicto']}**", f"> {r.get('texto','')}", "",
+        md += [f"### {r.get('nombre', r['modelo'])} · {r['pregunta']} · **{r['veredicto']}**" + (f" · respondio `{r['modelo_real']}`" if r.get('modelo_real') and r.get('modelo_real') != r['modelo'] else ""), f"> {r.get('texto','')}", "",
                (r.get("respuesta") or "(sin respuesta)"), "", f"_{r['detalle']} · {r.get('ms', 0)/1000:.1f} s_", ""]
     (AQUI / f"resultado_{marca}.md").write_text("\n".join(md), encoding="utf-8")
     print(f"\nGuardado: tests\\agente\\resultado_{marca}.json y .md")

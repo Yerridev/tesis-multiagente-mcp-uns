@@ -175,6 +175,11 @@
 .eq.sev-alarma .eq-ico {
   color: var(--err);
 }
+/* Nodo en alarma: borde rojo para que se vea de lejos (no pisa el resaltado azul de la cadena) */
+.eq.sev-alarma:not(.en-cadena) {
+  border-color: rgba(229, 57, 53, 0.75);
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.18);
+}
 .eq.sev-aviso .eq-ico {
   color: var(--warn);
 }
@@ -274,12 +279,26 @@
 .eq-barra .relleno.sev-alarma {
   background: #ef9a9a;
 }
-.eq-barra span {
-  position: relative;
+.eq-barra .eq-barra-txt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font: 600 11px var(--mono);
-  padding-left: 7px;
-  line-height: 16px;
+  line-height: 1;
+  color: #1f2933;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.85);
 }
+.eq-barra .relleno {
+  transition: width 0.6s ease, background 0.6s ease;
+}
+.eq-tend {
+  font-size: 9px;
+}
+.eq-tend.sube { color: #2e7d32; }
+.eq-tend.baja { color: #c62828; }
 .eq-filas {
   margin: 9px 0 0;
   display: grid;
@@ -1850,3 +1869,21 @@
 .lz-agente-pie { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--border-soft, #e5e7eb); }
 .lz-agente-pie .lz-agente-sug { margin: 0; }
 .lz-agente-pie .lz-agente-form { margin: 0; }
+
+/* Botón para volver a la disposición original del lienzo */
+.lz-pos-original {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #37474f;
+  background: #fff;
+  border: 1px solid #d5dbe0;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.lz-pos-original:hover { background: #f3f6f8; }

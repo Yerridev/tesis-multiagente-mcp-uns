@@ -145,6 +145,12 @@ function sBool(s: NivelSenales | null | undefined, k: string): boolean | null {
 const sFmt = (v: number | null, d = 1) => (v === null ? 'Sin datos' : num(v, d));
 const sBit = (v: boolean | null) => (v === null ? 'Sin datos' : v ? 'ON' : 'OFF');
 
+/** Color del selector: REMOTO verde · LOCAL azul · EN 0 ámbar (nadie tiene el mando). */
+export function sevModo(modo: string): Sev {
+  const m = modo.toUpperCase();
+  return m === 'REMOTO' ? 'activo' : m === 'LOCAL' ? 'info' : 'aviso';
+}
+
 /** Modo real del selector LOCAL/REMOTO (null = sin datos). */
 export function senalModo(s: NivelSenales | null | undefined): string | null {
   const remoto = sBool(s, 'estado/selector_remoto');
@@ -224,11 +230,7 @@ function leerNivel(id: string, ctx: CtxLienzo): Lectura {
           ? DESCONECTADO
           : modo === null
             ? SIN_DATO_EST
-            : modo === 'REMOTO'
-              ? { texto: 'REMOTO', sev: 'activo' }
-              : modo === 'LOCAL'
-                ? { texto: 'LOCAL', sev: 'aviso' }
-                : { texto: 'EN 0', sev: 'inactivo' },
+            : { texto: modo, sev: sevModo(modo) },
         filas: [{ k: 'Posición', v: modo ?? 'Sin datos' }],
       };
     }
@@ -309,7 +311,7 @@ function leerNivel(id: string, ctx: CtxLienzo): Lectura {
           : conAgua === null
             ? SIN_DATO_EST
             : conAgua
-              ? { texto: 'CON AGUA', sev: 'normal' }
+              ? { texto: 'CON AGUA', sev: 'activo' }
               : { texto: 'NIVEL BAJO', sev: 'alarma' },
         filas: [{ k: 'Piloto bajo (O:0/1)', v: sBit(bit('estado/alarma_nivel_bajo_tanque1')) }],
       };
@@ -387,7 +389,7 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
       filas: [{ k: 'Setpoint', v: sFmt(n('caudal/setpoint_pid')), u: 'L/min' }],
     };
     if (id === 'plc') return { estado: desconectado ? DESCONECTADO : { texto: 'CONECTADO', sev: 'activo' }, filas: [{ k: 'Enlace', v: 'S7-200 · CP243-1' }] };
-    if (id === 'selector') return { estado: desconectado ? DESCONECTADO : { texto: senalModo(s) ?? 'SIN DATO', sev: 'activo' }, filas: [] };
+    if (id === 'selector') { const m = senalModo(s); return { estado: desconectado ? DESCONECTADO : m === null ? SIN_DATO_EST : { texto: m, sev: sevModo(m) }, filas: [] }; }
     if (id === 'bomba') return { estado: desconectado ? DESCONECTADO : b('estado/sistema_funcionando') ? { texto: 'EN MARCHA', sev: 'activo' } : { texto: 'DETENIDA', sev: 'inactivo' }, filas: [{ k: 'Variador', v: sFmt(n('actuadores/variador_pct')), u: '%' }] };
     if (id === 'variador') return { estado: activo, barra: n('actuadores/variador_pct') == null ? undefined : { pct: clamp(n('actuadores/variador_pct')!), sev: 'normal', etiqueta: `${sFmt(n('actuadores/variador_pct'))} %` }, filas: [] };
     if (id === 'valvula') return { estado: activo, barra: n('actuadores/valvula_pct') == null ? undefined : { pct: clamp(n('actuadores/valvula_pct')!), sev: 'normal', etiqueta: `${sFmt(n('actuadores/valvula_pct'))} %` }, filas: [] };
@@ -395,6 +397,36 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
       { k: 'SP', v: sFmt(n('caudal/setpoint_pid')), u: 'L/min' }, { k: 'PV', v: sFmt(n('caudal/pv_pid')), u: 'L/min' },
       { k: 'Salida', v: sFmt(n('pid/salida')), u: '%' }, { k: 'Kc · Ti', v: `${sFmt(n('pid/kc'), 2)} · ${sFmt(n('pid/ti'), 2)}` },
     ] };
+    /* Mandos de consigna: M0.3 = 1 manda la HMI (VD408); M0.3 = 0 manda la PC (VD400) */
+    const hmiManda = b('estado/modo_hmi_pc');
+    if (id === 'pc_scada') return {
+      estado: desconectado ? DESCONECTADO : hmiManda === null ? SIN_DATO_EST : hmiManda ? { texto: 'EN ESPERA', sev: 'inactivo' } : { texto: 'EN MANDO', sev: 'activo' },
+      filas: [{ k: 'Setpoint remoto', v: sFmt(n('caudal/setpoint')), u: 'L/min' }, { k: 'Arranque remoto', v: sBit(b('estado/start_remoto')) }],
+    };
+    if (id === 'hmi') return {
+      estado: desconectado ? DESCONECTADO : hmiManda === null ? SIN_DATO_EST : hmiManda ? { texto: 'EN MANDO', sev: 'activo' } : { texto: 'EN ESPERA', sev: 'inactivo' },
+      filas: [{ k: 'Setpoint HMI', v: sFmt(n('caudal/setpoint_hmi')), u: 'L/min' }],
+    };
+    /* Switches de nivel del tanque: Q0.0 nivel alto · Q0.1 nivel bajo (= NOT I0.2) */
+    const bajo = b('estado/nivel_bajo'), alto = b('estado/nivel_alto');
+    const nivelEst = desconectado ? DESCONECTADO : bajo === null && alto === null ? SIN_DATO_EST
+      : bajo ? { texto: 'NIVEL BAJO', sev: 'alarma' as Sev } : alto ? { texto: 'NIVEL ALTO', sev: 'alarma' as Sev } : { texto: 'NIVEL OK', sev: 'activo' as Sev };
+    if (id === 'tanque') return { estado: nivelEst, filas: [{ k: 'Nivel bajo', v: sBit(bajo) }, { k: 'Nivel alto', v: sBit(alto) }] };
+    if (id === 'sensor_nivel') return {
+      estado: desconectado ? DESCONECTADO : bajo === null ? SIN_DATO_EST : bajo ? { texto: 'SIN AGUA', sev: 'alarma' } : { texto: 'CON AGUA', sev: 'activo' },
+      filas: [{ k: 'Nivel bajo (Q0.1)', v: sBit(bajo) }],
+    };
+    if (id === 'sensor_nivel_alto') return {
+      estado: desconectado ? DESCONECTADO : alto === null ? SIN_DATO_EST : alto ? { texto: 'NIVEL ALTO', sev: 'alarma' } : { texto: 'NORMAL', sev: 'activo' },
+      filas: [{ k: 'Nivel alto (Q0.0)', v: sBit(alto) }],
+    };
+    /* El potenciómetro solo existe en modo LOCAL (en REMOTO MW2 es basura y no se publica) */
+    if (id === 'potenciometro') {
+      const pot = n('actuadores/potenciometro');
+      return pot == null
+        ? { estado: desconectado ? DESCONECTADO : { texto: 'SOLO EN LOCAL', sev: 'inactivo' }, filas: [{ k: 'Valor', v: 'activo en LOCAL' }] }
+        : { estado: activo, filas: [{ k: 'Valor', v: sFmt(pot, 0), u: 'cuentas' }] };
+    }
   }
 
   const { eq, valor, historico, fresco, online, detalle, edad, tsActual } = ctx;
@@ -532,7 +564,7 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
       estado: historico
         ? { texto: 'HISTÓRICO', sev: 'inactivo' }
         : modo
-          ? { texto: modo, sev: modo === 'REMOTO' ? 'activo' : 'aviso' }
+          ? { texto: modo, sev: sevModo(modo) }
           : SIN_DATO,
       filas: [{ k: 'Posición', v: modo ?? 'Sin datos' }],
     };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -23,10 +23,33 @@ const nodeTypes: NodeTypes = { equipo: EquipoNode, panel: PanelNode };
 const edgeTypes: EdgeTypes = { relacion: RelacionEdge };
 
 /**
- * Posiciones guardadas por equipo: se conservan mientras se navega
- * (almacén a nivel de módulo, igual que el estado vivo del lienzo de la tesis).
+ * Posiciones guardadas por equipo: se conservan al navegar, al refrescar y al
+ * cerrar el navegador (localStorage de este navegador). "Posición original" las borra.
  */
-const POSICIONES: Record<string, Record<string, { x: number; y: number }>> = {};
+type Posiciones = Record<string, { x: number; y: number }>;
+const POSICIONES: Record<string, Posiciones> = {};
+const clave = (equipoId: string) => `mcp.lienzo.posiciones.${equipoId}`;
+
+function leerPosiciones(equipoId: string): Posiciones {
+  if (POSICIONES[equipoId]) return POSICIONES[equipoId];
+  try {
+    const crudo = localStorage.getItem(clave(equipoId));
+    POSICIONES[equipoId] = crudo ? (JSON.parse(crudo) as Posiciones) : {};
+  } catch {
+    POSICIONES[equipoId] = {};
+  }
+  return POSICIONES[equipoId];
+}
+
+function guardarPosiciones(equipoId: string, pos: Posiciones) {
+  POSICIONES[equipoId] = pos;
+  try {
+    if (Object.keys(pos).length === 0) localStorage.removeItem(clave(equipoId));
+    else localStorage.setItem(clave(equipoId), JSON.stringify(pos));
+  } catch {
+    /* sin almacenamiento: se conserva solo mientras la pestaña esté abierta */
+  }
+}
 
 /** Selección de lados de conexión — portada de VistaEquipo.tsx de la tesis. */
 function lados(a: Node | undefined, b: Node | undefined): [string, string] {
@@ -61,8 +84,10 @@ interface Props {
    * así el arrastre nunca se interrumpe y las posiciones se conservan.
    * Los valores vivos llegan por contexto (Estado.lecturas).
    */
+  const [version, setVersion] = useState(0);   // sube al pulsar "Posición original"
+
   useEffect(() => {
-    const guardada = POSICIONES[equipoId] ?? {};
+    const guardada = leerPosiciones(equipoId);
     const equipoNodes: Node[] = metas.map((meta) => ({
       id: meta.id,
       type: 'equipo',
@@ -80,7 +105,7 @@ interface Props {
       style: { width: p.w, height: p.h },
     }));
     setNodes([...equipoNodes, ...panelNodes]);
-  }, [metas, paneles, equipoId, setNodes]);
+  }, [metas, paneles, equipoId, setNodes, version]);
 
   const porId = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -101,10 +126,19 @@ interface Props {
     [aristas, porId],
   );
 
-  /* Guardar posición al soltar un nodo (se conserva al navegar) */
-  const guardarPosicion = (_evento: unknown, node: Node) => {
-    POSICIONES[equipoId] = POSICIONES[equipoId] ?? {};
-    POSICIONES[equipoId][node.id] = { x: node.position.x, y: node.position.y };
+  /* Guardar posición al soltar uno o varios nodos (se conserva al refrescar) */
+  const guardarPosicion = (_evento: unknown, node: Node, movidos?: Node[]) => {
+    const pos = { ...leerPosiciones(equipoId) };
+    for (const n of movidos && movidos.length ? movidos : [node]) {
+      pos[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
+    }
+    guardarPosiciones(equipoId, pos);
+  };
+
+  const posicionOriginal = () => {
+    guardarPosiciones(equipoId, {});
+    setVersion((v) => v + 1);
+    window.setTimeout(() => instancia.current?.fitView({ padding: 0.08, duration: 300 }), 50);
   };
 
   return (
@@ -151,6 +185,10 @@ interface Props {
           maskColor="rgba(33,33,33,0.06)"
         />
       </ReactFlow>
+
+      <button type="button" className="lz-pos-original" onClick={posicionOriginal} title="Vuelve a colocar los nodos y paneles como vienen por defecto">
+        ↺ Posición original
+      </button>
 
       {/* Leyenda fija en el visor (HTML, no escala) */}
       <div className="lz-leyenda-vp">

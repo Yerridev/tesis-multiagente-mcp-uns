@@ -6,7 +6,7 @@ import { PressureFlow, type PresionSenal } from '../components/scada/PressureFlo
 import { KnobRO as Knob } from '../components/scada/KnobRO';
 import { KnobControl } from '../components/scada/KnobControl';
 import { usePlcVirtualPresion, T1_ALTO, T1_BAJO } from '../components/scada/plcVirtualPresion';
-import { CajaPlanta, chequeosPlanta, leerSim, moverLlave, usePlantaModo } from '../components/scada/plantaSimulada';
+import { CajaPlanta, chequeosPlanta, leerSim, moverLlave, nivelPorSwitches, usePlantaModo } from '../components/scada/plantaSimulada';
 import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/ModuloHeader';
 import { HistoricoModal } from '../components/scada/HistoricoModal';
 import { ConfirmarOrden } from '../components/common/Emergente';
@@ -204,7 +204,11 @@ export function ModulePresionPage() {
   };
   // PLANTA SIMULADA: llaves y T1 vienen del simulador Python (en el laboratorio real las llaves son de mano)
   const simP = leerSim(presionSenal?.valores, ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'VF']);
+  // REAL: T1 no tiene sensor de nivel -> nivel aproximado por los switches alto/bajo
+  senal.nivelPct = online ? nivelPorSwitches(senal.nivelAlto, senal.nivelBajo) : null;
+  senal.nivelAprox = true;
   if (simulada && simP.hay) {
+    senal.nivelAprox = false;
     senal.valvulas = simP.valvulas;
     senal.nivelPct = simP.t1;
     senal.nivelAlto = simP.t1Alto;

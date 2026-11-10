@@ -17,6 +17,11 @@ const ID = 'temp-mct09';
 function real(s: TemperaturaSenales | null, key: string): number | null { const v=s?.valores?.[key]?.valor; if(typeof v==='number') return Number.isFinite(v)?v:null; if(typeof v==='boolean') return v?1:0; const n=typeof v==='string'?Number(v):NaN; return Number.isFinite(n)?n:null; }
 function bit(s: TemperaturaSenales | null, key: string): boolean | null { const v=real(s,key); return v==null?null:v>=.5; }
 
+/** El MCT-09 real no mide el nivel: solo tiene switches alto/bajo (T1 enfriador %M6/%M7, T2 principal %M4/%M5).
+ *  Se DIBUJA un nivel aproximado: alto -> 92 %, bajo -> 10 %, ninguno -> 60 % (un poco sobre la mitad). */
+function nivelPorSwitches(alto:boolean|null,bajoOk:boolean|null):number|null{if(alto==null||bajoOk==null)return null;return alto?92:!bajoOk?10:60;}
+const noOk=(ok:boolean|null):boolean|null=>ok==null?null:!ok;
+
 export function ModuleTempPage() {
   const { byId, historyFor, load, error, reload, now, link, temperaturaSenal } = usePlant();
   const eq=byId[ID]; const samples=useMemo(()=>historyFor(ID).slice(-300),[historyFor]);
@@ -38,10 +43,10 @@ export function ModuleTempPage() {
   const online=temperaturaSenal?.mqtt===true&&temperaturaSenal.plc==='CONECTADO'&&edadSenal!=null&&edadSenal<=15;
   const pc=bit(temperaturaSenal,'estado/selector_remoto')===true, hmi=bit(temperaturaSenal,'estado/selector_local')===true;
   const temp=real(temperaturaSenal,'temperatura/principal_c')??eq.value, spReal=real(temperaturaSenal,'pid/setpoint_c'), setpoint=spArrastre??spReal??sp, puede=armado&&online&&pc&&!hmi;
-  const senal:TempSenal={online,tempControl:online?temp:null,tempCooler:real(temperaturaSenal,'temperatura/enfriador_c'),nivel1Pct:real(temperaturaSenal,'nivel/principal_pct'),nivel2Pct:real(temperaturaSenal,'nivel/enfriador_pct'),bomba:bit(temperaturaSenal,'estado/bomba_marcha'),caudal:real(temperaturaSenal,'caudal/l_min'),heaterPct:real(temperaturaSenal,'pid/salida_pct'),coolerOn:bit(temperaturaSenal,'estado/enfriador_on'),valvulas:{V1:bit(temperaturaSenal,'estado/v1'),V2:bit(temperaturaSenal,'estado/v2'),VF:bit(temperaturaSenal,'estado/v3'),V4:bit(temperaturaSenal,'estado/v4')},altoTE:bit(temperaturaSenal,'falla/nivel_enfriador'),bajoTE:null,altoTP:bit(temperaturaSenal,'falla/nivel_principal'),bajoTP:null};
+  const senal:TempSenal={online,tempControl:online?temp:null,tempCooler:real(temperaturaSenal,'temperatura/enfriador_c'),nivelAprox:true,nivel1Pct:online?nivelPorSwitches(bit(temperaturaSenal,'nivel/enfriador_alto'),bit(temperaturaSenal,'nivel/enfriador_bajo_ok')):null,nivel2Pct:online?nivelPorSwitches(bit(temperaturaSenal,'nivel/principal_alto'),bit(temperaturaSenal,'nivel/principal_bajo_ok')):null,bomba:bit(temperaturaSenal,'estado/bomba_marcha'),caudal:real(temperaturaSenal,'caudal/l_min'),heaterPct:real(temperaturaSenal,'pid/salida_pct'),coolerOn:bit(temperaturaSenal,'estado/enfriador_on'),valvulas:{V1:bit(temperaturaSenal,'estado/v1'),V2:bit(temperaturaSenal,'estado/v2'),VF:bit(temperaturaSenal,'estado/v3'),V4:bit(temperaturaSenal,'estado/v4')},altoTE:bit(temperaturaSenal,'nivel/enfriador_alto'),bajoTE:noOk(bit(temperaturaSenal,'nivel/enfriador_bajo_ok')),altoTP:bit(temperaturaSenal,'nivel/principal_alto'),bajoTP:noOk(bit(temperaturaSenal,'nivel/principal_bajo_ok'))};
   // PLANTA SIMULADA: llaves y niveles de T1/T2 vienen del simulador Python
   const simT=leerSim(temperaturaSenal?.valores,['V1','V2','VF','V4']);
-  if(simulada&&simT.hay){senal.valvulas=simT.valvulas;senal.nivel1Pct=simT.t1;senal.nivel2Pct=simT.t2;senal.altoTE=simT.t1Alto;senal.bajoTE=simT.t1Bajo;senal.altoTP=simT.t2Alto;senal.bajoTP=simT.t2Bajo;}
+  if(simulada&&simT.hay){senal.valvulas=simT.valvulas;senal.nivel1Pct=simT.t1;senal.nivelAprox=false;senal.nivel2Pct=simT.t2;senal.altoTE=simT.t1Alto;senal.bajoTE=simT.t1Bajo;senal.altoTP=simT.t2Alto;senal.bajoTP=simT.t2Bajo;}
   const chequeosSim=chequeosPlanta(online,simT,{abiertas:[],cerradas:['V1','V2','V4','VF'],tanques:['t1','t2']});
   const bloqueoSim=simulada&&!chequeosSim.every(c=>c.ok);
   const series=[{id:'temp',label:'TEMPERATURA',color:'#e2412d',points:samples.map(x=>({t:Date.parse(x.ts),v:x.value}))},...(spReal==null?[]:[{id:'sp',label:'SETPOINT',color:'#ffd600',dashed:true,points:samples.map(x=>({t:Date.parse(x.ts),v:spReal}))}])];

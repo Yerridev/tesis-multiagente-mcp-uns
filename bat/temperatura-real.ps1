@@ -6,7 +6,7 @@ $ip   = '192.168.114.10'
 
 Write-Host "`n[1/5] Cable de la red del laboratorio (Ethernet)..." -ForegroundColor Cyan
 $ad = Get-NetAdapter -Name 'Ethernet' -ErrorAction SilentlyContinue
-if ($ad.Status -ne 'Up') { Write-Host "  SIN ENLACE ($($ad.Status)): conecta el cable y corre red-laboratorio.bat" -ForegroundColor Red; return }
+if ($ad.Status -ne 'Up') { Write-Host "  SIN ENLACE ($($ad.Status)): conecta el cable y corre 01-red-laboratorio.bat" -ForegroundColor Red; return }
 $ips = (Get-NetIPAddress -InterfaceAlias 'Ethernet' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress -join ', '
 Write-Host "  OK  IP: $ips"
 

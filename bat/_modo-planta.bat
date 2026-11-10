@@ -2,7 +2,7 @@
 rem ============================================================
 rem  Lee el modo de la planta guardado (bat\.modo-planta) y prepara
 rem  las variables de Docker para NO perderlo al reconstruir.
-rem  Lo escriben: simular-planta.bat (simulado) y detener-simulacion.bat (real).
+rem  Lo escriben: 10-simular-planta.bat (simulado) y 11-detener-simulacion.bat (real).
 rem ============================================================
 set "MODO_ACTUAL=real"
 if exist "%~dp0.modo-planta" set /p MODO_ACTUAL=<"%~dp0.modo-planta"

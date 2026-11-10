@@ -49,6 +49,18 @@ function num(v: Valores, k: string): number | null {
 }
 
 /** Lee del simulador las llaves y los tanques. */
+/** Planta REAL sin sensor de nivel en T1: se DIBUJA un nivel aproximado con los switches.
+ *  alto -> 92 %, bajo -> 10 %, ninguno -> 60 % (un poco sobre la mitad). Sin dato -> null. */
+export function nivelPorSwitches(alto: boolean | null, bajo: boolean | null): number | null {
+  if (alto == null || bajo == null) return null;
+  return alto ? 92 : bajo ? 10 : 60;
+}
+
+/** Texto del visor del tanque cuando el nivel es aproximado (por switches). */
+export function textoNivelAprox(pct: number): string {
+  return pct >= 85 ? 'ALTO' : pct <= 15 ? 'BAJO' : 'OK';
+}
+
 export function leerSim(valores: Valores, llaves: string[]) {
   const valvulas = Object.fromEntries(llaves.map((id) => [id, bool(valores, `sim/${id}`)])) as Record<string, boolean | null>;
   return {
@@ -94,7 +106,7 @@ export function chequeosPlanta(
     const ok = !sinDato.length && !mal.length;
     const partes: string[] = [];
     if (mal.length) partes.push(`${quiere ? 'abre' : 'cierra'} ${mal.join(', ')}`);
-    if (sinDato.length) partes.push(`${sinDato.join(', ')} sin dato del simulador (reinicia simular-planta)`);
+    if (sinDato.length) partes.push(`${sinDato.join(', ')} sin dato del simulador (reinicia 10-simular-planta)`);
     lista.push({ id, texto: ok ? `${ids.join(', ')} ${nombre}` : partes.join(' · '), ok });
   };
   grupo(reglas.abiertas, true, 'ab', reglas.abiertas.length > 1 ? 'abiertas' : 'abierta');

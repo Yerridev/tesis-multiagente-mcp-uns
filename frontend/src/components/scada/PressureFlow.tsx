@@ -1,4 +1,5 @@
 import { observarEncuadre, useMedidasEstables } from './encuadre';
+import { textoNivelAprox } from './plantaSimulada';
 import { CatalogoBoton } from './catalogo/CatalogoBoton';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, getStraightPath, useEdges, useNodeId, useReactFlow, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react';
@@ -22,6 +23,8 @@ export interface PresionSenal {
   valvulas: Record<string, boolean | null>;
   nivelAlto: boolean | null;
   nivelBajo: boolean | null;
+  /** true en planta REAL: el nivel de T1 se dibuja con los switches (no hay sensor) */
+  nivelAprox?: boolean;
 }
 
 const T2_LABEL_SIZE = tagSize(['TRANSMISOR DE PRESIÓN', 'PRESOSTATO'], 8);
@@ -227,7 +230,7 @@ function TankT1Node({ data }: NodeProps) {
         <rect x="-10" y="34" width="14" height="16" rx="3" className={alto ? 'level-switch-orange on' : 'level-switch-orange'} />
         <rect x="-10" y="252" width="14" height="16" rx="3" className={bajo ? 'level-switch-orange on' : 'level-switch-orange'} />
       </SteelTank>
-      <div className="tank__readout"><strong>{pct == null ? '—' : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : '%'}</span></div>
+      <div className="tank__readout"><strong>{pct == null ? '—' : d.aprox === true ? textoNivelAprox(pct) : pct.toFixed(0)}</strong><span>{pct == null ? 'sin dato' : d.aprox === true ? 'nivel' : '%'}</span></div>
       <span className="tag level-tag" style={{ right: 204, top: 42 }}>NIVEL ALTO <i className={alto ? 'led led--alarm' : 'led'} /></span>
       <span className="tag level-tag" style={{ right: 204, top: 260 }}>NIVEL BAJO <i className={bajo ? 'led led--alarm' : 'led'} /></span>
       <span className="tag" style={{ left: 60, top: 10 }}>TANQUE T1</span>
@@ -483,7 +486,7 @@ function Flow({ senal, interactivo = false, onValvulas, onLlave }: { senal: Pres
     return BASE_NODES.map((n) => {
       const data: Data = { ...n.data };
       if (n.type === 'pump') data.on = senal.bomba;
-      if (n.type === 'tankT1') { data.nivelPct = senal.nivelPct; data.alto = senal.nivelAlto; data.bajo = senal.nivelBajo; }
+      if (n.type === 'tankT1') { data.aprox = senal.nivelAprox === true; data.nivelPct = senal.nivelPct; data.alto = senal.nivelAlto; data.bajo = senal.nivelBajo; }
       if (n.type === 'tankT2') data.psi = senal.presion;
       if (n.type === 'propValve') data.pct = senal.valvulaPct;
       if (n.type === 'valve') {

@@ -14,12 +14,18 @@ set MODO_PLANTA=real
 > "%~dp0.modo-planta" echo real
 echo   modo guardado en bat\.modo-planta = real
 set PLC_NIVEL_IP=192.168.114.9
-set CONECTOR_MODO=dry-run
-set CONTROL_REAL=0
+rem El modo de control real (CONECTOR_MODO, CONTROL_REAL, CONTROL_MODO...) lo decide .env:
+rem se BORRAN de esta ventana para que no lo pisen (antes forzaba dry-run y el PLC no obedecia).
+set CONECTOR_MODO=
+set CONTROL_REAL=
+set CONTROL_MODO=
+set CONTROL_HABILITADOESCRITURA=
+echo   control de nivel: modo tomado de .env
 set PRESION_CONTROL_HOST=mosquitto
 set TEMP_CONTROL_HOST=mosquitto
 docker compose -f compose.yaml -f compose.override.yaml up -d backend connector-nivel
-docker start mcp-connector-temperatura >nul 2>&1
+echo   arrancando el control real de temperatura (mcp-connector-temperatura)...
+docker start mcp-connector-temperatura
 echo.
 echo Las ventanas negras de la simulacion quedan abiertas sin proceso: puedes cerrarlas.
 echo Para volver a leer la planta REAL ejecuta: bat\iniciar-lectores.bat

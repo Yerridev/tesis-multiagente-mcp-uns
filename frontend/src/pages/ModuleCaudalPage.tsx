@@ -14,6 +14,19 @@ import { enviarControlCaudal, estadoControlCaudal, listarOrdenesCaudal, tokenCon
 
 const ID = 'caudal-mcc09';
 
+/** useState que recuerda el valor en localStorage (sobrevive a recargar la página). */
+function useRecordado(clave: string, inicial: string): [string, (v: string) => void] {
+  const k = `mcp.caudal.${clave}`;
+  const [v, setV] = useState<string>(() => {
+    try { return localStorage.getItem(k) ?? inicial; } catch { return inicial; }
+  });
+  const guardar = useCallback((nuevo: string) => {
+    setV(nuevo);
+    try { localStorage.setItem(k, nuevo); } catch { /* sin almacenamiento: solo en memoria */ }
+  }, [k]);
+  return [v, guardar];
+}
+
 function real(s: CaudalSenales | null, key: string): number | null {
   const v = s?.valores?.[key]?.valor;
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
@@ -33,11 +46,14 @@ export function ModuleCaudalPage() {
   const samples = useMemo(() => historyFor(ID).slice(-300), [historyFor]);
   const [armado, setArmado] = useState(false);
   const [mensaje, setMensaje] = useState('Comprobando control…');
-  const [sp, setSp] = useState('10');
-  const [valvula, setValvula] = useState('100');
-  const [kc, setKc] = useState('1');
-  const [ti, setTi] = useState('0.01');
-  const [td, setTd] = useState('0');
+  // Los mandos arrancan con lo último que dejó el operador (localStorage) y, en cuanto llega
+  // telemetría, toman el valor REAL del PLC (lo que de verdad está cargado).
+  const [sp, setSp] = useRecordado('sp', '0');
+  const [valvula, setValvula] = useRecordado('valvula', '100');
+  const [kc, setKc] = useRecordado('kc', '1');
+  const [ti, setTi] = useRecordado('ti', '0.01');
+  const [td, setTd] = useRecordado('td', '0');
+  const [sincronizado, setSincronizado] = useState(false);
   const [ordenes, setOrdenes] = useState<ControlOrden[]>([]);
   const [ordenesAbiertas, setOrdenesAbiertas] = useState(false);
   const [historicoAbierto, setHistoricoAbierto] = useState(false);
@@ -50,6 +66,22 @@ export function ModuleCaudalPage() {
   const plc = usePlcVirtualCaudal(modo === 'simulador', estadoMimico, Number(valvula) || 0);
   const simulada = usePlantaModo() === 'simulado';   // backend con MODO_PLANTA=simulado
   const [avisoLlave, setAvisoLlave] = useState<string | null>(null);
+  // Una sola vez por visita: copiar a los mandos lo que tiene cargado el PLC
+  useEffect(() => {
+    if (sincronizado || !caudalSenal?.valores) return;
+    const spPlc = real(caudalSenal, 'caudal/setpoint');
+    const valPlc = real(caudalSenal, 'actuadores/valvula_pct');
+    const kcPlc = real(caudalSenal, 'pid/kc'), tiPlc = real(caudalSenal, 'pid/ti'), tdPlc = real(caudalSenal, 'pid/td');
+    if (spPlc == null && valPlc == null && kcPlc == null) return;
+    const txt = (v: number) => String(Math.round(v * 1000) / 1000);
+    if (spPlc != null) setSp(txt(spPlc));
+    if (valPlc != null) setValvula(String(Math.round(valPlc)));
+    if (kcPlc != null && kcPlc > 0) setKc(txt(kcPlc));
+    if (tiPlc != null && tiPlc > 0) setTi(txt(tiPlc));
+    if (tdPlc != null) setTd(txt(tdPlc));
+    setSincronizado(true);
+  }, [caudalSenal, sincronizado, setSp, setValvula, setKc, setTi, setTd]);
+
   const onLlave = useCallback((id: string, abierta: boolean) => {
     setAvisoLlave(`${id}: ${abierta ? 'abriendo' : 'cerrando'}…`);
     void moverLlave('caudal-mcc09', id, abierta).then((e) => setAvisoLlave(e ? `${id}: ${e}` : null));
@@ -140,7 +172,7 @@ export function ModuleCaudalPage() {
     senal.nivelAlto = simC.t1Alto;
     senal.nivelBajo = simC.t1Bajo;
   }
-  const chequeosSim = chequeosPlanta(online, simC, { abiertas: ['V5', 'V2'], cerradas: ['V1', 'V3', 'V4', 'V6', 'V7'], tanques: ['t1'], soloBajo: true });
+  const chequeosSim = chequeosPlanta(online, simC, { abiertas: ['V5', 'V2'], cerradas: ['V1', 'V3', 'V4', 'V6', 'V7'], tanques: ['t1'] });   // T1 sin nivel alto ni nivel bajo
   const bloqueoSim = simulada && !chequeosSim.every((c) => c.ok);
 
   // Estado de comunicación para la cabecera

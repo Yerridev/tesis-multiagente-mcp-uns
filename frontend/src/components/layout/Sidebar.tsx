@@ -5,6 +5,7 @@ import { NAV, type Route } from '../../router';
 import {
   IconAgent,
   IconCanvas,
+  IconPlantas,
   IconRobot,
   IconBarChart,
   IconBranch,
@@ -31,6 +32,7 @@ const ICONS: Record<string, ComponentType<IconProps>> = {
   agent: IconAgent,
   robot: IconRobot,
   canvas: IconCanvas,
+  plantas: IconPlantas,
   server: IconServer,
   topology: IconTopology,
   branch: IconBranch,

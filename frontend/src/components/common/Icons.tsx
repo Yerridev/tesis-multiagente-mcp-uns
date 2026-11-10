@@ -80,6 +80,17 @@ export const IconRobot = (p: IconProps) => (
 );
 
 /** Lienzo: marco con un pequeño diagrama de nodos (distinto al de arquitectura). */
+// Módulos de control: dos plantas conectadas a una estación SCADA (monitor)
+export const IconPlantas = (p: IconProps) => (
+  <Icon className="ico-planta" {...p}>
+    <path d="M1.5 9 L2.4 2.5 H4.4 L5 5.8 L7.2 4 V5.8 L9.5 4 V9 Z" />
+    <path d="M14.5 9 L15.4 2.5 H17.4 L18 5.8 L20.2 4 V5.8 L22.5 4 V9 Z" />
+    <path d="M4.5 9 V15.5 H6.2 M19.5 9 V15.5 H17.8" />
+    <rect x="6.2" y="11" width="11.6" height="8" rx="1" />
+    <path d="M12 19 V21.5 M8.5 21.5 H15.5" />
+  </Icon>
+);
+
 export const IconCanvas = (p: IconProps) => (
   <Icon {...p}>
     <rect x="3" y="4" width="18" height="13" rx="2" />

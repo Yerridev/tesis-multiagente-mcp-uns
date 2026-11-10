@@ -79,8 +79,8 @@ export const NAV: NavSection[] = [
       {
         kind: 'group',
         key: 'modules',
-        label: 'Módulos industriales',
-        icon: 'layers',
+        label: 'Módulos de control',
+        icon: 'plantas',
         children: [
           { id: 'mod-caudal', label: 'Scada Caudal', icon: 'flow' },
           { id: 'mod-nivel', label: 'Scada Nivel', icon: 'tank' },

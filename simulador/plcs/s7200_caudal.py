@@ -69,9 +69,9 @@ class S7200Caudal:
         # Niveles y marcha
         set_bool(Q, 0, 0, e.nivel_alto)
         set_bool(Q, 0, 1, not agua)
-        if not agua:
-            set_bool(M, 0, 2, False)        # nivel bajo borra la orden de arranque
-        marcha = agua and ((remoto and get_bool(M, 0, 2)) or (local and e.arranque_local))
+        if not agua or e.nivel_alto:
+            set_bool(M, 0, 2, False)        # nivel bajo o nivel alto borran la orden de arranque
+        marcha = agua and not e.nivel_alto and ((remoto and get_bool(M, 0, 2)) or (local and e.arranque_local))
         set_bool(Q, 0, 2, marcha)
 
         # Parametros PID escritos por la PC (VD100/108/116) -> tabla del lazo

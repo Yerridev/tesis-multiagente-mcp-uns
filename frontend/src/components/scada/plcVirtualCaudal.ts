@@ -5,14 +5,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
    Solo se usa en modo SIMULADOR. Nunca envía nada al PLC real.
    - Hay que CONECTARSE primero (handshake simulado).
    - Enclavamientos para INICIAR (como en el módulo real):
-       T1 sin nivel bajo · V5 y V2 abiertas · V1, V3, V4, V6, V7 cerradas · setpoint > 0
+       T1 sin nivel alto ni nivel bajo · V5 y V2 abiertas · V1, V3, V4, V6, V7 cerradas · setpoint > 0
    - En marcha: PID (PI) sobre la bomba; el flujómetro sigue al setpoint
      con pequeñas variaciones (ruido + dinámica de la bomba).
    - Si un enclavamiento se pierde en marcha (p. ej. abres V6 o baja el nivel) → se detiene.
    ============================================================ */
 
 export type EstadoConexion = 'desconectado' | 'conectando' | 'conectado';
-export interface EntradasPlanta { valvulas: Record<string, boolean | null>; nivelPct: number | null; nivelBajo: boolean | null }
+export interface EntradasPlanta { valvulas: Record<string, boolean | null>; nivelPct: number | null; nivelBajo: boolean | null; nivelAlto?: boolean | null }
 export interface Chequeo { id: string; texto: string; ok: boolean }
 export interface MuestraSim { ts: string; value: number }
 
@@ -37,7 +37,7 @@ export function usePlcVirtualCaudal(activo: boolean, entradas: EntradasPlanta, a
 
   const chequeos: Chequeo[] = [
     { id: 'con', texto: 'Conectado al PLC virtual', ok: conexion === 'conectado' },
-    { id: 'nivel', texto: 'T1 sin nivel bajo', ok: entradas.nivelBajo === false },
+    { id: 'nivel', texto: 'T1 sin nivel alto ni nivel bajo', ok: entradas.nivelBajo === false && entradas.nivelAlto !== true },
     ...DEBEN_ABIERTAS.map((v) => ({ id: v, texto: `${v} abierta`, ok: entradas.valvulas[v] === true })),
     { id: 'cerradas', texto: `${DEBEN_CERRADAS.join(', ')} cerradas`, ok: DEBEN_CERRADAS.every((v) => entradas.valvulas[v] === false) },
     { id: 'sp', texto: 'Setpoint cargado (> 0 L/min)', ok: sp > 0 },

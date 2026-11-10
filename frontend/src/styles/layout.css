@@ -589,3 +589,4 @@
 /* Íconos de relleno (p. ej. robot de Agentes): el menú no debe convertirlos en contorno */
 .nav-ico svg.ico-relleno, svg.ico-relleno { fill: currentColor !important; stroke: none !important; }
 .nav-ico svg.ico-relleno { width: 19px; height: 19px; }
+.nav-ico svg.ico-planta { width: 19px; height: 19px; stroke-width: 1.5; }

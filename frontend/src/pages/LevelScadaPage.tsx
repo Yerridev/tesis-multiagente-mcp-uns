@@ -95,7 +95,7 @@ export function LevelScadaPage() {
   const plcOk = plc.conexion === 'conectado';
   const levelSim = { ...level, status: plcOk ? 'ONLINE' : 'OFFLINE', value: plc.t2, timestamp: new Date(now).toISOString() } as typeof level;
   const detailSim = { ...(detail ?? {}), pumpOn: plc.marcha && plc.bombaPct > 1, tankHeight: 60, valveOpen: vpSim } as LevelDetail;
-  const senalSim = { valores: { 'estado/tanque1_con_agua': { valor: plc.t1Alto }, 'estado/alarma_nivel_bajo_tanque1': { valor: plc.t1Bajo } } } as unknown as NivelSenales;
+  const senalSim = { valores: { 'estado/mando_i03': { valor: plc.t1Alto }, 'estado/tanque1_con_agua': { valor: !plc.t1Bajo }, 'estado/alarma_nivel_bajo_tanque1': { valor: plc.t1Bajo } } } as unknown as NivelSenales;
   const seriesSim = [
     { id: 'nivel', label: 'NIVEL', color: '#ef5350', points: plc.historial.map((x) => ({ t: Date.parse(x.ts), v: x.value })) },
     ...(plc.sp > 0 ? [{ id: 'sp', label: 'SETPOINT', color: '#ffd600', dashed: true, points: plc.historial.map((x) => ({ t: Date.parse(x.ts), v: plc.sp })) }] : []),

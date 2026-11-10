@@ -267,18 +267,26 @@ def main():
 
     mq = nuevo_cliente_mqtt("control-cfp2200-{}".format(socket.gethostname()))
     mq.will_set(CTRL + "/state", json.dumps({"modo": "OFFLINE", "ts": ahora()}), qos=1, retain=True)
-    mq.connect(a.broker, a.puerto, keepalive=30)
-    mq.loop_start()
+    mq.reconnect_delay_set(1, 10)
 
     ds = DataSocket(a.cfp)
     ctl = Control(ds, mq, a.habilitado_real, a.cfp)
+    modo = "REAL" if a.habilitado_real and os.getenv("CONTROL_PRESION_REAL") == "1" else "BLOQUEADO"
 
-    # Lectura periodica del estado fisico (para el gate) y de las variables de setpoint.
+    def al_conectar(client, userdata, *args):
+        # En CADA (re)conexion: re-suscribe /cmd y borra el OFFLINE que dejo el Last Will.
+        # Sin esto, tras un corte del broker el conector queda "sordo" y todo da Timeout.
+        client.subscribe(CTRL + "/cmd", qos=1)
+        client.publish(CTRL + "/state", json.dumps({"modo": modo, "plc": "CONECTADO", "ts": ahora()}), qos=1, retain=True)
+        print("[{}] MQTT conectado: escuchando ordenes en {}/cmd".format(ahora(), CTRL), flush=True)
+
+    def al_desconectar(client, userdata, *args):
+        print("[{}] MQTT desconectado: reintentando...".format(ahora()), flush=True)
+
+    mq.on_connect, mq.on_disconnect = al_conectar, al_desconectar
     mq.on_message = lambda c, u, m: ctl.procesar(m.payload.decode("utf-8", "replace"))
-    mq.subscribe(CTRL + "/cmd", qos=1)
-    mq.publish(CTRL + "/state", json.dumps({
-        "modo": "REAL" if a.habilitado_real and os.getenv("CONTROL_PRESION_REAL") == "1" else "BLOQUEADO",
-        "plc": "CONECTADO", "ts": ahora()}), qos=1, retain=True)
+    mq.connect(a.broker, a.puerto, keepalive=30)
+    mq.loop_start()
     print("Control de presion listo ({}). Broker mqtt://{}:{}".format(
         "REAL" if a.habilitado_real else "BLOQUEADO", a.broker, a.puerto), flush=True)
 

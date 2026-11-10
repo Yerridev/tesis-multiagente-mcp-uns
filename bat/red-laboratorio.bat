@@ -21,6 +21,17 @@ echo ============================================================
 echo  RED DEL LABORATORIO en "%ADAPTADOR%" (IP fija 192.168.114.x)
 echo ============================================================
 echo.
+echo [0/4] Revisando el cable de "%ADAPTADOR%"...
+set "CABLE=?"
+for /f %%E in ('powershell -NoProfile -Command "(Get-NetAdapter -Name '%ADAPTADOR%' -ErrorAction SilentlyContinue).Status"') do set "CABLE=%%E"
+if /i "%CABLE%"=="Up" (
+  echo   OK: cable conectado ^(hay enlace^)
+) else (
+  echo   ATENCION: "%ADAPTADOR%" esta "%CABLE%" = SIN CABLE / SIN ENLACE.
+  echo   Las IP se guardan igual, pero Windows NO las usa ni los PLC responden
+  echo   hasta que conectes el cable al switch del laboratorio ^(luces del puerto encendidas^).
+)
+echo.
 echo [1/4] IP principal 192.168.114.70 / 255.255.255.0 (sin puerta de enlace)...
 netsh interface ipv4 set address name="%ADAPTADOR%" source=static address=192.168.114.70 mask=255.255.255.0
 if %errorlevel% neq 0 (
@@ -45,8 +56,13 @@ if %errorlevel% neq 0 (
   docker restart mcp-mosquitto
 )
 echo.
-echo ===================== IP actuales de "%ADAPTADOR%" =====================
-netsh interface ipv4 show addresses name="%ADAPTADOR%"
+echo ===================== IP guardadas en "%ADAPTADOR%" =====================
+powershell -NoProfile -Command "$d=(Get-NetIPInterface -InterfaceAlias '%ADAPTADOR%' -AddressFamily IPv4 -PolicyStore PersistentStore -ErrorAction SilentlyContinue).Dhcp; '  DHCP: ' + $d; Get-NetIPAddress -InterfaceAlias '%ADAPTADOR%' -AddressFamily IPv4 -PolicyStore PersistentStore -ErrorAction SilentlyContinue | ForEach-Object { '  ' + $_.IPAddress + '/' + $_.PrefixLength }"
+if /i not "%CABLE%"=="Up" (
+  echo.
+  echo   Sin cable no se prueba nada mas: conecta el cable y vuelve a correr este bat.
+  goto fin
+)
 echo.
 echo Probando los PLC (1 ping cada uno):
 for %%P in (192.168.114.7 192.168.114.8 192.168.114.9 192.168.114.10) do (

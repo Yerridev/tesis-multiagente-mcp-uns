@@ -101,8 +101,12 @@ def main():
     p=argparse.ArgumentParser(); p.add_argument("--plc",default="192.168.114.7"); p.add_argument("--broker",default="127.0.0.1"); p.add_argument("--local-tsap",default="1000"); p.add_argument("--remote-tsap",default="1000"); p.add_argument("--habilitado-real",action="store_true"); a=p.parse_args()
     socket.setdefaulttimeout(5); plc=PLC(a.plc,int(a.local_tsap,16),int(a.remote_tsap,16)); plc.conectar()
     mq=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id="control-caudal-"+socket.gethostname()); ctl=Control(plc,mq,a.habilitado_real)
-    mq.on_message=lambda c,u,m: ctl.procesar(m.payload.decode("utf-8","replace")); mq.connect(a.broker,1883,30); mq.subscribe(CTRL+"/cmd",qos=1)
-    mq.publish(CTRL+"/state",json.dumps({"modo":"REAL" if a.habilitado_real and os.getenv("CONTROL_CAUDAL_REAL")=="1" else "BLOQUEADO","plc":"CONECTADO","ts":iso()}),qos=1,retain=True)
+    mq.reconnect_delay_set(1,10)
+    def al_conectar(client,userdata,*args):   # en CADA (re)conexion: re-suscribe /cmd y re-anuncia el estado
+        client.subscribe(CTRL+"/cmd",qos=1)
+        client.publish(CTRL+"/state",json.dumps({"modo":"REAL" if a.habilitado_real and os.getenv("CONTROL_CAUDAL_REAL")=="1" else "BLOQUEADO","plc":"CONECTADO","ts":iso()}),qos=1,retain=True)
+    mq.on_connect=al_conectar
+    mq.on_message=lambda c,u,m: ctl.procesar(m.payload.decode("utf-8","replace")); mq.connect(a.broker,1883,30)
     try: mq.loop_forever()
     finally: plc.cerrar()
 if __name__ == "__main__": main()

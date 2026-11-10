@@ -289,6 +289,20 @@ def main():
 
     mq = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"edge-s7200-{socket.gethostname()}")
     mq.will_set(f"{BASE}/funcional/edge/estado", "OFFLINE", qos=1, retain=True)
+    mq.reconnect_delay_set(1, 10)
+
+    def al_conectar(client, userdata, *args):
+        # Se ejecuta en CADA (re)conexion: sin esto, tras un corte del broker (PC suspendida,
+        # broker reiniciado) paho reconecta pero sin la suscripcion a /cmd -> ordenes en Timeout.
+        client.subscribe(f"{CONTROL}/cmd", qos=1)
+        client.publish(f"{BASE}/funcional/edge/estado", "ONLINE", qos=1, retain=True)
+        client.publish(f"{CONTROL}/state", json.dumps({"modo": "REAL" if os.getenv("CONTROL_CAUDAL_REAL") == "1" else "BLOQUEADO", "ts": ahora()}), qos=1, retain=True)
+        print(f"[{ahora()}] MQTT conectado: escuchando ordenes en {CONTROL}/cmd", flush=True)
+
+    def al_desconectar(client, userdata, *args):
+        print(f"[{ahora()}] MQTT desconectado: reintentando...", flush=True)
+
+    mq.on_connect, mq.on_disconnect = al_conectar, al_desconectar
     mq.connect(a.broker, a.puerto, keepalive=30)
     mq.loop_start()
     mq.publish(f"{BASE}/funcional/edge/estado", "ONLINE", qos=1, retain=True)
@@ -322,6 +336,7 @@ def main():
             if not remoto or local: raise PermissionError("SELECTOR_NO_REMOTO")
             if mando_hmi: raise PermissionError("CONTROL_EN_HMI")
             if tipo == "Iniciar" and plc.leer_memoria("Q", 0, "bool", 1): raise PermissionError("NIVEL_BAJO_T1")
+            if tipo == "Iniciar" and plc.leer_memoria("Q", 0, "bool", 0): raise PermissionError("NIVEL_ALTO_T1")
             clave = str(orden.get("parametro", "")).lower() if tipo == "ParametroPid" else tipo
             spec = CONTROL_MAPA.get(clave)
             if spec is None: raise PermissionError("DIRECCION_NO_PERMITIDA")
@@ -349,9 +364,7 @@ def main():
         except Exception as e:
             ack(oid, "Error", motivo=f"PLC_ERROR:{e}", escrito=False)
 
-    mq.on_message = control_recibido
-    mq.subscribe(f"{CONTROL}/cmd", qos=1)
-    mq.publish(f"{CONTROL}/state", json.dumps({"modo": "REAL" if os.getenv("CONTROL_CAUDAL_REAL") == "1" else "BLOQUEADO", "ts": ahora()}), qos=1, retain=True)
+    mq.on_message = control_recibido   # la suscripcion a /cmd la hace al_conectar (en cada reconexion)
     ultimo, ultimo_latido = {}, 0.0
     print(f"Publicando en mqtt://{a.broker}:{a.puerto}/{BASE}/... (Ctrl+C para detener)")
 

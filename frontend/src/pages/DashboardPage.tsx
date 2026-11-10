@@ -137,7 +137,7 @@ export function DashboardPage({ onNavigate }: Props) {
       <div className="section-title">
         <div>
           <div className="eyebrow">Planta</div>
-          <h2>Módulos industriales</h2>
+          <h2>Módulos de control</h2>
           <p>Controlador, dirección IP, valor, consigna y antigüedad del dato de cada equipo.</p>
         </div>
         <span className="readonly-tag">MODO SUPERVISIÓN · SOLO LECTURA</span>

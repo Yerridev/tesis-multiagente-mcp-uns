@@ -58,6 +58,7 @@ services:
       # (el nivel no es medible). La orden queda marcada en la auditoria. 0 = bloquea (seguro).
       CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO: ${CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO:-0}
       Control__AuditoriaRuta: /data/auditoria
+      Agente__ConversacionesRuta: /data/conversaciones
       ControlCaudal__Modo: Real
       ControlCaudal__HabilitadoEscritura: "true"
       ControlCaudal__TimeoutSegundos: "12"
@@ -81,6 +82,8 @@ services:
       Health__DatabasePort: "5432"
     volumes:
       - backend-auditoria:/data/auditoria
+      # chats con los agentes (un JSON por conversacion) visibles en la PC: registros/conversaciones
+      - ./registros/conversaciones:/data/conversaciones
     networks:
       - frontend_net
       - application_net

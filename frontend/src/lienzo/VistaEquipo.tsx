@@ -51,6 +51,32 @@ function guardarPosiciones(equipoId: string, pos: Posiciones) {
   }
 }
 
+/* Lado de salida/entrada elegido a mano para cada flecha (id de la arista -> handles) */
+type Lados = Record<string, { s?: string; t?: string }>;
+const claveLados = (equipoId: string) => `mcp.lienzo.lados.${equipoId}`;
+function leerLados(equipoId: string): Lados {
+  try {
+    const crudo = localStorage.getItem(claveLados(equipoId));
+    return crudo ? (JSON.parse(crudo) as Lados) : {};
+  } catch {
+    return {};
+  }
+}
+function guardarLados(equipoId: string, l: Lados) {
+  try {
+    if (Object.keys(l).length === 0) localStorage.removeItem(claveLados(equipoId));
+    else localStorage.setItem(claveLados(equipoId), JSON.stringify(l));
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+const LADOS_UI: { k: string; ico: string; t: string }[] = [
+  { k: 'top', ico: '↑', t: 'arriba' },
+  { k: 'right', ico: '→', t: 'derecha' },
+  { k: 'bottom', ico: '↓', t: 'abajo' },
+  { k: 'left', ico: '←', t: 'izquierda' },
+];
+
 /** Selección de lados de conexión — portada de VistaEquipo.tsx de la tesis. */
 function lados(a: Node | undefined, b: Node | undefined): [string, string] {
   if (!a || !b) return ['s-right', 't-left'];
@@ -85,6 +111,10 @@ interface Props {
    * Los valores vivos llegan por contexto (Estado.lecturas).
    */
   const [version, setVersion] = useState(0);   // sube al pulsar "Posición original"
+  const [ladosOv, setLadosOv] = useState<Lados>(() => leerLados(equipoId));
+  const [editando, setEditando] = useState<{ id: string; x: number; y: number } | null>(null);
+  const caja = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { setLadosOv(leerLados(equipoId)); setEditando(null); }, [equipoId]);
 
   useEffect(() => {
     const guardada = leerPosiciones(equipoId);
@@ -112,9 +142,12 @@ interface Props {
   const edges: Edge[] = useMemo(
     () =>
       aristas.map((r) => {
-        const [sh, th] = lados(porId[r.de], porId[r.a]);
+        const id = `${r.de}|${r.rel}|${r.a}`;
+        const [autoS, autoT] = lados(porId[r.de], porId[r.a]);
+        const sh = ladosOv[id]?.s ?? autoS;
+        const th = ladosOv[id]?.t ?? autoT;
         return {
-          id: `${r.de}|${r.rel}|${r.a}`,
+          id,
           source: r.de,
           target: r.a,
           sourceHandle: sh,
@@ -123,8 +156,27 @@ interface Props {
           data: { rel: r.rel, nota: r.nota },
         };
       }),
-    [aristas, porId],
+    [aristas, porId, ladosOv],
   );
+
+  /* Elegir por qué lado sale / entra una flecha (se guarda en el navegador) */
+  const fijarLado = (id: string, extremo: 's' | 't', lado: string | null) => {
+    setLadosOv((prev) => {
+      const actual = { ...(prev[id] ?? {}) };
+      if (lado) actual[extremo] = `${extremo}-${lado}`;
+      else delete actual[extremo];
+      const sig = { ...prev };
+      if (actual.s || actual.t) sig[id] = actual;
+      else delete sig[id];
+      guardarLados(equipoId, sig);
+      return sig;
+    });
+  };
+  const nombreNodo = (id: string) => {
+    const n = (porId[id]?.data as { meta?: MetaNodo } | undefined)?.meta?.nombre ?? id;
+    return n.length > 26 ? `${n.slice(0, 25)}…` : n;
+  };
+  const aristaEdit = editando ? edges.find((e) => e.id === editando.id) : undefined;
 
   /* Guardar posición al soltar uno o varios nodos (se conserva al refrescar) */
   const guardarPosicion = (_evento: unknown, node: Node, movidos?: Node[]) => {
@@ -137,12 +189,15 @@ interface Props {
 
   const posicionOriginal = () => {
     guardarPosiciones(equipoId, {});
+    guardarLados(equipoId, {});
+    setLadosOv({});
+    setEditando(null);
     setVersion((v) => v + 1);
     window.setTimeout(() => instancia.current?.fitView({ padding: 0.08, duration: 300 }), 50);
   };
 
   return (
-    <div className="lz-rf">
+    <div className="lz-rf" ref={caja}>
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <defs>
           <marker id="flecha-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -161,6 +216,11 @@ interface Props {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStop={guardarPosicion}
+        onEdgeClick={(ev, edge) => {
+          const r = caja.current?.getBoundingClientRect();
+          setEditando({ id: edge.id, x: ev.clientX - (r?.left ?? 0), y: ev.clientY - (r?.top ?? 0) });
+        }}
+        onPaneClick={() => setEditando(null)}
         onInit={(inst) => {
           instancia.current = inst;
         }}
@@ -185,6 +245,31 @@ interface Props {
           maskColor="rgba(33,33,33,0.06)"
         />
       </ReactFlow>
+
+      {editando && aristaEdit ? (
+        <div className="lz-lados" style={{ left: editando.x + 12, top: editando.y + 12 }} onClick={(e) => e.stopPropagation()}>
+          <div className="lz-lados-tit">
+            <span>{nombreNodo(aristaEdit.source)} → {nombreNodo(aristaEdit.target)}</span>
+            <button type="button" className="lz-lados-x" onClick={() => setEditando(null)} aria-label="Cerrar">×</button>
+          </div>
+          {(['s', 't'] as const).map((ext) => {
+            const actual = (ext === 's' ? aristaEdit.sourceHandle : aristaEdit.targetHandle) ?? '';
+            const manual = ladosOv[aristaEdit.id]?.[ext];
+            return (
+              <div className="lz-lados-fila" key={ext}>
+                <span>{ext === 's' ? 'Sale por' : 'Entra por'}</span>
+                {LADOS_UI.map((l) => (
+                  <button key={l.k} type="button" title={l.t}
+                    className={actual === `${ext}-${l.k}` ? (manual ? 'on manual' : 'on') : ''}
+                    onClick={() => fijarLado(aristaEdit.id, ext, l.k)}>{l.ico}</button>
+                ))}
+                <button type="button" className={manual ? 'auto' : 'auto on'} title="Elegir automáticamente"
+                  onClick={() => fijarLado(aristaEdit.id, ext, null)}>Auto</button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <button type="button" className="lz-pos-original" onClick={posicionOriginal} title="Vuelve a colocar los nodos y paneles como vienen por defecto">
         ↺ Posición original

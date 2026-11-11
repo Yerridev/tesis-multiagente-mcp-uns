@@ -6,5 +6,5 @@ echo  CMD = orden que manda el backend · ACK = respuesta del conector
 echo  Ctrl+C para salir
 echo ============================================================
 cd /d "%~dp0.."
-"C:\Users\KST\Desktop\INVESTIGACION II\JK\04_SISTEMAS-MCP\tesis-multiagente-mcp-uns\historiador\.venv\Scripts\python.exe" -u conectores\diag_ordenes.py
+"%~dp0..\.venv\Scripts\python.exe" -u conectores\diag_ordenes.py
 pause

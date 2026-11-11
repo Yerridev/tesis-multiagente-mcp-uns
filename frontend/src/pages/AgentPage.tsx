@@ -7,6 +7,9 @@ import { IconArrow } from '../components/common/Icons';
 import { AgentFlow } from '../components/agents/AgentFlow';
 import { SelectorModelo, useModeloElegido } from '../components/agents/SelectorModelo';
 import { CajaChat } from '../components/agents/CajaChat';
+import { HistorialChats } from '../components/agents/HistorialChats';
+import { useSesion } from '../components/agents/useSesion';
+import type { ConversacionCompleta } from '../types';
 
 interface ChatMessage {
   id: number;
@@ -50,8 +53,9 @@ const NOMBRE_A_KEY: Record<string, string> = Object.fromEntries(AGENTES.map((a) 
 
 export function AgentPage() {
   const { link, health, history, load, error, reload } = usePlant();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [actions, setActions] = useState<Action[]>([]);
+  /* el chat se conserva al cambiar de módulo o refrescar; se borra con "Nuevo chat" o al cerrar el navegador */
+  const [messages, setMessages] = useSesion<ChatMessage[]>('mcp.chat.agentes.mensajes', []);
+  const [actions, setActions] = useSesion<Action[]>('mcp.chat.agentes.acciones', []);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -61,7 +65,9 @@ export function AgentPage() {
   const [activos, setActivos] = useState<Set<string>>(new Set());
   const apagar = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const nextId = useRef(1);
+  const nextId = useRef(messages.reduce((m, x) => Math.max(m, x.id), 0) + 1);
+  const [convId, setConvId] = useSesion<string | null>('mcp.chat.agentes.conversacion', null);   // conversación guardada en curso
+  const [historialAbierto, setHistorialAbierto] = useState(false);
 
   useEffect(() => {
     api
@@ -134,7 +140,9 @@ export function AgentPage() {
     setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: message }]);
     setBusy(true);
     try {
-      const reply = await api.agentAsk(message, ia.modelo);
+      const historial = messages.map((m) => ({ rol: m.role === 'user' ? ('user' as const) : ('agente' as const), texto: m.text }));
+      const reply = await api.agentAsk(message, ia.modelo, historial, { id: convId, origen: 'agentes' });
+      if (reply.conversacionId) setConvId(reply.conversacionId);
       setMessages((prev) => [...prev, { id: nextId.current++, role: 'agent', text: reply.reply, tools: reply.tools, model: reply.model ?? null }]);
       {
         const on = new Set<string>(['orquestador']);
@@ -186,6 +194,12 @@ export function AgentPage() {
   };
 
   const agentCards = useMemo(() => AGENTES, []);
+
+  const nuevoChat = () => { setMessages([]); setActions([]); setConvId(null); setFailure(null); };
+  const continuar = (c: ConversacionCompleta) => {
+    setConvId(c.id);
+    setMessages(c.mensajes.map((m) => ({ id: nextId.current++, role: m.rol === 'user' ? 'user' : 'agent', text: m.texto, tools: m.herramientas ?? undefined, model: m.modelo ?? null })));
+  };
 
   if (load === 'loading') return <LoadingBlock label="Preparando los agentes de IA…" />;
   if (load === 'error') return <ErrorBlock message={error ?? undefined} onRetry={reload} />;
@@ -259,6 +273,10 @@ export function AgentPage() {
                 {busy ? (llm ? 'Consultando la IA…' : 'Consultando el asistente…') : modeText}
               </span>
             </div>
+            <div className="hc-acciones">
+              <button type="button" className="hc-btn" onClick={() => setHistorialAbierto(true)} title="Ver conversaciones guardadas">Historial</button>
+              <button type="button" className="hc-btn" onClick={nuevoChat} disabled={busy || messages.length === 0} title="Empezar una conversación nueva">Nuevo chat</button>
+            </div>
             {llm ? (
               <span className="pill pill-ok pill-live">
                 <i />
@@ -304,6 +322,7 @@ export function AgentPage() {
             ) : null}
           </div>
 
+          <HistorialChats abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} onContinuar={continuar} />
           <div className="chat-pie">
           {failure ? (
             <div className="banner banner-err" style={{ marginBottom: 10 }}>

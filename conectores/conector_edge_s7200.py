@@ -141,7 +141,7 @@ TAGS = [
     #     guardamotor, paro de emergencia, piloto de marcha, etc. ---
     {"n": "I0_3", "dir": "I0.3", "area": "I", "off": 0, "bit": 3, "tipo": "bool", "topic": "io/i0_3", "estado": "hipotesis", "desc": "Entrada sin documentar"},
     {"n": "I0_4", "dir": "I0.4", "area": "I", "off": 0, "bit": 4, "tipo": "bool", "topic": "io/i0_4", "estado": "hipotesis", "desc": "Entrada sin documentar"},
-    {"n": "I0_5", "dir": "I0.5", "area": "I", "off": 0, "bit": 5, "tipo": "bool", "topic": "io/i0_5", "estado": "hipotesis", "desc": "Entrada sin documentar; encendida en marcha (candidata: contacto auxiliar del guardamotor o paro de emergencia NC)"},
+    {"n": "I0_5", "dir": "I0.5", "area": "I", "off": 0, "bit": 5, "tipo": "bool", "topic": "io/i0_5", "estado": "hipotesis", "desc": "Entrada sin documentar, siempre ON. NO es el guardamotor (10-nov: no cambio con el GV2 en STOP); candidata: contacto OF del C60H o paro de emergencia"},
     {"n": "I0_6", "dir": "I0.6", "area": "I", "off": 0, "bit": 6, "tipo": "bool", "topic": "io/i0_6", "estado": "hipotesis", "desc": "Entrada sin documentar"},
     {"n": "I0_7", "dir": "I0.7", "area": "I", "off": 0, "bit": 7, "tipo": "bool", "topic": "io/i0_7", "estado": "hipotesis", "desc": "Entrada sin documentar"},
     {"n": "Q0_3", "dir": "Q0.3", "area": "Q", "off": 0, "bit": 3, "tipo": "bool", "topic": "io/q0_3", "estado": "hipotesis", "desc": "Salida sin documentar"},
@@ -150,7 +150,7 @@ TAGS = [
     {"n": "Q0_6", "dir": "Q0.6", "area": "Q", "off": 0, "bit": 6, "tipo": "bool", "topic": "io/q0_6", "estado": "hipotesis", "desc": "Salida sin documentar"},
     {"n": "Q0_7", "dir": "Q0.7", "area": "Q", "off": 0, "bit": 7, "tipo": "bool", "topic": "io/q0_7", "estado": "hipotesis", "desc": "Salida sin documentar"},
     {"n": "Q1_0", "dir": "Q1.0", "area": "Q", "off": 1, "bit": 0, "tipo": "bool", "topic": "io/q1_0", "estado": "hipotesis", "desc": "Salida sin documentar"},
-    {"n": "Q1_1", "dir": "Q1.1", "area": "Q", "off": 1, "bit": 1, "tipo": "bool", "topic": "io/q1_1", "estado": "hipotesis", "desc": "Salida sin documentar; encendida en marcha (candidata: orden RUN al variador o piloto)"},
+    {"n": "Q1_1", "dir": "Q1.1", "area": "Q", "off": 1, "bit": 1, "tipo": "bool", "topic": "io/q1_1", "estado": "confirmado", "desc": "Orden de marcha (RUN) al variador Altivar 11: sigue a Q0.2 (verificado 10-nov con Detener/Iniciar)"},
     {"n": "Q1_2", "dir": "Q1.2", "area": "Q", "off": 1, "bit": 2, "tipo": "bool", "topic": "io/q1_2", "estado": "hipotesis", "desc": "Salida sin documentar"},
     {"n": "Q1_3", "dir": "Q1.3", "area": "Q", "off": 1, "bit": 3, "tipo": "bool", "topic": "io/q1_3", "estado": "hipotesis", "desc": "Salida sin documentar"},
     {"n": "Q1_4", "dir": "Q1.4", "area": "Q", "off": 1, "bit": 4, "tipo": "bool", "topic": "io/q1_4", "estado": "hipotesis", "desc": "Salida sin documentar"},
@@ -389,8 +389,27 @@ def main():
     ultimo, ultimo_latido = {}, 0.0
     print(f"Publicando en mqtt://{a.broker}:{a.puerto}/{BASE}/... (Ctrl+C para detener)")
 
+    # --- WATCHDOG: si el ciclo principal se congela (p. ej. al desconectar el cable de red
+    # el socket S7 puede quedar colgado), el proceso se cierra solo y el lanzador
+    # launch_caudal_edge.ps1 lo vuelve a arrancar en 5 s con una sesion S7 nueva. ---
+    latido = {"t": time.time()}
+    def vigilante():
+        while True:
+            time.sleep(5)
+            parado = time.time() - latido["t"]
+            if parado > 45:
+                print(f"[{ahora()}] WATCHDOG: ciclo congelado {parado:.0f} s -> reinicio el conector", flush=True)
+                try:
+                    mq.publish(f"{BASE}/funcional/plc/conexion", "SIN_CONEXION", qos=1, retain=True)
+                    time.sleep(0.5)   # no se llama a desconectar(): un socket colgado podria bloquearlo tambien
+                except Exception:
+                    pass
+                os._exit(3)
+    threading.Thread(target=vigilante, daemon=True, name="watchdog").start()
+
     try:
         while True:
+            latido["t"] = time.time()
             if plc.c is None:
                 try:
                     plc.conectar()

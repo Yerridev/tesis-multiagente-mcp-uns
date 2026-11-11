@@ -52,3 +52,6 @@ frontend/_respaldo_estilo_*/
 simulador/.paquete.tgz
 __pycache__/
 bat/.modo-planta
+
+# chats con los agentes (pueden contener datos del laboratorio)
+registros/

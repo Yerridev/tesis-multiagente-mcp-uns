@@ -6,7 +6,7 @@ echo  (cFP-2200 virtual 127.0.0.1:6341 · broker Windows 127.0.0.1:1883)
 echo  No toca la planta real.
 echo ============================================================
 cd /d "%~dp0.."
-set "PY=C:\Users\KST\Desktop\INVESTIGACION II\JK\04_SISTEMAS-MCP\tesis-multiagente-mcp-uns\historiador\.venv\Scripts\python.exe"
+set "PY=%~dp0..\.venv\Scripts\python.exe"
 echo.
 echo [1/3] Cerrando conectores de ordenes de presion que sigan vivos...
 powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*conector_control_presion*' -and $_.Name -like 'python*' } | ForEach-Object { '  matando PID ' + $_.ProcessId; Stop-Process -Id $_.ProcessId -Force }"

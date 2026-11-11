@@ -1,0 +1,103 @@
+namespace MCP.Industrial.Api;
+
+/// <summary>Conocimiento de los 4 módulos para el agente (generado del grafo de los lienzos + mímicos).</summary>
+public static class ConocimientoModulos
+{
+    public const string Texto = """
+CONOCIMIENTO DE LOS MÓDULOS (grafo de conocimiento de los lienzos + mímicos).
+Las llaves manuales V1-V7 y VF NO tienen señal al PLC: en la planta real su posición no se conoce (solo en la planta simulada).
+
+### NIVEL MCN-09 [nivel-mcn09]
+Tanques y llaves (mímico): T1 = tanque de RESERVA abajo (acero, 78 L) con switch de nivel BAJO (I:0/2, 1 = hay agua) y switch ALTO (I:0/3, hipótesis). T2 = tanque de ACRÍLICO arriba (60 cm, 43 L), su nivel lo mide el sensor ultrasónico (es la variable controlada).
+Circuito: bomba aspira de T1 → sube por la línea → V4 → entra a T2; T2 descarga por la válvula motorizada Belimo (perturbación) y V5 de vuelta a T1. VF llena T1 desde el abastecimiento externo; V7 drena T1; V1, V2 y V3 son ramales/by-pass.
+Condiciones de arranque (enclavamientos del SCADA): T1 sin nivel alto ni bajo; solo V4 abierta (V1, V2, V3, V5, VF, V7 cerradas); consigna cargada.
+Componentes: Potenciometro CONTROL MANUAL (I:1.5) (mando); Sensor ultrasonico Senix TS-30S1 (N7:4) (sensor); Valvula Belimo LRB24-3 (salida de T2) (actuador); PID PD12:0 del MicroLogix (control); Tanque T2 de acrilico (43 L, 60 cm) (proceso); HMI TPC-2106T (sin comunicacion) (mando); PLC MicroLogix 1100 + 1762-IF2OF2 (control); Selector LOCAL - 0 - REMOTO (mando); Tanque T1 de reserva (acero, 78 L) (equipo); Variador Schneider Altivar 11 (actuador); Interruptores de nivel de T1 (Kobold NKP) (sensor); Pulsadores ARRANQUE / PARADA MANUAL (mando); Bomba Pentax Ultra U5 120/3T (equipo)
+Relaciones:
+- Tanque T1 de reserva —alimenta→ Bomba Pentax Ultra U5 120/3T: La bomba aspira de T1
+- Interruptores de nivel de T1 —protege→ Bomba Pentax Ultra U5 120/3T: Nivel bajo de T1 (I:0/2 = 0) detiene la bomba y enciende O:0/1
+- Variador Schneider Altivar 11 —acciona→ Bomba Pentax Ultra U5 120/3T
+- Potenciometro CONTROL MANUAL —controla_en_local→ Variador Schneider Altivar 11: En LOCAL la referencia AI1 (0-5 V) del ATV11 viene del potenciometro
+- PID PD12:0 del MicroLogix —controla→ Variador Schneider Altivar 11: Solo en REMOTO (O:1.0); hoy sin HMI no recibe setpoint
+- Bomba Pentax Ultra U5 120/3T —impulsa→ Tanque T2 de acrilico
+- Valvula Belimo LRB24-3 —restringe→ Tanque T2 de acrilico: Salida de T2; el PLC la abre 35 s al entrar en modo
+- Tanque T2 de acrilico —descarga_en→ Tanque T1 de reserva: Por la valvula Belimo y la valvula manual de salida
+- Sensor ultrasonico Senix TS-30S1 —mide→ Tanque T2 de acrilico: cm = (16348 - N7:4)/400; satura cerca de 40 cm
+- PID PD12:0 del MicroLogix —lee→ Sensor ultrasonico Senix TS-30S1: N7:4 es la PV del PD12:0
+- Selector LOCAL - 0 - REMOTO —habilita→ PID PD12:0 del MicroLogix: REMOTO (I:0/0) habilita el PID; LOCAL (I:0/1) manda el potenciometro
+- Pulsadores ARRANQUE / PARADA MANUAL —arranca→ Bomba Pentax Ultra U5 120/3T: ARRANQUE MANUAL (I:0/4) en LOCAL
+- PLC MicroLogix 1100 + 1762-IF2OF2 —ejecuta→ PID PD12:0 del MicroLogix
+- HMI TPC-2106T —fija_setpoint→ PID PD12:0 del MicroLogix: Comunicacion directa con el PLC por Ethernet; hoy en otra subred (192.168.1.110)
+
+### CAUDAL MCC-09 [caudal-mcc09]
+Tanques y llaves (mímico): UN solo tanque, T1 (reserva) con switches de nivel ALTO (Q0.0) y BAJO (Q0.1 = NOT I0.2). No hay T2.
+Circuito cerrado: bomba aspira de T1 → V5 → línea de impulsión con caudalímetro Kobold y manómetro → válvula proporcional (perturbación) → V2 → retorno a T1. VF + V1 llenan T1 desde el abastecimiento externo; V7 drena T1; V3, V4 y V6 son ramales.
+Condiciones de arranque: T1 sin nivel alto ni bajo; V5 y V2 abiertas; V1, V3, V4, V6, V7 cerradas; consigna > 0. Selector en REMOTO y mando PC (M0.3 = 0) para ordenar desde el SCADA.
+Componentes: Potenciometro del tablero (AIW2) (mando); Valvula proporcional (AQW0) (actuador); Lazo PID 0 del S7-200 (tabla VB159) (control); HMI TPC-2106T (setpoint VD408) (mando); PLC S7-200 CPU226 + CP243-1 (control); Tanque de agua (equipo); Variador de frecuencia (AQW2) (actuador); PC / SCADA (setpoint remoto VD400) (mando); Guardamotor GV2ME10 (proteccion del motor) (proteccion); Sensor de nivel BAJO del tanque (I0.2) (sensor); Linea de impulsion (caudal) (proceso); Caudalimetro Kobold DRG 4-20 mA (AIW0) (sensor); Selector LOCAL/REMOTO del tablero (mando); Bomba centrifuga (equipo); Sensor de nivel ALTO del tanque (sensor)
+Relaciones:
+- Tanque de agua —alimenta→ Bomba centrifuga: Sin agua la bomba no puede impulsar caudal
+- Sensor de nivel BAJO del tanque —protege→ Bomba centrifuga: Nivel bajo (I0.2 = 0) activa Q0.1 y detiene la bomba
+- Variador de frecuencia —acciona→ Bomba centrifuga: La velocidad de la bomba sigue a la consigna del variador
+- Bomba centrifuga —impulsa→ Linea de impulsion
+- Valvula proporcional —restringe→ Linea de impulsion: 100 % = totalmente abierta; en LOCAL el PLC la fija en 100 %
+- Caudalimetro Kobold DRG 4-20 mA —mide→ Linea de impulsion
+- Lazo PID 0 del S7-200 —lee→ Caudalimetro Kobold DRG 4-20 mA: La PV del PID es AIW0 normalizada (fondo 140 L/min)
+- Lazo PID 0 del S7-200 —controla→ Variador de frecuencia: Solo en REMOTO: VW6 (salida PID) -> VW8 -> AQW2
+- Potenciometro del tablero —controla_en_local→ Variador de frecuencia: En LOCAL: AIW2 -> MW2 -> VW8 -> AQW2
+- Selector LOCAL/REMOTO del tablero —habilita→ Lazo PID 0 del S7-200: REMOTO (I0.0) habilita el PID; LOCAL (I0.1) lo deja sin efecto
+- PC / SCADA —fija_setpoint→ Lazo PID 0 del S7-200: VD400 cuando el mando es PC (M0.6 = 0)
+- HMI TPC-2106T —fija_setpoint→ Lazo PID 0 del S7-200: VD408 cuando el mando es HMI (M0.6 = 1)
+- PLC S7-200 CPU226 + CP243-1 —ejecuta→ Lazo PID 0 del S7-200
+- Guardamotor GV2ME10 —protege→ Bomba centrifuga: GV2ME10 (4-6.3 A) SIN contacto auxiliar: no tiene senal hacia el PLC (prueba 10-nov: con el guardamotor en STOP el PLC siguio indicando marcha). Su disparo se infiere: bomba en marcha + caudal 0 + salida del PID saturada. Se dispara en modo LOCAL con el potenciometro al maximo y la valvula abierta (maxima carga; confirmado por el equipo, 19-oct tras 1-2 min)
+- Sensor de nivel ALTO del tanque —vigila→ Tanque de agua: Nivel alto activa Q0.0 (alarma); el SCADA no deja arrancar con T1 lleno
+
+### PRESIÓN MCP-09 [presion-mcp09]
+Tanques y llaves (mímico): T1 = tanque de RECOGIDA abajo (AISI 316, 30,8 L) con switches de nivel alto y bajo. T2 = tanque PRESURIZADO cerrado (AISI 316, 20,4 L) con transmisor de presión, presostato y cargador de aire (colchón de aire).
+Circuito: bomba aspira de T1 → V5 → entra a T2 (al entrar agua se comprime el aire y sube la presión); T2 → válvula proporcional (perturbación) → V2 → retorno a T1. VF + V1 llenan T1; V7 drena T1; V3, V4 y V6 son ramales.
+Condiciones de arranque: T1 sin nivel alto ni bajo; V2 y V5 abiertas; V1, V3, V4, V6, V7 y VF cerradas; consigna > 0; selector en AUTOMÁTICO.
+Componentes: Transmisor de presion Danfoss MBS 3000 (0-6 bar, 4-20 mA) (sensor); Valvula proporcional Danfoss EV260B (0-10 V) (actuador); PID de LabVIEW RT en el cFP-2200 (control); Tanque presurizado T2 (AISI 316, 20,4 L) (proceso); Variador Schneider Altivar 11 (ATV11HU29M3A) (actuador); Selector CONTROL LOCAL - REMOTO (mando); Tanque T1 de recogida (AISI 316, 30,8 L) (equipo); Supervisor: SCADA PRESION.exe (PC .80) o HMI TPC-2106T (mando); Presostato Danfoss KPI (sensor); Pulsadores ARRANQUE / PARADA MANUAL (mando); Perilla frontal del Altivar 11 (mando); Interruptores de nivel de T1 (Kobold NKP) (sensor); PAC NI Compact FieldPoint cFP-2200 (192.168.114.8) (control); Bomba centrifuga Pentax Ultra U5 120/3T (1,2 HP) (equipo)
+Relaciones:
+- Tanque T1 de recogida —alimenta→ Bomba centrifuga Pentax Ultra U5 120/3T: La bomba aspira de T1
+- Interruptores de nivel de T1 —protege→ Bomba centrifuga Pentax Ultra U5 120/3T: Nivel bajo de T1: protege la bomba de trabajar en seco (logica sin confirmar)
+- Variador Schneider Altivar 11 —acciona→ Bomba centrifuga Pentax Ultra U5 120/3T
+- Perilla frontal del Altivar 11 —fija_velocidad→ Variador Schneider Altivar 11: 21-oct-2026: el Altivar toma la velocidad de su perilla frontal, NO de la salida 0-10 V del cFP
+- PID de LabVIEW RT en el cFP-2200 —controla→ Variador Schneider Altivar 11: En REMOTO la salida del PID (0-10 V, AO0) es la consigna de velocidad; hoy el variador no la obedece
+- Bomba centrifuga Pentax Ultra U5 120/3T —presuriza→ Tanque presurizado T2: Al entrar agua al tanque cerrado se comprime el aire
+- Valvula proporcional Danfoss EV260B —despresuriza→ Tanque presurizado T2: Salida de T2 hacia T1; mas apertura = menos presion (perturbacion)
+- Tanque presurizado T2 —descarga_en→ Tanque T1 de recogida
+- Transmisor de presion Danfoss MBS 3000 —mide→ Tanque presurizado T2: psi = (mA - 4)/16 x 87; validado contra la HMI
+- Presostato Danfoss KPI —protege→ Tanque presurizado T2: Corte por sobrepresion (logica sin confirmar)
+- PID de LabVIEW RT en el cFP-2200 —lee→ Transmisor de presion Danfoss MBS 3000: TRANS_PRESION es la PV del PID
+- Selector CONTROL LOCAL - REMOTO —habilita→ PID de LabVIEW RT en el cFP-2200: REMOTO habilita el PID con el supervisor; LOCAL = marcha con pulsadores
+- Pulsadores ARRANQUE / PARADA MANUAL —arranca→ Bomba centrifuga Pentax Ultra U5 120/3T: En LOCAL: habilita el variador y abre la valvula al 50 %
+- Supervisor: SCADA PRESION.exe —fija_setpoint→ PID de LabVIEW RT en el cFP-2200: SP, Kp, Ti, Td y apertura de valvula
+- Supervisor: SCADA PRESION.exe —fija_apertura→ Valvula proporcional Danfoss EV260B
+- PAC NI Compact FieldPoint cFP-2200 —ejecuta→ PID de LabVIEW RT en el cFP-2200
+
+### TEMPERATURA MCT-09 [temp-mct09]
+Tanques y llaves (mímico): T1 = tanque de ENFRIAMIENTO arriba (AISI 316, 125 L) con serpentín conectado al enfriador. T2 = tanque PRINCIPAL abajo (AISI 316, 125 L) con la resistencia calefactora; su temperatura es la variable controlada. Cada tanque tiene switch de nivel alto y bajo.
+Circuito: la bomba aspira de T2 y recircula hacia T1 pasando por los sensores-válvula de temperatura de entrada y salida; T1 descarga por gravedad en T2. VF + V1 llenan T1 desde el abastecimiento externo; V2 baja agua de T1 a T2; V4 drena T2.
+Condiciones de arranque: T1 y T2 sin nivel alto ni bajo; V1, V2, VF y V4 cerradas; consigna 15-50 °C; selector en PC.
+Componentes: Tanque principal T2 (inferior, AISI 316, 125 L) (proceso); Tanque de enfriamiento T1 (superior, AISI 316, 125 L, con serpentin) (proceso); Resistencia calefactora del tanque principal (actuador); Rele de estado solido FOTEK SSR-25DA-H (sin disipador) (actuador); Segunda llave termomagnetica (alimentacion de la resistencia) (equipo); Bomba centrifuga Pentax Ultra U5 120/3T (1,2 HP) (equipo); Variador Schneider Altivar 11 (ATV11HU29M3A) (actuador); Enfriador + serpentin (rele R_02) (actuador); Pt100 Danfoss MBT 5252 + transmisor 4-20 mA (tanque principal) (sensor); Pt100 Danfoss MBT 5252 + transmisor 4-20 mA (tanque de enfriamiento) (sensor); Interruptores de nivel Kobold NKP (alto y bajo en cada tanque) (sensor); PID 0 del Twido (PWM a la resistencia) (control); PLC Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT (192.168.114.10) (control); Selector CONTROLADOR HMI - 0 - PC (mando); Pulsadores HABILITAR / DESHABILITAR ENFRIADOR (mando); Supervisor: SCADA MOD_TEMP.exe (PC .100, OPC 'temp') o HMI TPC-2106T (.101) (mando)
+Relaciones:
+- Segunda llave termomagnetica —alimenta→ Rele de estado solido FOTEK SSR-25DA-H: Con la llave abajo la resistencia no recibe energia aunque el PLC lo ordene
+- PID 0 del Twido —controla→ Rele de estado solido FOTEK SSR-25DA-H: PWM por Q0.0.1 (entrada 3-32 VDC del rele); ciclo de trabajo = salida del PID
+- Rele de estado solido FOTEK SSR-25DA-H —energiza→ Resistencia calefactora del tanque principal: 23-oct-2026: el agua se calento con el lazo detenido y hubo olor a quemado: rele sospechoso de cortocircuito (montado sin disipador)
+- Resistencia calefactora del tanque principal —calienta→ Tanque principal T2
+- Tanque principal T2 —alimenta→ Bomba centrifuga Pentax Ultra U5 120/3T: La bomba aspira del tanque inferior
+- Variador Schneider Altivar 11 —acciona→ Bomba centrifuga Pentax Ultra U5 120/3T: 23-oct-2026: Altivar pasado de mando local (tCC=LOC) a 2 hilos (2C) y AI1 a 0-10 V (AIt=10U); ahora obedece al PLC
+- Supervisor: SCADA MOD_TEMP.exe —fija_velocidad→ Variador Schneider Altivar 11: Perturbacion: velocidad de la bomba en % via %MW10 -> salida analogica del PLC
+- Bomba centrifuga Pentax Ultra U5 120/3T —recircula→ Tanque de enfriamiento T1: Sin recirculacion el sensor de control no ve el calor de la resistencia
+- Tanque de enfriamiento T1 —descarga_en→ Tanque principal T2
+- Enfriador + serpentin —enfria→ Tanque de enfriamiento T1: Por el serpentin
+- PLC Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT —controla→ Enfriador + serpentin: Enciende si esta habilitado y la temperatura supera el setpoint durante %TM0 (logica del respaldo, hipotesis)
+- Pulsadores HABILITAR / DESHABILITAR ENFRIADOR —habilita→ Enfriador + serpentin: En modo HMI; en modo PC lo habilita el SCADA
+- Pt100 Danfoss MBT 5252 + transmisor 4-20 mA —mide→ Tanque principal T2: C = cuentas*100/4095; falta contraste con termometro
+- Pt100 Danfoss MBT 5252 + transmisor 4-20 mA —mide→ Tanque de enfriamiento T1
+- PID 0 del Twido —lee→ Pt100 Danfoss MBT 5252 + transmisor 4-20 mA: %IW0.2.0 es la PV del PID
+- Interruptores de nivel Kobold NKP —bloquea→ PID 0 del Twido: Nivel alto activado o nivel bajo descubierto en cualquier tanque detiene el lazo y borra los inicios
+- Selector CONTROLADOR HMI - 0 - PC —habilita→ PID 0 del Twido: PC = control desde el SCADA; HMI = desde la pantalla del tablero
+- Supervisor: SCADA MOD_TEMP.exe —fija_setpoint→ PID 0 del Twido: SP, Kp, Ti, Td e inicio (%M30/%M32); el PLC los pierde al apagarse
+- PLC Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT —ejecuta→ PID 0 del Twido
+
+""";
+}

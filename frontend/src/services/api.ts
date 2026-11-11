@@ -1,5 +1,7 @@
 import type {
   AgentReply,
+  ConversacionCompleta,
+  ConversacionResumen,
   AgentStatus,
   AgentTool,
   Equipment,
@@ -51,12 +53,19 @@ export const api = {
 
   agentStatus: () => request<AgentStatus>('/api/agent/status'),
 
-  agentAsk: (message: string, model?: string | null) =>
+  /** history: turnos previos de la conversación (para que el agente entienda "¿y ahora?") */
+  agentAsk: (message: string, model?: string | null, history?: { rol: 'user' | 'agente'; texto: string }[],
+    conv?: { id?: string | null; origen: string }) =>
     request<AgentReply>('/api/agent/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, model: model ?? undefined }),
+      body: JSON.stringify({ message, model: model ?? undefined, history: history?.slice(-8),
+        conversacionId: conv?.id ?? undefined, origen: conv?.origen }),
     }),
+
+  /** Chats guardados con los agentes */
+  conversaciones: () => request<ConversacionResumen[]>('/api/agent/conversaciones'),
+  conversacion: (id: string) => request<ConversacionCompleta>(`/api/agent/conversaciones/${encodeURIComponent(id)}`),
 };
 
 export const HUB_URL = '/hubs/plant';

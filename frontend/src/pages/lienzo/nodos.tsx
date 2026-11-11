@@ -391,7 +391,7 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
     if (id === 'plc') return { estado: desconectado ? DESCONECTADO : { texto: 'CONECTADO', sev: 'activo' }, filas: [{ k: 'Enlace', v: 'S7-200 · CP243-1' }] };
     if (id === 'selector') { const m = senalModo(s); return { estado: desconectado ? DESCONECTADO : m === null ? SIN_DATO_EST : { texto: m, sev: sevModo(m) }, filas: [] }; }
     if (id === 'bomba') return { estado: desconectado ? DESCONECTADO : b('estado/sistema_funcionando') ? { texto: 'EN MARCHA', sev: 'activo' } : { texto: 'DETENIDA', sev: 'inactivo' }, filas: [{ k: 'Variador', v: sFmt(n('actuadores/variador_pct')), u: '%' }] };
-    if (id === 'variador') return { estado: activo, barra: n('actuadores/variador_pct') == null ? undefined : { pct: clamp(n('actuadores/variador_pct')!), sev: 'normal', etiqueta: `${sFmt(n('actuadores/variador_pct'))} %` }, filas: [] };
+    if (id === 'variador') return { estado: activo, filas: [{ k: 'Orden RUN (Q1.1)', v: sBit(b('io/q1_1')) }], barra: n('actuadores/variador_pct') == null ? undefined : { pct: clamp(n('actuadores/variador_pct')!), sev: 'normal', etiqueta: `${sFmt(n('actuadores/variador_pct'))} %` } };
     if (id === 'valvula') return { estado: activo, barra: n('actuadores/valvula_pct') == null ? undefined : { pct: clamp(n('actuadores/valvula_pct')!), sev: 'normal', etiqueta: `${sFmt(n('actuadores/valvula_pct'))} %` }, filas: [] };
     if (id === 'pid') return { estado: activo, filas: [
       { k: 'SP', v: sFmt(n('caudal/setpoint_pid')), u: 'L/min' }, { k: 'PV', v: sFmt(n('caudal/pv_pid')), u: 'L/min' },
@@ -420,9 +420,20 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
       estado: desconectado ? DESCONECTADO : alto === null ? SIN_DATO_EST : alto ? { texto: 'NIVEL ALTO', sev: 'alarma' } : { texto: 'NORMAL', sev: 'activo' },
       filas: [{ k: 'Nivel alto (Q0.0)', v: sBit(alto) }],
     };
+    /* Guardamotor: sin señal al PLC -> se INFIERE el disparo (marcha + caudal 0 + PID saturado) */
+    if (id === 'proteccion_motor') {
+      const marcha = b('estado/sistema_funcionando'), q = n('caudal/pv_pid'), salida = n('pid/salida');
+      const posible = marcha === true && q != null && q < 0.5 && salida != null && salida >= 95;
+      return {
+        estado: desconectado ? DESCONECTADO : posible ? { texto: 'POSIBLE DISPARO', sev: 'alarma' } : { texto: 'SIN SEÑAL AL PLC', sev: 'inactivo' },
+        filas: [{ k: 'Disparo', v: posible ? 'inferido: marcha sin caudal' : 'se infiere del caudal' }, { k: 'Riesgo', v: 'LOCAL + potenc. al máx.' }],
+      };
+    }
+    /* Variador: Q1.1 = orden RUN */
     /* El potenciómetro solo existe en modo LOCAL (en REMOTO MW2 es basura y no se publica) */
     if (id === 'potenciometro') {
-      const pot = n('actuadores/potenciometro');
+      /* el valor queda RETENIDO en el broker desde la última vez en LOCAL: solo vale si el selector está en LOCAL */
+      const pot = senalModo(s) === 'LOCAL' ? n('actuadores/potenciometro') : null;
       return pot == null
         ? { estado: desconectado ? DESCONECTADO : { texto: 'SOLO EN LOCAL', sev: 'inactivo' }, filas: [{ k: 'Valor', v: 'activo en LOCAL' }] }
         : { estado: activo, filas: [{ k: 'Valor', v: sFmt(pot, 0), u: 'cuentas' }] };

@@ -25,6 +25,8 @@ builder.Services.AddHostedService<TemperaturaMqttService>();
 builder.Services.AddHostedService<PlantSimulator>();
 builder.Services.AddHttpClient("openrouter");
 builder.Services.AddSingleton<OpenRouterAgent>();
+builder.Services.AddSingleton<ContextoAgente>();
+builder.Services.AddSingleton<ConversacionesStore>();
 builder.Services.AddSingleton<AgentService>();
 
 /* ------------------------- CONTROL (dry-run por defecto, sin escrituras al PLC) ------------------------- */
@@ -184,11 +186,16 @@ app.MapGet("/api/equipment/{id}/detail", (string id, PlantState plant) =>
 app.MapGet("/api/history", (PlantState plant, string? equipmentId, int? limit) => Results.Ok(plant.GetHistory(equipmentId, limit ?? 300)));
 app.MapGet("/api/agent/tools", () => Results.Ok(PlantState.Tools()));
 app.MapGet("/api/agent/status", (AgentService agent) => Results.Ok(agent.Status()));
-app.MapPost("/api/agent/ask", async (AgentAskRequest request, AgentService agent, CancellationToken token) =>
+app.MapPost("/api/agent/ask", async (AgentAskRequest request, AgentService agent, ConversacionesStore chats, CancellationToken token) =>
 {
-    var reply = await agent.AskAsync(request.Message, token, request.Model);
-    return Results.Ok(reply);
+    var reply = await agent.AskAsync(request.Message, token, request.Model, request.History);
+    // cada pregunta/respuesta queda registrada en su conversacion (registros/conversaciones)
+    var id = chats.Registrar(request.ConversacionId, request.Origen, (request.Message ?? "").Trim(), reply);
+    return Results.Ok(reply with { ConversacionId = id });
 });
+app.MapGet("/api/agent/conversaciones", (ConversacionesStore chats) => Results.Ok(chats.Listar()));
+app.MapGet("/api/agent/conversaciones/{id}", (string id, ConversacionesStore chats) =>
+    chats.Leer(id) is { } c ? Results.Ok(c) : Results.NotFound());
 
 /* --------------------------------- API de control (NO en modo agents) --------------------------------- */
 if (!agentsOnly)
@@ -340,5 +347,6 @@ app.MapHub<PlantHub>("/hubs/plant");
 app.MapFallbackToFile("index.html", new StaticFileOptions { OnPrepareResponse = SinCacheHtml });
 app.Run();
 
-public record AgentAskRequest(string? Message, string? Model = null);
+public record AgentAskRequest(string? Message, string? Model = null, List<TurnoChat>? History = null, string? ConversacionId = null, string? Origen = null);
+public record TurnoChat(string? Rol, string? Texto);
 public record SolicitudLlave(string? Modulo, string? Id, bool Abierta);

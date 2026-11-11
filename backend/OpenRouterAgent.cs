@@ -65,11 +65,26 @@ public sealed class OpenRouterAgent
             .Select(p => char.IsLetter(p[0]) ? char.ToUpperInvariant(p[0]) + p[1..] : p));   // "claude-haiku-5.5" → "Claude Haiku 5.5"
     }
 
+    /// <summary>system + últimos turnos de la conversación (máx. 8, recortados) + pregunta actual.</summary>
+    private static object[] Mensajes(string system, string user, IReadOnlyList<TurnoChat>? historial)
+    {
+        var lista = new List<object> { new { role = "system", content = system } };
+        foreach (var t in (historial ?? []).TakeLast(8))
+        {
+            if (string.IsNullOrWhiteSpace(t.Texto)) continue;
+            var rol = string.Equals(t.Rol, "user", StringComparison.OrdinalIgnoreCase) ? "user" : "assistant";
+            var texto = t.Texto.Length > 700 ? t.Texto[..700] + "…" : t.Texto;
+            lista.Add(new { role = rol, content = texto });
+        }
+        lista.Add(new { role = "user", content = user });
+        return lista.ToArray();
+    }
+
     /// <summary>Solo modelos del catálogo; cualquier otro valor usa el predeterminado.</summary>
     public string Resolver(string? pedido) =>
         !string.IsNullOrWhiteSpace(pedido) && Modelos.Any(x => x.Id == pedido) ? pedido : _options.Model;
 
-    public async Task<LlmResult> CompleteAsync(string system, string user, CancellationToken token, string? modelo = null)
+    public async Task<LlmResult> CompleteAsync(string system, string user, CancellationToken token, string? modelo = null, IReadOnlyList<TurnoChat>? historial = null)
     {
         var elegido = Resolver(modelo);
         if (!Enabled) return new LlmResult(false, elegido, null, "sin clave de OpenRouter configurada", 0);
@@ -81,11 +96,7 @@ public sealed class OpenRouterAgent
             {
                 model = elegido,
                 max_tokens = _options.MaxTokens,
-                messages = new object[]
-                {
-                    new { role = "system", content = system },
-                    new { role = "user", content = user },
-                },
+                messages = Mensajes(system, user, historial),
             };
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions")

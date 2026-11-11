@@ -1,7 +1,7 @@
 # Revisa y arranca el lector REAL de temperatura (Twido 192.168.114.10, Modbus 502)
 $raiz = Split-Path -Parent $PSScriptRoot
 $con  = Join-Path $raiz 'conectores'
-$log  = Join-Path $con 'temperatura_edge.log'
+$log  = Join-Path $raiz 'logs\temperatura_edge.log'
 $ip   = '192.168.114.10'
 
 Write-Host "`n[1/5] Cable de la red del laboratorio (Ethernet)..." -ForegroundColor Cyan

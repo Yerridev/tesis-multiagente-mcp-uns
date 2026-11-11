@@ -1,3 +1,4 @@
+import { useSesion } from '../../agents/useSesion';
 import { useEffect, useRef, useState } from 'react';
 import { usePlant } from '../../../context/PlantContext';
 import { api } from '../../../services/api';
@@ -18,8 +19,11 @@ export function AgentePanel() {
   const [consulta, setConsulta] = useState('');
   /* conversación completa (como el chat de Agentes de IA): se desplaza en el centro */
   type Turno = { id: number; rol: 'user' | 'agente' | 'err'; texto: string; tools?: AgentCall[]; modelo?: string | null };
-  const [turnos, setTurnos] = useState<Turno[]>([]);
+  /* cada lienzo conserva su chat al cambiar de módulo o refrescar (se borra con Nuevo chat o al cerrar el navegador) */
+  const claveChat = `mcp.chat.lienzo.${window.location.pathname}${window.location.hash}`;
+  const [turnos, setTurnos] = useSesion<Turno[]>(`${claveChat}.turnos`, []);
   const [ocupado, setOcupado] = useState(false);
+  const [convId, setConvId] = useSesion<string | null>(`${claveChat}.conversacion`, null);   // conversación guardada de este lienzo
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +44,9 @@ export function AgentePanel() {
     setTurnos((t) => [...t, { id, rol: 'user', texto: consulta }]);
     setOcupado(true);
     try {
-      const reply = await api.agentAsk(consulta, ia.modelo);
+      const historial = turnos.filter((x) => x.rol !== 'err').map((x) => ({ rol: x.rol === 'user' ? ('user' as const) : ('agente' as const), texto: x.texto }));
+      const reply = await api.agentAsk(consulta, ia.modelo, historial, { id: convId, origen: 'lienzo' });
+      if (reply.conversacionId) setConvId(reply.conversacionId);
       setTurnos((t) => [...t, { id: id + 1, rol: 'agente', texto: reply.reply, tools: reply.tools, modelo: reply.model ?? null }]);
     } catch (err) {
       setTurnos((t) => [...t, { id: id + 1, rol: 'err', texto: err instanceof Error ? err.message : 'No se pudo contactar con el agente.' }]);
@@ -92,6 +98,10 @@ export function AgentePanel() {
             {s}
           </button>
         ))}
+        <button type="button" className="lz-chip-btn" style={{ marginLeft: 'auto' }} title="Empezar una conversación nueva"
+          onClick={() => { setTurnos([]); setConvId(null); }} disabled={ocupado || turnos.length === 0}>
+          Nuevo chat
+        </button>
       </div>
 
       <CajaChat

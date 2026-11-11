@@ -7,8 +7,8 @@ param([switch]$SoloDocker)   # -SoloDocker: repite solo el paso 6 (Docker) sin t
 # =====================================================================
 $ErrorActionPreference = 'Continue'
 $raiz = Split-Path -Parent $PSScriptRoot
-$py   = 'C:\Users\KST\Desktop\INVESTIGACION II\JK\04_SISTEMAS-MCP\tesis-multiagente-mcp-uns\historiador\.venv\Scripts\python.exe'
-$ml1100 = 'C:\Users\KST\Desktop\INVESTIGACION II\JK\04_SISTEMAS-MCP\tesis-multiagente-mcp-uns\historiador\conector_edge_ml1100.py'
+$py   = Join-Path $raiz '.venv\Scripts\python.exe'
+$ml1100 = Join-Path $raiz 'conectores\conector_edge_ml1100.py'
 $con  = Join-Path $raiz 'conectores'
 $shim = Join-Path $raiz 'simulador\psp_shim'
 # Broker Windows (lo espeja mirror-tesis al stack Docker): lectura y ordenes de la planta simulada

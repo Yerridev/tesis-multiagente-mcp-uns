@@ -8,6 +8,16 @@ Todos muestran en pantalla lo que van haciendo. Se ejecutan con **doble clic**.
 
 ---
 
+## 🧰 Instalación (una vez por PC)
+
+| Bat | Qué hace | Cuándo usarlo |
+|---|---|---|
+| **00-instalar-python** | Crea el Python propio del proyecto (`.venv`) e instala las librerías de `requirements.txt` | **Primero de todo** en una PC nueva, o si un bat dice "FALTA .venv" |
+| **29-arranque-automatico** | Rehace el arranque de Windows con los lectores reales (caudal, nivel, presión, temperatura) | Una vez, después del 00. Deja respaldo `.bak` |
+
+> Todo queda **dentro del proyecto**: Python en `.venv\`, logs de los lectores en `logs\` (rotan a los 20 MB),
+> chats en `registros\`. Solo presión usa además `C:\Users\KST\NI-DS` (sus DLL de NI) y `C:\Python37-32` (32 bits).
+
 ## 🏭 Planta REAL (laboratorio) · uso diario
 
 | Bat | Qué hace | Cuándo usarlo |
@@ -68,11 +78,14 @@ Todos **respetan el modo guardado** (real o simulado): no lo pierden.
 
 | Bat | Qué hace | Cuándo usarlo |
 |---|---|---|
+| **26-vigilar-io-caudal** | Muestra en vivo qué entrada/salida del S7-200 cambia (I0.x, Q0.x, Q1.x) | Para identificar en campo el guardamotor, paro de emergencia, pulsadores |
+| **27-capturar-hmi** | Escucha 60 s el tráfico de la HMI TPC-2106T (.72) y prueba sus puertos. Guarda `tests\hmi\hmi.pcapng` | Para descubrir qué variables pide la HMI (no envía nada) |
+| **28-hmi-nivel** | Revive la pantalla HMI de nivel (.92): arranca el motor de variables NI, abre el firewall solo para .92 y corre el puente PLC→HMI en **solo lectura** | Para mostrar la HMI de nivel (p. ej. en la defensa). La 1.ª vez con el módulo en LOCAL y detenido |
 | **25-ejecutor-mcp** | Ejecuta tareas de `tools\trabajos\*.cmd` mientras la ventana esté abierta | Solo para desarrollo asistido |
 
 ### Archivos auxiliares (no se ejecutan a mano)
 - `_modo-planta.bat` · lee `.modo-planta` (real/simulado) para que los reconstruir no pierdan el modo
-- `simular-planta.ps1`, `estado-simulacion.ps1`, `temperatura-real.ps1` · los usan los bats 10, 12, 13 y 03
+- `simular-planta.ps1`, `estado-simulacion.ps1`, `temperatura-real.ps1`, `instalar-python.ps1`, `arranque-automatico.ps1` · los usan los bats 10, 12, 13, 03, 00 y 29
 - `.modo-planta` · modo guardado actual (lo escriben el 10 y el 11)
 
 ---

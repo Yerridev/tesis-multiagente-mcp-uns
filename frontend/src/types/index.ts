@@ -67,6 +67,38 @@ export interface AgentReply {
   tools: AgentCall[];
   mode?: 'llm' | 'rules';
   model?: string | null;
+  /** conversación donde quedó registrada la pregunta/respuesta */
+  conversacionId?: string | null;
+}
+
+/** Resumen de una conversación guardada (registros/conversaciones). */
+export interface ConversacionResumen {
+  id: string;
+  origen: string;
+  titulo: string;
+  creada: string;
+  actualizada: string;
+  mensajes: number;
+  modelos: string[];
+}
+
+export interface MensajeGuardado {
+  rol: 'user' | 'agente';
+  texto: string;
+  ts: string;
+  modelo?: string | null;
+  modo?: string | null;
+  herramientas?: AgentCall[] | null;
+  ms?: number | null;
+}
+
+export interface ConversacionCompleta {
+  id: string;
+  origen: string;
+  titulo: string;
+  creada: string;
+  actualizada: string;
+  mensajes: MensajeGuardado[];
 }
 
 export interface AgentStatus {

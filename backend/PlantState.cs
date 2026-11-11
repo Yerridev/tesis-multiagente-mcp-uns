@@ -68,7 +68,7 @@ public record LevelDetail(
 
 public record AgentTool(string Name, string Server, string Description);
 public record AgentCall(string Name, bool Ok, long Ms, string Result);
-public record AgentReply(string Reply, string Agent, DateTimeOffset Ts, IReadOnlyList<AgentCall> Tools, string Mode = "rules", string? Model = null);
+public record AgentReply(string Reply, string Agent, DateTimeOffset Ts, IReadOnlyList<AgentCall> Tools, string Mode = "rules", string? Model = null, string? ConversacionId = null);
 
 public sealed class PlantState
 {
@@ -318,6 +318,19 @@ public sealed class PlantState
             reply = "Soy el agente de supervisión de MCP Industrial. Puedo responder sobre el estado de los equipos, las alarmas, el historial y el PLC 192.168.114.9. Ejemplos: «estado de la planta», «¿hay alarmas?», «promedio de caudal», «estado del PLC». Solo lectura: no envío órdenes al PLC.";
             calls.Add(Call("ayuda", () => "listado de capacidades"));
         }
+        else if (Rx(norm, @"\blocal\b|remoto|selector|modo de (control|operaci)"))
+        {
+            calls.Add(Call("modo_selector", () =>
+            {
+                var l = GetLevel();
+                reply = l.Mode is null
+                    ? "No tengo el dato del selector del módulo de nivel en este momento."
+                    : $"El módulo de nivel (MicroLogix 1100) está en modo {l.Mode}. " +
+                      (l.Mode.Equals("REMOTO", StringComparison.OrdinalIgnoreCase)
+                          ? "Manda la PC/SCADA (PID del PLC)." : "Manda el tablero: potenciómetro y pulsadores.");
+                return l.Mode ?? "sin dato";
+            }));
+        }
         else if (Rx(norm, @"histor|promedio|prom |media|mínim|minim|máxim|maxim|tendencia"))
         {
             var target = GetAll().FirstOrDefault(v => Rx(norm, KeyOf(v.Id)));
@@ -439,7 +452,7 @@ public sealed class PlantState
     {
         var sb = new StringBuilder();
         sb.AppendLine("Eres el agente de supervisión de MCP Industrial (Laboratorio USS · UNS). Trabajas en MODO SOLO LECTURA: no propongas órdenes de arranque, parada ni cambios de consigna; la lógica de control y seguridad vive en el PLC.");
-        sb.AppendLine("Responde en español, con un máximo de 4 frases y sin inventar: usa SOLO los datos en vivo de abajo. Si algo no aparece, dilo.");
+        sb.AppendLine("Responde en español, de forma breve y sin inventar: usa SOLO los datos en vivo de abajo. Si algo no aparece, dilo.");
         sb.AppendLine("Datos en vivo:");
         foreach (var e in GetAll())
         {

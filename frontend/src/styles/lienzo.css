@@ -1887,3 +1887,19 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 .lz-pos-original:hover { background: #f3f6f8; }
+
+/* Editor de lados de una flecha (clic sobre la flecha) */
+.lz-rf .react-flow__edge { cursor: pointer; }
+.lz-lados {
+  position: absolute; z-index: 20; min-width: 230px;
+  background: #fff; border: 1px solid #d5dbe0; border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14); padding: 8px 10px; font-size: 12px;
+}
+.lz-lados-tit { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; color: #263238; margin-bottom: 6px; }
+.lz-lados-x { width: 22px; height: 22px; border: 0; border-radius: 6px; background: #e53935; color: #fff; font-size: 15px; line-height: 1; cursor: pointer; }
+.lz-lados-fila { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.lz-lados-fila span { width: 62px; color: #546e7a; }
+.lz-lados-fila button { min-width: 26px; height: 26px; border: 1px solid #d5dbe0; border-radius: 6px; background: #f7f9fa; cursor: pointer; font-weight: 700; color: #37474f; }
+.lz-lados-fila button.on { background: #e3f2fd; border-color: #1e88e5; color: #1565c0; }
+.lz-lados-fila button.on.manual { background: #1e88e5; color: #fff; }
+.lz-lados-fila button.auto { padding: 0 6px; font-weight: 600; }

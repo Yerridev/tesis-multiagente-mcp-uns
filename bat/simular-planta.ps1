@@ -117,6 +117,7 @@ $env:MODO_PLANTA = 'simulado'                    # el SCADA muestra PLANTA SIMUL
 $env:PLC_NIVEL_IP = 'host.docker.internal'       # el conector de nivel (Docker) habla con el MicroLogix virtual
 $env:CONECTOR_MODO = 'real'; $env:CONTROL_REAL = '1'          # escribe, pero SOLO al simulador
 $env:CONTROL_MODO = 'Real'; $env:CONTROL_HABILITADOESCRITURA = 'true'
+$env:MQTT_LAB_IP = if (Get-NetIPAddress -IPAddress 192.168.114.100 -ErrorAction SilentlyContinue | Where-Object { (Get-NetAdapter -InterfaceIndex $_.InterfaceIndex -ErrorAction SilentlyContinue).Status -eq 'Up' }) { '192.168.114.100' } else { '127.0.0.1' }   # broker 1884 sin cable
 $env:PRESION_CONTROL_HOST = 'host.docker.internal'; $env:TEMP_CONTROL_HOST = 'host.docker.internal'   # ordenes al broker Windows
 if (-not (DockerListo)) {
   Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\13-docker-planta-simulada.bat' -ForegroundColor Red
@@ -131,7 +132,7 @@ Write-Host '  docker compose up -d --build backend connector-nivel frontend  (la
 docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend
 if ($LASTEXITCODE -eq 0) { Write-Host '  backend en MODO_PLANTA=simulado' -ForegroundColor Green } else { Write-Host '  ERROR al levantar Docker: revisa arriba' -ForegroundColor Red }
 Pop-Location
-foreach ($v in 'MODO_PLANTA','PLC_NIVEL_IP','CONECTOR_MODO','CONTROL_REAL','CONTROL_MODO','CONTROL_HABILITADOESCRITURA','PRESION_CONTROL_HOST','TEMP_CONTROL_HOST') { Remove-Item "Env:$v" -ErrorAction SilentlyContinue }
+foreach ($v in 'MODO_PLANTA','PLC_NIVEL_IP','CONECTOR_MODO','CONTROL_REAL','CONTROL_MODO','CONTROL_HABILITADOESCRITURA','PRESION_CONTROL_HOST','TEMP_CONTROL_HOST','MQTT_LAB_IP') { Remove-Item "Env:$v" -ErrorAction SilentlyContinue }
 
 Write-Host ""
 Write-Host "LISTO: planta simulada en marcha." -ForegroundColor Green

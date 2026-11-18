@@ -23,6 +23,8 @@ set CONTROL_HABILITADOESCRITURA=
 echo   control de nivel: modo tomado de .env
 set PRESION_CONTROL_HOST=mosquitto
 set TEMP_CONTROL_HOST=mosquitto
+call "%~dp0_docker-listo.bat" || (pause & exit /b 1)
+call "%~dp0_modo-planta.bat"
 docker compose -f compose.yaml -f compose.override.yaml up -d backend connector-nivel
 echo   arrancando el control real de temperatura (mcp-connector-temperatura)...
 docker start mcp-connector-temperatura

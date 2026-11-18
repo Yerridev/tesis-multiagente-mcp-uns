@@ -38,8 +38,12 @@ FRESQUEZA_MAX_S = 30
 mcp = FastMCP("mcp-nivel", host="0.0.0.0", port=int(os.environ.get("MCP_NIVEL_PUERTO", "8000")))
 
 
+# el backend exige sesion: se usa el token de solo lectura SERVICIO_TOKEN (.env)
+_CABECERAS = {"Authorization": f"Bearer {os.environ['SERVICIO_TOKEN']}"} if os.environ.get("SERVICIO_TOKEN") else {}
+
+
 def _get(path: str):
-    r = httpx.get(f"{BACKEND}{path}", timeout=10.0)
+    r = httpx.get(f"{BACKEND}{path}", timeout=10.0, headers=_CABECERAS)
     r.raise_for_status()
     return r.json()
 

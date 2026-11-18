@@ -5,6 +5,7 @@ import { api } from '../../../services/api';
 import type { AgentCall, AgentStatus } from '../../../types';
 import { SelectorModelo, useModeloElegido } from '../../agents/SelectorModelo';
 import { CajaChat } from '../../agents/CajaChat';
+import { TextoMd } from '../../agents/TextoMd';
 
 const SUGERENCIAS = ['Estado de la planta', '¿Hay alarmas?'];
 
@@ -74,7 +75,7 @@ export function AgentePanel() {
           : t.rol === 'err' ? <div key={t.id} className="lz-msg lz-msg-err">{t.texto}</div>
           : (
             <div key={t.id} className="lz-msg lz-msg-agente">
-              {t.texto}
+              <TextoMd texto={t.texto} />
               {t.modelo || t.tools?.length ? (
                 <div className="lz-msg-tools">
                   {t.modelo ? <span className="tag tag-warn">{t.modelo}</span> : null}

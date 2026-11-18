@@ -1,4 +1,6 @@
 import { PlantProvider } from './context/PlantContext';
+import { AuthGate } from './components/auth/AuthGate';
+import { UsuariosPage } from './pages/UsuariosPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ComingSoon } from './components/common/ComingSoon';
 import { IconBranch, IconSettings, IconTopology } from './components/common/Icons';
@@ -64,6 +66,8 @@ function View({ route, onNavigate }: { route: Route; onNavigate: (route: Route) 
       return <ModulePresionPage />;
     case 'mod-temp':
       return <ModuleTempPage />;
+    case 'usuarios':
+      return <UsuariosPage />;
     case 'config':
       return (
         <ComingSoon
@@ -88,9 +92,15 @@ function Shell() {
 }
 
 export default function App() {
+  /* sin sesión no se monta nada (ni SignalR): login obligatorio. key = token → al cambiar
+     de usuario se rehacen la conexión en vivo y los contextos */
   return (
-    <PlantProvider>
-      <Shell />
-    </PlantProvider>
+    <AuthGate>
+      {(clave) => (
+        <PlantProvider key={clave}>
+          <Shell />
+        </PlantProvider>
+      )}
+    </AuthGate>
   );
 }

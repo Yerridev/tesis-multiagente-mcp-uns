@@ -57,10 +57,30 @@ NOMBRE = {"nivel-mcn09": "nivel", "caudal-mcc09": "caudal", "presion-mcp09": "pr
 
 
 # ---------------------------------------------------------------- http
+def _token_servicio() -> str:
+    """SERVICIO_TOKEN del entorno o del .env del proyecto (el backend exige sesion)."""
+    if os.environ.get("SERVICIO_TOKEN"):
+        return os.environ["SERVICIO_TOKEN"]
+    env = Path(__file__).resolve().parents[2] / ".env"
+    try:
+        for linea in env.read_text(encoding="utf-8").splitlines():
+            if linea.startswith("SERVICIO_TOKEN="):
+                return linea.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return ""
+
+
+TOKEN = _token_servicio()
+
+
 def http(api: str, ruta: str, cuerpo: dict | None = None, timeout: float = 120.0):
     datos = None if cuerpo is None else json.dumps(cuerpo).encode("utf-8")
-    req = urllib.request.Request(api + ruta, data=datos, method="POST" if datos else "GET",
-                                 headers={"Content-Type": "application/json"})
+    cab = {"Content-Type": "application/json"}
+    if TOKEN:
+        cab["Authorization"] = f"Bearer {TOKEN}"
+        os.environ.setdefault("SERVICIO_TOKEN", TOKEN)  # tambien para el servidor MCP lanzado desde aqui
+    req = urllib.request.Request(api + ruta, data=datos, method="POST" if datos else "GET", headers=cab)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
 

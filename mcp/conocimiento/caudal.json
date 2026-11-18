@@ -1,0 +1,491 @@
+{
+ "equipo": "caudal-mcc09",
+ "nodos": {
+  "potenciometro": {
+   "nombre": "Potenciometro del tablero (AIW2)",
+   "tipo": "mando",
+   "variables": [
+    "actuadores/potenciometro"
+   ]
+  },
+  "valvula": {
+   "nombre": "Valvula proporcional (AQW0)",
+   "tipo": "actuador",
+   "variables": [
+    "actuadores/valvula_pct"
+   ]
+  },
+  "pid": {
+   "nombre": "Lazo PID 0 del S7-200 (tabla VB159)",
+   "tipo": "control",
+   "variables": [
+    "caudal/pv_pid",
+    "caudal/setpoint_pid",
+    "pid/salida",
+    "pid/mx",
+    "pid/kc",
+    "pid/ti",
+    "pid/td",
+    "pid/ts"
+   ]
+  },
+  "hmi": {
+   "nombre": "HMI TPC-2106T (setpoint VD408)",
+   "tipo": "mando",
+   "variables": [
+    "caudal/setpoint_hmi",
+    "estado/modo_hmi_pc"
+   ]
+  },
+  "plc": {
+   "nombre": "PLC S7-200 CPU226 + CP243-1",
+   "tipo": "control",
+   "variables": []
+  },
+  "tanque": {
+   "nombre": "Tanque de agua",
+   "tipo": "equipo",
+   "variables": [
+    "estado/nivel_bajo",
+    "estado/nivel_alto"
+   ]
+  },
+  "variador": {
+   "nombre": "Variador de frecuencia (AQW2)",
+   "tipo": "actuador",
+   "variables": [
+    "actuadores/variador_pct"
+   ]
+  },
+  "pc_scada": {
+   "nombre": "PC / SCADA (setpoint remoto VD400)",
+   "tipo": "mando",
+   "variables": [
+    "caudal/setpoint",
+    "estado/start_remoto"
+   ]
+  },
+  "proteccion_motor": {
+   "nombre": "Guardamotor GV2ME10 (proteccion del motor)",
+   "tipo": "proteccion",
+   "variables": []
+  },
+  "sensor_nivel": {
+   "nombre": "Sensor de nivel BAJO del tanque (I0.2)",
+   "tipo": "sensor",
+   "variables": [
+    "estado/nivel_bajo"
+   ]
+  },
+  "linea": {
+   "nombre": "Linea de impulsion (caudal)",
+   "tipo": "proceso",
+   "variables": [
+    "caudal/pv_pid",
+    "caudal/caudalimetro"
+   ]
+  },
+  "caudalimetro": {
+   "nombre": "Caudalimetro Kobold DRG 4-20 mA (AIW0)",
+   "tipo": "sensor",
+   "variables": [
+    "caudal/caudalimetro",
+    "caudal/caudalimetro_raw"
+   ]
+  },
+  "selector": {
+   "nombre": "Selector LOCAL/REMOTO del tablero",
+   "tipo": "mando",
+   "variables": [
+    "estado/selector_remoto",
+    "estado/selector_local"
+   ]
+  },
+  "bomba": {
+   "nombre": "Bomba centrifuga",
+   "tipo": "equipo",
+   "variables": [
+    "estado/sistema_funcionando"
+   ]
+  },
+  "sensor_nivel_alto": {
+   "nombre": "Sensor de nivel ALTO del tanque",
+   "tipo": "sensor",
+   "variables": [
+    "estado/nivel_alto"
+   ]
+  }
+ },
+ "relaciones": [
+  {
+   "nota": "Sin agua la bomba no puede impulsar caudal",
+   "de": "tanque",
+   "a": "bomba",
+   "rel": "alimenta"
+  },
+  {
+   "nota": "Nivel bajo (I0.2 = 0) activa Q0.1 y detiene la bomba",
+   "de": "sensor_nivel",
+   "a": "bomba",
+   "rel": "protege"
+  },
+  {
+   "nota": "La velocidad de la bomba sigue a la consigna del variador",
+   "de": "variador",
+   "a": "bomba",
+   "rel": "acciona"
+  },
+  {
+   "de": "bomba",
+   "a": "linea",
+   "rel": "impulsa"
+  },
+  {
+   "nota": "100 % = totalmente abierta; en LOCAL el PLC la fija en 100 %",
+   "de": "valvula",
+   "a": "linea",
+   "rel": "restringe"
+  },
+  {
+   "de": "caudalimetro",
+   "a": "linea",
+   "rel": "mide"
+  },
+  {
+   "nota": "La PV del PID es AIW0 normalizada (fondo 140 L/min)",
+   "de": "pid",
+   "a": "caudalimetro",
+   "rel": "lee"
+  },
+  {
+   "nota": "Solo en REMOTO: VW6 (salida PID) -> VW8 -> AQW2",
+   "de": "pid",
+   "a": "variador",
+   "rel": "controla"
+  },
+  {
+   "nota": "En LOCAL: AIW2 -> MW2 -> VW8 -> AQW2",
+   "de": "potenciometro",
+   "a": "variador",
+   "rel": "controla_en_local"
+  },
+  {
+   "nota": "REMOTO (I0.0) habilita el PID; LOCAL (I0.1) lo deja sin efecto",
+   "de": "selector",
+   "a": "pid",
+   "rel": "habilita"
+  },
+  {
+   "nota": "VD400 cuando el mando es PC (M0.6 = 0)",
+   "de": "pc_scada",
+   "a": "pid",
+   "rel": "fija_setpoint"
+  },
+  {
+   "nota": "VD408 cuando el mando es HMI (M0.6 = 1)",
+   "de": "hmi",
+   "a": "pid",
+   "rel": "fija_setpoint"
+  },
+  {
+   "de": "plc",
+   "a": "pid",
+   "rel": "ejecuta"
+  },
+  {
+   "nota": "GV2ME10 (4-6.3 A) SIN contacto auxiliar: no tiene senal hacia el PLC (prueba 10-nov: con el guardamotor en STOP el PLC siguio indicando marcha). Su disparo se infiere: bomba en marcha + caudal 0 + salida del PID saturada. Se dispara en modo LOCAL con el potenciometro al maximo y la valvula abierta (maxima carga; confirmado por el equipo, 19-oct tras 1-2 min)",
+   "de": "proteccion_motor",
+   "a": "bomba",
+   "rel": "protege"
+  },
+  {
+   "nota": "Nivel alto activa Q0.0 (alarma); el SCADA no deja arrancar con T1 lleno",
+   "de": "sensor_nivel_alto",
+   "a": "tanque",
+   "rel": "vigila"
+  }
+ ],
+ "senales": [
+  {
+   "clave": "caudal/pv_pid",
+   "descripcion": "Caudal medido segun el lazo PID (PV normalizada x 140)",
+   "unidad": "L/min",
+   "hipotesis": false,
+   "direccion": "VD159"
+  },
+  {
+   "clave": "caudal/caudalimetro_raw",
+   "descripcion": "Copia de AIW0 (Kobold DRG 4-20 mA); valida solo en modo REMOTO",
+   "unidad": "cuentas",
+   "hipotesis": false,
+   "direccion": "MW3"
+  },
+  {
+   "clave": "caudal/caudalimetro",
+   "descripcion": "Caudal por calibracion del caudalimetro (0.005498*AIW0-34.896); medida independiente de la PV del PID",
+   "unidad": "L/min",
+   "hipotesis": false,
+   "direccion": "MW3"
+  },
+  {
+   "clave": "caudal/setpoint_pid",
+   "descripcion": "Setpoint efectivo del lazo PID",
+   "unidad": "L/min",
+   "hipotesis": false,
+   "direccion": "VD163"
+  },
+  {
+   "clave": "caudal/setpoint",
+   "descripcion": "Setpoint remoto (PC/SCADA)",
+   "unidad": "L/min",
+   "hipotesis": false,
+   "direccion": "VD400"
+  },
+  {
+   "clave": "caudal/setpoint_hmi",
+   "descripcion": "Setpoint desde la HMI (se usa cuando M0.6 = modo HMI)",
+   "unidad": "L/min",
+   "hipotesis": false,
+   "direccion": "VD408"
+  },
+  {
+   "clave": "actuadores/variador_pct",
+   "descripcion": "Consigna aplicada al variador (VW8 -> AQW2): salida PID en remoto, potenciometro en local",
+   "unidad": "%",
+   "hipotesis": false,
+   "direccion": "VW8"
+  },
+  {
+   "clave": "actuadores/valvula_pct",
+   "descripcion": "Apertura aplicada a la valvula proporcional (MW25 -> AQW0); 100 % en local",
+   "unidad": "%",
+   "hipotesis": false,
+   "direccion": "MW25"
+  },
+  {
+   "clave": "actuadores/potenciometro",
+   "descripcion": "Potenciometro del tablero (copia de AIW2); valido solo en modo LOCAL",
+   "unidad": "cuentas",
+   "hipotesis": false,
+   "direccion": "MW2"
+  },
+  {
+   "clave": "pid/salida",
+   "descripcion": "Salida calculada por el PID (Mn)",
+   "unidad": "%",
+   "hipotesis": false,
+   "direccion": "VD167"
+  },
+  {
+   "clave": "estado/sistema_funcionando",
+   "descripcion": "Bomba/sistema en marcha",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "Q0.2"
+  },
+  {
+   "clave": "estado/nivel_alto",
+   "descripcion": "Indicador de nivel alto del tanque",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "Q0.0"
+  },
+  {
+   "clave": "estado/nivel_bajo",
+   "descripcion": "Indicador de nivel bajo del tanque (Q0.1 = NOT I0.2)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "Q0.1"
+  },
+  {
+   "clave": "estado/selector_remoto",
+   "descripcion": "Selector en REMOTO (control por PID)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I0.0"
+  },
+  {
+   "clave": "estado/selector_local",
+   "descripcion": "Selector en LOCAL (control por potenciometro)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I0.1"
+  },
+  {
+   "clave": "estado/start_remoto",
+   "descripcion": "Orden de arranque remota",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "M0.2"
+  },
+  {
+   "clave": "estado/modo_hmi_pc",
+   "descripcion": "1 = mando desde HMI, 0 = mando desde PC",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "M0.3"
+  },
+  {
+   "clave": "io/i0_3",
+   "descripcion": "Entrada sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I0.3"
+  },
+  {
+   "clave": "io/i0_4",
+   "descripcion": "Entrada sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I0.4"
+  },
+  {
+   "clave": "io/i0_5",
+   "descripcion": "Entrada sin documentar, siempre ON. NO es el guardamotor (10-nov: no cambio con el GV2 en STOP); candidata: contacto OF del C60H o paro de emergencia",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I0.5"
+  },
+  {
+   "clave": "io/i0_6",
+   "descripcion": "Entrada sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I0.6"
+  },
+  {
+   "clave": "io/i0_7",
+   "descripcion": "Entrada sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I0.7"
+  },
+  {
+   "clave": "io/q0_3",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q0.3"
+  },
+  {
+   "clave": "io/q0_4",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q0.4"
+  },
+  {
+   "clave": "io/q0_5",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q0.5"
+  },
+  {
+   "clave": "io/q0_6",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q0.6"
+  },
+  {
+   "clave": "io/q0_7",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q0.7"
+  },
+  {
+   "clave": "io/q1_0",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.0"
+  },
+  {
+   "clave": "io/q1_1",
+   "descripcion": "Orden de marcha (RUN) al variador Altivar 11: sigue a Q0.2 (verificado 10-nov con Detener/Iniciar)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "Q1.1"
+  },
+  {
+   "clave": "io/q1_2",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.2"
+  },
+  {
+   "clave": "io/q1_3",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.3"
+  },
+  {
+   "clave": "io/q1_4",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.4"
+  },
+  {
+   "clave": "io/q1_5",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.5"
+  },
+  {
+   "clave": "io/q1_6",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.6"
+  },
+  {
+   "clave": "io/q1_7",
+   "descripcion": "Salida sin documentar",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "Q1.7"
+  },
+  {
+   "clave": "pid/kc",
+   "descripcion": "Ganancia proporcional Kc del lazo",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "VD171"
+  },
+  {
+   "clave": "pid/ti",
+   "descripcion": "Tiempo integral Ti (no es una ganancia Ki)",
+   "unidad": "min",
+   "hipotesis": false,
+   "direccion": "VD179"
+  },
+  {
+   "clave": "pid/td",
+   "descripcion": "Tiempo derivativo Td (no es una ganancia Kd)",
+   "unidad": "min",
+   "hipotesis": false,
+   "direccion": "VD183"
+  },
+  {
+   "clave": "pid/ts",
+   "descripcion": "Tiempo de muestreo del lazo",
+   "unidad": "s",
+   "hipotesis": false,
+   "direccion": "VD175"
+  },
+  {
+   "clave": "pid/mx",
+   "descripcion": "Bias / suma integral del lazo",
+   "unidad": "fraccion 0-1",
+   "hipotesis": false,
+   "direccion": "VD187"
+  }
+ ],
+ "conocimiento": "CONOCIMIENTO DE LOS MÓDULOS (grafo de conocimiento de los lienzos + mímicos).\nLas llaves manuales V1-V7 y VF NO tienen señal al PLC: en la planta real su posición no se conoce (solo en la planta simulada).\n\n### CAUDAL MCC-09 [caudal-mcc09]\nTanques y llaves (mímico): UN solo tanque, T1 (reserva) con switches de nivel ALTO (Q0.0) y BAJO (Q0.1 = NOT I0.2). No hay T2.\nCircuito cerrado: bomba aspira de T1 → V5 → línea de impulsión con caudalímetro Kobold y manómetro → válvula proporcional (perturbación) → V2 → retorno a T1. VF + V1 llenan T1 desde el abastecimiento externo; V7 drena T1; V3, V4 y V6 son ramales.\nCondiciones de arranque: T1 sin nivel alto ni bajo; V5 y V2 abiertas; V1, V3, V4, V6, V7 cerradas; consigna > 0. Selector en REMOTO y mando PC (M0.3 = 0) para ordenar desde el SCADA.\nComponentes: Potenciometro del tablero (AIW2) (mando); Valvula proporcional (AQW0) (actuador); Lazo PID 0 del S7-200 (tabla VB159) (control); HMI TPC-2106T (setpoint VD408) (mando); PLC S7-200 CPU226 + CP243-1 (control); Tanque de agua (equipo); Variador de frecuencia (AQW2) (actuador); PC / SCADA (setpoint remoto VD400) (mando); Guardamotor GV2ME10 (proteccion del motor) (proteccion); Sensor de nivel BAJO del tanque (I0.2) (sensor); Linea de impulsion (caudal) (proceso); Caudalimetro Kobold DRG 4-20 mA (AIW0) (sensor); Selector LOCAL/REMOTO del tablero (mando); Bomba centrifuga (equipo); Sensor de nivel ALTO del tanque (sensor)\nRelaciones:\n- Tanque de agua —alimenta→ Bomba centrifuga: Sin agua la bomba no puede impulsar caudal\n- Sensor de nivel BAJO del tanque —protege→ Bomba centrifuga: Nivel bajo (I0.2 = 0) activa Q0.1 y detiene la bomba\n- Variador de frecuencia —acciona→ Bomba centrifuga: La velocidad de la bomba sigue a la consigna del variador\n- Bomba centrifuga —impulsa→ Linea de impulsion\n- Valvula proporcional —restringe→ Linea de impulsion: 100 % = totalmente abierta; en LOCAL el PLC la fija en 100 %\n- Caudalimetro Kobold DRG 4-20 mA —mide→ Linea de impulsion\n- Lazo PID 0 del S7-200 —lee→ Caudalimetro Kobold DRG 4-20 mA: La PV del PID es AIW0 normalizada (fondo 140 L/min)\n- Lazo PID 0 del S7-200 —controla→ Variador de frecuencia: Solo en REMOTO: VW6 (salida PID) -> VW8 -> AQW2\n- Potenciometro del tablero —controla_en_local→ Variador de frecuencia: En LOCAL: AIW2 -> MW2 -> VW8 -> AQW2\n- Selector LOCAL/REMOTO del tablero —habilita→ Lazo PID 0 del S7-200: REMOTO (I0.0) habilita el PID; LOCAL (I0.1) lo deja sin efecto\n- PC / SCADA —fija_setpoint→ Lazo PID 0 del S7-200: VD400 cuando el mando es PC (M0.6 = 0)\n- HMI TPC-2106T —fija_setpoint→ Lazo PID 0 del S7-200: VD408 cuando el mando es HMI (M0.6 = 1)\n- PLC S7-200 CPU226 + CP243-1 —ejecuta→ Lazo PID 0 del S7-200\n- Guardamotor GV2ME10 —protege→ Bomba centrifuga: GV2ME10 (4-6.3 A) SIN contacto auxiliar: no tiene senal hacia el PLC (prueba 10-nov: con el guardamotor en STOP el PLC siguio indicando marcha). Su disparo se infiere: bomba en marcha + caudal 0 + salida del PID saturada. Se dispara en modo LOCAL con el potenciometro al maximo y la valvula abierta (maxima carga; confirmado por el equipo, 19-oct tras 1-2 min)\n- Sensor de nivel ALTO del tanque —vigila→ Tanque de agua: Nivel alto activa Q0.0 (alarma); el SCADA no deja arrancar con T1 lleno"
+}

@@ -1,0 +1,426 @@
+{
+ "equipo": "nivel-mcn09",
+ "nodos": {
+  "potenciometro": {
+   "nombre": "Potenciometro CONTROL MANUAL (I:1.5)",
+   "tipo": "mando",
+   "variables": [
+    "bomba/potenciometro_raw",
+    "bomba/frecuencia_estimada_hz"
+   ]
+  },
+  "sensor_ultrasonico": {
+   "nombre": "Sensor ultrasonico Senix TS-30S1 (N7:4)",
+   "tipo": "sensor",
+   "variables": [
+    "nivel/cm",
+    "nivel/raw",
+    "nivel/fuera_rango_sensor"
+   ]
+  },
+  "valvula": {
+   "nombre": "Valvula Belimo LRB24-3 (salida de T2)",
+   "tipo": "actuador",
+   "variables": [
+    "valvula/abriendo",
+    "valvula/cerrando",
+    "valvula/t_apertura"
+   ]
+  },
+  "pid": {
+   "nombre": "PID PD12:0 del MicroLogix",
+   "tipo": "control",
+   "variables": [
+    "pid/setpoint_a_raw",
+    "pid/setpoint_b_raw",
+    "pid/cv_raw",
+    "pid/kc_a",
+    "pid/ti_a",
+    "pid/td_a"
+   ]
+  },
+  "tanque_t2": {
+   "nombre": "Tanque T2 de acrilico (43 L, 60 cm)",
+   "tipo": "proceso",
+   "variables": [
+    "nivel/cm",
+    "nivel/pct"
+   ]
+  },
+  "hmi": {
+   "nombre": "HMI TPC-2106T (sin comunicacion)",
+   "tipo": "mando",
+   "variables": []
+  },
+  "plc": {
+   "nombre": "PLC MicroLogix 1100 + 1762-IF2OF2",
+   "tipo": "control",
+   "variables": []
+  },
+  "selector": {
+   "nombre": "Selector LOCAL - 0 - REMOTO",
+   "tipo": "mando",
+   "variables": [
+    "estado/selector_remoto",
+    "estado/selector_local"
+   ]
+  },
+  "tanque_t1": {
+   "nombre": "Tanque T1 de reserva (acero, 78 L)",
+   "tipo": "equipo",
+   "variables": [
+    "estado/tanque1_con_agua",
+    "estado/mando_i03"
+   ]
+  },
+  "variador": {
+   "nombre": "Variador Schneider Altivar 11",
+   "tipo": "actuador",
+   "variables": [
+    "bomba/frecuencia_estimada_hz",
+    "bomba/salida_plc_raw"
+   ]
+  },
+  "interruptor_nivel_t1": {
+   "nombre": "Interruptores de nivel de T1 (Kobold NKP)",
+   "tipo": "sensor",
+   "variables": [
+    "estado/tanque1_con_agua",
+    "estado/alarma_nivel_bajo_tanque1",
+    "estado/mando_i03"
+   ]
+  },
+  "pulsadores": {
+   "nombre": "Pulsadores ARRANQUE / PARADA MANUAL",
+   "tipo": "mando",
+   "variables": [
+    "estado/pulsador_arranque"
+   ]
+  },
+  "bomba": {
+   "nombre": "Bomba Pentax Ultra U5 120/3T",
+   "tipo": "equipo",
+   "variables": [
+    "estado/bomba_marcha",
+    "estado/piloto_marcha"
+   ]
+  }
+ },
+ "relaciones": [
+  {
+   "nota": "La bomba aspira de T1",
+   "de": "tanque_t1",
+   "a": "bomba",
+   "rel": "alimenta"
+  },
+  {
+   "nota": "Nivel bajo de T1 (I:0/2 = 0) detiene la bomba y enciende O:0/1",
+   "de": "interruptor_nivel_t1",
+   "a": "bomba",
+   "rel": "protege"
+  },
+  {
+   "de": "variador",
+   "a": "bomba",
+   "rel": "acciona"
+  },
+  {
+   "nota": "En LOCAL la referencia AI1 (0-5 V) del ATV11 viene del potenciometro",
+   "de": "potenciometro",
+   "a": "variador",
+   "rel": "controla_en_local"
+  },
+  {
+   "nota": "Solo en REMOTO (O:1.0); hoy sin HMI no recibe setpoint",
+   "de": "pid",
+   "a": "variador",
+   "rel": "controla"
+  },
+  {
+   "de": "bomba",
+   "a": "tanque_t2",
+   "rel": "impulsa"
+  },
+  {
+   "nota": "Salida de T2; el PLC la abre 35 s al entrar en modo",
+   "de": "valvula",
+   "a": "tanque_t2",
+   "rel": "restringe"
+  },
+  {
+   "nota": "Por la valvula Belimo y la valvula manual de salida",
+   "de": "tanque_t2",
+   "a": "tanque_t1",
+   "rel": "descarga_en"
+  },
+  {
+   "nota": "cm = (16348 - N7:4)/400; satura cerca de 40 cm",
+   "de": "sensor_ultrasonico",
+   "a": "tanque_t2",
+   "rel": "mide"
+  },
+  {
+   "nota": "N7:4 es la PV del PD12:0",
+   "de": "pid",
+   "a": "sensor_ultrasonico",
+   "rel": "lee"
+  },
+  {
+   "nota": "REMOTO (I:0/0) habilita el PID; LOCAL (I:0/1) manda el potenciometro",
+   "de": "selector",
+   "a": "pid",
+   "rel": "habilita"
+  },
+  {
+   "nota": "ARRANQUE MANUAL (I:0/4) en LOCAL",
+   "de": "pulsadores",
+   "a": "bomba",
+   "rel": "arranca"
+  },
+  {
+   "de": "plc",
+   "a": "pid",
+   "rel": "ejecuta"
+  },
+  {
+   "nota": "Comunicacion directa con el PLC por Ethernet; hoy en otra subred (192.168.1.110)",
+   "de": "hmi",
+   "a": "pid",
+   "rel": "fija_setpoint"
+  }
+ ],
+ "senales": [
+  {
+   "clave": "nivel/raw",
+   "descripcion": "PV del PID PD12:0 (sensor ultrasonico TS-30S, mide distancia: baja al llenar)",
+   "unidad": "cuentas",
+   "hipotesis": false,
+   "direccion": "N7:4"
+  },
+  {
+   "clave": "nivel/cm",
+   "descripcion": "Nivel del tanque 2 calibrado en 4 puntos: (16348 - N7:4)/400, mediana de 3 muestras; valido hasta ~40 cm",
+   "unidad": "cm",
+   "hipotesis": false,
+   "direccion": "N7:4"
+  },
+  {
+   "clave": "nivel/pct",
+   "descripcion": "Nivel del tanque 2 en % de su altura total (60 cm)",
+   "unidad": "%",
+   "hipotesis": false,
+   "direccion": "N7:4"
+  },
+  {
+   "clave": "nivel/fuera_rango_sensor",
+   "descripcion": "True si el agua supera el rango util del sensor (~40 cm); el valor en cm deja de ser fiable",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "N7:4"
+  },
+  {
+   "clave": "bomba/potenciometro_raw",
+   "descripcion": "Potenciometro del tablero (consigna de velocidad en modo LOCAL)",
+   "unidad": "cuentas",
+   "hipotesis": false,
+   "direccion": "I:1.5"
+  },
+  {
+   "clave": "bomba/frecuencia_estimada_hz",
+   "descripcion": "Frecuencia aproximada del variador ATV11 segun el potenciometro (2 puntos: 24,6 y 33 Hz)",
+   "unidad": "Hz",
+   "hipotesis": true,
+   "direccion": "I:1.5"
+  },
+  {
+   "clave": "bomba/salida_plc_raw",
+   "descripcion": "Consigna analogica PLC->variador; 0 en modo manual",
+   "unidad": "cuentas",
+   "hipotesis": false,
+   "direccion": "O:1.0"
+  },
+  {
+   "clave": "estado/bomba_marcha",
+   "descripcion": "Bomba/variador en marcha",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "O:0/2"
+  },
+  {
+   "clave": "estado/piloto_marcha",
+   "descripcion": "Salida activa junto con la marcha de la bomba",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "O:0/3"
+  },
+  {
+   "clave": "valvula/abriendo",
+   "descripcion": "Valvula Belimo LRB24-3 recibiendo orden de ABRIR",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "O:0/4"
+  },
+  {
+   "clave": "valvula/cerrando",
+   "descripcion": "Valvula Belimo LRB24-3 recibiendo orden de CERRAR",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "O:0/5"
+  },
+  {
+   "clave": "valvula/t_apertura",
+   "descripcion": "Tiempo acumulado de apertura (base 0.01 s, carrera 35 s)",
+   "unidad": "s",
+   "hipotesis": false,
+   "direccion": "T4:0.ACC"
+  },
+  {
+   "clave": "valvula/t_cierre",
+   "descripcion": "Tiempo acumulado de cierre (base 0.01 s)",
+   "unidad": "s",
+   "hipotesis": true,
+   "direccion": "T4:1.ACC"
+  },
+  {
+   "clave": "estado/selector_remoto",
+   "descripcion": "Selector en REMOTO (control desde PC/SCADA; hoy sin SCADA solo abre la valvula)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I:0/0"
+  },
+  {
+   "clave": "estado/selector_local",
+   "descripcion": "Selector en LOCAL (bomba por potenciometro y pulsador de arranque)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I:0/1"
+  },
+  {
+   "clave": "estado/tanque1_con_agua",
+   "descripcion": "Interruptor de nivel bajo del tanque 1 (reserva): False = nivel bajo, la bomba se detiene",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I:0/2"
+  },
+  {
+   "clave": "estado/alarma_nivel_bajo_tanque1",
+   "descripcion": "Piloto de nivel bajo del tanque 1",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "O:0/1"
+  },
+  {
+   "clave": "estado/mando_i03",
+   "descripcion": "Probable interruptor de NIVEL ALTO del tanque 1 (manual: T1 tiene interruptores bajo y alto)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I:0/3"
+  },
+  {
+   "clave": "estado/piloto_o00",
+   "descripcion": "Probable piloto ALARMA NIVEL ALTO del tablero (va junto con I:0/3)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "O:0/0"
+  },
+  {
+   "clave": "estado/pulsador_arranque",
+   "descripcion": "Pulsador de ARRANQUE (pulso corto; puede no verse a 1 s de muestreo)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "I:0/4"
+  },
+  {
+   "clave": "estado/entrada_5",
+   "descripcion": "Siempre 1 en las pruebas (posible paro de emergencia NC)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "I:0/5"
+  },
+  {
+   "clave": "estado/marcha_interna",
+   "descripcion": "Bit interno = 1 con la bomba en marcha",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "B3:0/1"
+  },
+  {
+   "clave": "pid/setpoint_a_raw",
+   "descripcion": "Setpoint copiado a PD12:0.SPS en un modo",
+   "unidad": "cuentas",
+   "hipotesis": true,
+   "direccion": "N7:5"
+  },
+  {
+   "clave": "pid/setpoint_b_raw",
+   "descripcion": "Setpoint copiado a PD12:0.SPS en el otro modo",
+   "unidad": "cuentas",
+   "hipotesis": true,
+   "direccion": "N7:6"
+  },
+  {
+   "clave": "pid/cv_raw",
+   "descripcion": "Salida (CV) del PID PD12:0",
+   "unidad": "cuentas",
+   "hipotesis": true,
+   "direccion": "N7:14"
+  },
+  {
+   "clave": "pid/kc_a",
+   "descripcion": "Kc juego A",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:8"
+  },
+  {
+   "clave": "pid/ti_a",
+   "descripcion": "Ti juego A",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:9"
+  },
+  {
+   "clave": "pid/td_a",
+   "descripcion": "Td juego A",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:10"
+  },
+  {
+   "clave": "pid/kc_b",
+   "descripcion": "Kc juego B",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:11"
+  },
+  {
+   "clave": "pid/ti_b",
+   "descripcion": "Ti juego B",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:12"
+  },
+  {
+   "clave": "pid/td_b",
+   "descripcion": "Td juego B",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "N7:13"
+  },
+  {
+   "clave": "valvula/t_apertura_sp",
+   "descripcion": "Preset de apertura enviado a T4:0 en remoto",
+   "unidad": "s",
+   "hipotesis": true,
+   "direccion": "N7:1"
+  },
+  {
+   "clave": "valvula/t_cierre_sp",
+   "descripcion": "Preset de cierre enviado a T4:1 en remoto",
+   "unidad": "s",
+   "hipotesis": true,
+   "direccion": "N7:2"
+  }
+ ],
+ "conocimiento": "CONOCIMIENTO DE LOS MÓDULOS (grafo de conocimiento de los lienzos + mímicos).\nLas llaves manuales V1-V7 y VF NO tienen señal al PLC: en la planta real su posición no se conoce (solo en la planta simulada).\n\n### NIVEL MCN-09 [nivel-mcn09]\nTanques y llaves (mímico): T1 = tanque de RESERVA abajo (acero, 78 L) con switch de nivel BAJO (I:0/2, 1 = hay agua) y switch ALTO (I:0/3, hipótesis). T2 = tanque de ACRÍLICO arriba (60 cm, 43 L), su nivel lo mide el sensor ultrasónico (es la variable controlada).\nCircuito: bomba aspira de T1 → sube por la línea → V4 → entra a T2; T2 descarga por la válvula motorizada Belimo (perturbación) y V5 de vuelta a T1. VF llena T1 desde el abastecimiento externo; V7 drena T1; V1, V2 y V3 son ramales/by-pass.\nCondiciones de arranque (enclavamientos del SCADA): T1 sin nivel alto ni bajo; solo V4 abierta (V1, V2, V3, V5, VF, V7 cerradas); consigna cargada.\nComponentes: Potenciometro CONTROL MANUAL (I:1.5) (mando); Sensor ultrasonico Senix TS-30S1 (N7:4) (sensor); Valvula Belimo LRB24-3 (salida de T2) (actuador); PID PD12:0 del MicroLogix (control); Tanque T2 de acrilico (43 L, 60 cm) (proceso); HMI TPC-2106T (sin comunicacion) (mando); PLC MicroLogix 1100 + 1762-IF2OF2 (control); Selector LOCAL - 0 - REMOTO (mando); Tanque T1 de reserva (acero, 78 L) (equipo); Variador Schneider Altivar 11 (actuador); Interruptores de nivel de T1 (Kobold NKP) (sensor); Pulsadores ARRANQUE / PARADA MANUAL (mando); Bomba Pentax Ultra U5 120/3T (equipo)\nRelaciones:\n- Tanque T1 de reserva —alimenta→ Bomba Pentax Ultra U5 120/3T: La bomba aspira de T1\n- Interruptores de nivel de T1 —protege→ Bomba Pentax Ultra U5 120/3T: Nivel bajo de T1 (I:0/2 = 0) detiene la bomba y enciende O:0/1\n- Variador Schneider Altivar 11 —acciona→ Bomba Pentax Ultra U5 120/3T\n- Potenciometro CONTROL MANUAL —controla_en_local→ Variador Schneider Altivar 11: En LOCAL la referencia AI1 (0-5 V) del ATV11 viene del potenciometro\n- PID PD12:0 del MicroLogix —controla→ Variador Schneider Altivar 11: Solo en REMOTO (O:1.0); hoy sin HMI no recibe setpoint\n- Bomba Pentax Ultra U5 120/3T —impulsa→ Tanque T2 de acrilico\n- Valvula Belimo LRB24-3 —restringe→ Tanque T2 de acrilico: Salida de T2; el PLC la abre 35 s al entrar en modo\n- Tanque T2 de acrilico —descarga_en→ Tanque T1 de reserva: Por la valvula Belimo y la valvula manual de salida\n- Sensor ultrasonico Senix TS-30S1 —mide→ Tanque T2 de acrilico: cm = (16348 - N7:4)/400; satura cerca de 40 cm\n- PID PD12:0 del MicroLogix —lee→ Sensor ultrasonico Senix TS-30S1: N7:4 es la PV del PD12:0\n- Selector LOCAL - 0 - REMOTO —habilita→ PID PD12:0 del MicroLogix: REMOTO (I:0/0) habilita el PID; LOCAL (I:0/1) manda el potenciometro\n- Pulsadores ARRANQUE / PARADA MANUAL —arranca→ Bomba Pentax Ultra U5 120/3T: ARRANQUE MANUAL (I:0/4) en LOCAL\n- PLC MicroLogix 1100 + 1762-IF2OF2 —ejecuta→ PID PD12:0 del MicroLogix\n- HMI TPC-2106T —fija_setpoint→ PID PD12:0 del MicroLogix: Comunicacion directa con el PLC por Ethernet; hoy en otra subred (192.168.1.110)"
+}

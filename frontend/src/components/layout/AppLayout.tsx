@@ -62,6 +62,7 @@ export function AppLayout({ route, onNavigate, children }: Props) {
           now={now}
           onOpenMenu={() => setMobileOpen(true)}
           onAction={setToast}
+          onNavigate={onNavigate}
         />
         <main className="content">
           <div className="page">{children}</div>

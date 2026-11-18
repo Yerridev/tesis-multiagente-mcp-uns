@@ -65,7 +65,7 @@ export interface AgentReply {
   agent: string;
   ts: string;
   tools: AgentCall[];
-  mode?: 'llm' | 'rules';
+  mode?: 'llm' | 'rules' | 'multiagente';
   model?: string | null;
   /** conversación donde quedó registrada la pregunta/respuesta */
   conversacionId?: string | null;
@@ -109,6 +109,8 @@ export interface AgentStatus {
   models?: { id: string; nombre: string; gratis: boolean }[];
   provider: string;
   scope: string;
+  /** el sistema multiagente MCP (bat 31) está en línea */
+  multiagente?: boolean;
 }
 
 export interface HealthInfo {
@@ -183,4 +185,33 @@ export interface ControlOrden {
   escrito?: boolean | null;
   valorEsperado?: number | null;
   valorLeido?: number | null;
+}
+
+/** Catálogo de los servidores MCP del sistema multiagente (publicado por el orquestador). */
+export interface ServidorMcpCatalogo {
+  modulo: string;
+  servidor: string;
+  url: string;
+  puerto: number;
+  plc: string;
+  codigo: string;
+  en_linea: boolean;
+  ms?: number;
+  error?: string;
+  herramientas: { nombre: string; descripcion: string }[];
+}
+
+export interface LlamadaMcp {
+  ts: string;
+  agente: string;
+  servidor: string;
+  herramienta: string;
+  ok: boolean;
+  ms: number;
+  corr: string;
+}
+
+export interface CatalogoMcpRespuesta {
+  disponible: boolean;
+  catalogo: { ts: string; servidores: ServidorMcpCatalogo[]; llamadas?: LlamadaMcp[] } | null;
 }

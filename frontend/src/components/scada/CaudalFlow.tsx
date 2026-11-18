@@ -367,13 +367,13 @@ const BASE_NODES: Node[] = [
   { id: 'PV', type: 'propValve', position: { x: 560, y: 565 }, data: {}, ...fixed },
   { id: 'SUPPLY', type: 'supply', position: { x: 800, y: 1440 }, data: { portSide: 'l' }, ...fixed },
   /* Posición nominal según el manual INDUCONTROL del módulo: V2, V5 abiertas · V1, V3, V4, V6, V7 cerradas */
-  valve('V1', 810, 888, 'h', false), valve('V2', 745, 730, 'v', true), valve('V3', 810, 640, 'h', false), valve('V4', 490, 775, 'h', false),
+  valve('V1', 810, 888, 'h', false), valve('V2', 745, 650, 'v', true), valve('V3', 810, 770, 'h', false), valve('V4', 490, 775, 'h', false),
   valve('V5', 440, 830, 'v', true), valve('V6', 500, 888, 'h', false), { ...valve('V7', 728, 1325, 'v', false), data: { valveId: 'V7', label: 'V7', orientation: 'v', nominal: false, leverLeft: true } },  /* 180° · vertical · palanca izquierda */
   /* válvula manual en la boca de la fuente de agua (abre/cierra el abastecimiento hacia V1) */
   valve('VF', 900, 1404, 'v', true),   /* pegada al pico de la fuente, como en el módulo real */
   junction('JT', 728, 1263), junction('JV1F', 900, 888), junction('J888', 440, 888), junction('J775', 440, 775), junction('J667', 440, 667),
-  junction('JTL', 440, 585), junction('JTR', 745, 585), junction('J640', 745, 640), junction('J888R', 745, 888), junction('JE', 715, 888),
-  end('END3', 845, 628, 'l'), end('END4', 525, 763, 'l'),
+  junction('JTL', 440, 585), junction('JTR', 745, 585), junction('J640', 745, 770), junction('J888R', 745, 888), junction('JE', 715, 888),
+  end('END3', 845, 758, 'l'), end('END4', 525, 763, 'l'),
 ];
 
 const ed = (id: string, source: string, sh: string, target: string, th: string): Edge => ({
@@ -388,9 +388,9 @@ const EDGES: Edge[] = [
   ed('w1', 'J888', 't', 'V5', 'b'), ed('w2', 'V5', 't', 'J775', 'b'),
   ed('x1', 'J775', 'r', 'V4', 'l'), ed('x2', 'V4', 'r', 'END4', 'l'),
   ed('y1', 'J775', 't', 'J667', 'b'), ed('y2', 'J667', 't', 'JTL', 'b'), ed('y3', 'J667', 'r', 'PG', 'l'),
-  ed('y4', 'JTL', 'r', 'PV', 'l'), ed('y5', 'PV', 'r', 'JTR', 'l'), ed('y6', 'JTR', 'b', 'J640', 't'),
+  ed('y4', 'JTL', 'r', 'PV', 'l'), ed('y5', 'PV', 'r', 'JTR', 'l'), ed('y6', 'JTR', 'b', 'V2', 't'),
   ed('z1', 'J640', 'r', 'V3', 'l'), ed('z2', 'V3', 'r', 'END3', 'l'),
-  ed('z3', 'J640', 'b', 'V2', 't'), ed('z4', 'V2', 'b', 'J888R', 't'), ed('z5', 'J888R', 'b', 'tank', 'inR'),
+  ed('z3', 'V2', 'b', 'J640', 't'), ed('z4', 'J640', 'b', 'J888R', 't'),   /* V2 arriba, ramal V3 debajo (como el módulo real) */ ed('z5', 'J888R', 'b', 'tank', 'inR'),
   /* abastecimiento: fuente → válvula manual VF → V1 → tanque */
   ed('s1', 'SUPPLY', 'in', 'VF', 'b'), ed('s2', 'VF', 't', 'JV1F', 'b'), ed('s3', 'JV1F', 'l', 'V1', 'r'),
   ed('f2', 'V1', 'l', 'J888R', 'r'),

@@ -7,6 +7,7 @@ echo ============================================================
 cd /d "%~dp0.."
 echo.
 echo [1/3] Estado actual del contenedor:
+call "%~dp0_docker-listo.bat" || (pause & exit /b 1)
 docker ps -a --filter name=mcp-connector-temperatura --format "  {{.Names}}  ->  {{.Status}}"
 echo.
 echo [2/3] Arrancandolo (si estaba detenido por la planta simulada)...

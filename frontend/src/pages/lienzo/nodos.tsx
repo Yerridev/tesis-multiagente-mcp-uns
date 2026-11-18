@@ -470,6 +470,12 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
 
   /* --- lazo PID --- */
   if (id === 'pid') {
+    /* salida y sintonía reales del PLC (temperatura: pid/salida_pct · presión: pid/cv) */
+    const sp = ctx.senal;
+    const salida = historico ? null : (sNum(sp, 'pid/salida_pct') ?? sNum(sp, 'pid/cv'));
+    const kp = sNum(sp, 'pid/kp'), ti = sNum(sp, 'pid/ti'), td = sNum(sp, 'pid/td');
+    const f = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
+    const sintonia = historico || kp == null || ti == null ? 'Sin datos' : `${f(kp)} · ${f(ti)}${td == null ? '' : ` · ${f(td)}`}`;
     return {
       estado: historico
         ? { texto: 'HISTÓRICO', sev: 'inactivo' }
@@ -481,8 +487,8 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
       filas: [
         { k: 'SP', v: num(eq.setpoint, 1), u: unit },
         { k: 'PV', v: num(valor, 1), u: unit },
-        { k: 'Salida', v: 'Sin datos', u: '%' },
-        { k: 'Kc · Ti', v: 'Sin datos' },
+        { k: 'Salida', v: salida == null ? 'Sin datos' : num(salida, 1), u: salida == null ? undefined : '%' },
+        { k: td == null ? 'Kp · Ti' : 'Kp · Ti · Td', v: sintonia },
       ],
     };
   }

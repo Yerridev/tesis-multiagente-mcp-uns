@@ -10,7 +10,7 @@ import { ModuloHeader, type EstadoCom, type Modo } from '../components/scada/Mod
 import { ConfirmarOrden } from '../components/common/Emergente';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
 import type { CaudalSenales, ControlOrden } from '../types';
-import { enviarControlCaudal, estadoControlCaudal, listarOrdenesCaudal, tokenControl } from '../services/control';
+import { enviarControlCaudal, estadoControlCaudal, listarOrdenesCaudal, nombreControl } from '../services/control';
 
 const ID = 'caudal-mcc09';
 
@@ -60,7 +60,7 @@ export function ModuleCaudalPage() {
   const [confirmarInicio, setConfirmarInicio] = useState(false);
   const [confirmarDetencion, setConfirmarDetencion] = useState(false);
   const [modo, setModo] = useState<Modo>('real');
-  const [usuario, setUsuario] = useState(tokenControl());
+  const [usuario, setUsuario] = useState(nombreControl());
   // PLC virtual (solo modo SIMULADOR): recibe el estado de llaves/tanque del mímico
   const [estadoMimico, setEstadoMimico] = useState<EstadoMimico>({ valvulas: {}, nivelPct: null, nivelBajo: null });
   const plc = usePlcVirtualCaudal(modo === 'simulador', estadoMimico, Number(valvula) || 0);
@@ -96,7 +96,7 @@ export function ModuleCaudalPage() {
     void estadoControlCaudal().then((r) => {
       const ok = r.ok && r.datos?.datos.realArmado === true;
       setArmado(ok);
-      setUsuario(r.datos?.usuario ?? tokenControl());
+      setUsuario(r.datos?.usuario ?? nombreControl());
       setMensaje(ok ? 'Control REAL habilitado' : 'Control físico bloqueado hasta la puesta en marcha');
     });
     void cargarOrdenes();

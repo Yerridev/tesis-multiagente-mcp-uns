@@ -2,7 +2,8 @@ import { ConfirmarOrden } from '../common/Emergente';
 import { usePlantaModo } from './plantaSimulada';
 import { useEffect, useMemo, useState } from 'react';
 import { usePlant } from '../../context/PlantContext';
-import { controlEstado, enviarControl, tokenControl, CONTROL_TOKEN_DEFECTO, type EstadoControlDatos } from '../../services/control';
+import { controlEstado, enviarControl, tokenControl, type EstadoControlDatos } from '../../services/control';
+import { useUsuario } from '../../services/auth';
 import { KnobRO } from './KnobRO';
 
 const COLOR: Record<string, string> = {
@@ -97,7 +98,8 @@ export function ControlPanel({ bloqueoIniciar = false }: { bloqueoIniciar?: bool
   const [confirmar, setConfirmar] = useState<'Iniciar' | 'Detener' | null>(null);
   const simulada = usePlantaModo() === 'simulado';
   const token = tokenControl();
-  const rol = rolDeToken(token);
+  const sesion = useUsuario();
+  const rol = sesion?.rol ?? rolDeToken(token);
 
   /* ESC cierra el emergente de órdenes */
   useEffect(() => {
@@ -168,7 +170,7 @@ export function ControlPanel({ bloqueoIniciar = false }: { bloqueoIniciar?: bool
           {real ? 'REAL' : simulador ? 'PRUEBAS' : 'DRY-RUN'}
         </span>
         <span className="pill pill-dark" title="Usuario y rol del token de control">
-          {estado?.usuario ?? token === CONTROL_TOKEN_DEFECTO ? `${estado?.usuario ?? 'desconocido'} · ${rol}` : 'sin usuario'}
+          {`${estado?.usuario ?? sesion?.usuario ?? 'sin usuario'} · ${rol}`}
         </span>
         <button type="button" className="co-ver" title="Ver el historial de órdenes (emergente)" onClick={() => { setAbierto(true); controlRecargar(); }}>
           Órdenes

@@ -1,5 +1,7 @@
 ﻿using System.Net.Sockets;
+using System.Text.Json;
 using MCP.Industrial.Api;
+using MCP.Industrial.Api.Auth;
 using MCP.Industrial.Api.Control;
 using Microsoft.AspNetCore.StaticFiles;
 
@@ -28,6 +30,24 @@ builder.Services.AddSingleton<OpenRouterAgent>();
 builder.Services.AddSingleton<ContextoAgente>();
 builder.Services.AddSingleton<ConversacionesStore>();
 builder.Services.AddSingleton<AgentService>();
+builder.Services.AddSingleton<OrquestadorMultiagente>();
+
+/* ------------------------- USUARIOS Y SESIONES (TimescaleDB, esquema seguridad) -------------------------
+   Con Auth:Conexion definida, TODO /api y /hubs exige sesión (salvo /api/health y el login).
+   El primer admin sale del .env (ADMIN_USUARIO / ADMIN_PASSWORD); nunca del código.
+   Sin cadena de conexión (p. ej. `dotnet run` local) la autenticación queda deshabilitada. */
+var authOp = new AuthOpciones
+{
+    Habilitado = !string.Equals(builder.Configuration["Auth:Habilitado"], "false", StringComparison.OrdinalIgnoreCase),
+    Conexion = builder.Configuration["Auth:Conexion"],
+    HorasSesion = int.TryParse(builder.Configuration["Auth:HorasSesion"], out var hsAuth) ? hsAuth : 8,
+    AdminUsuario = builder.Configuration["Auth:AdminUsuario"],
+    AdminPassword = builder.Configuration["Auth:AdminPassword"],
+    TokenServicio = builder.Configuration["Auth:TokenServicio"],
+};
+if (string.IsNullOrWhiteSpace(authOp.Conexion)) authOp.Habilitado = false;
+builder.Services.AddSingleton(authOp);
+builder.Services.AddSingleton<SeguridadStore>();
 
 /* ------------------------- CONTROL (dry-run por defecto, sin escrituras al PLC) ------------------------- */
 if (!agentsOnly)
@@ -52,6 +72,8 @@ AuditoriaRuta = builder.Configuration["Control:AuditoriaRuta"],
         ctrl.PermitirSensorFueraDeRango = envSfr.Trim() == "1" || envSfr.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
     foreach (var u in builder.Configuration.GetSection("Control:Usuarios").GetChildren())
         ctrl.Usuarios[u.Key] = u.Value ?? "viewer";
+    // con usuarios reales, las claves dev-… dejan de funcionar
+    if (authOp.Habilitado) ctrl.Usuarios.Clear();
     builder.Services.AddSingleton(ctrl);
     builder.Services.AddSingleton(new ControlAuditoria(ctrl.AuditoriaRuta));
     builder.Services.AddSingleton<IComandoTransporte, MqttComandoTransporte>();
@@ -98,6 +120,58 @@ AuditoriaRuta = builder.Configuration["Control:AuditoriaRuta"],
 
 var app = builder.Build();
 app.UseCors();
+
+var seguridad = app.Services.GetRequiredService<SeguridadStore>();
+if (authOp.Habilitado) _ = Task.Run(() => seguridad.InicializarAsync(app.Lifetime.ApplicationStopping));
+else app.Logger.LogWarning("Autenticación DESHABILITADA (sin Auth:Conexion o Auth:Habilitado=false): se usan las claves dev-…");
+
+static string? IpDe(HttpContext ctx)
+{
+    var f = ctx.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
+    return f.Length > 0 ? f : ctx.Connection.RemoteIpAddress?.ToString();
+}
+static SesionActiva? SesionDe(HttpContext ctx) => ctx.Items["auth.sesion"] as SesionActiva;
+
+/* Puerta de sesión: /api/* y /hubs/* exigen un token válido (cabecera Bearer; en /hubs también
+   ?access_token= porque los WebSockets del navegador no envían cabeceras). */
+app.Use(async (ctx, next) =>
+{
+    var ruta = ctx.Request.Path;
+    var esHub = ruta.StartsWithSegments("/hubs");
+    var publica = ruta.StartsWithSegments("/api/health") || ruta.StartsWithSegments("/api/auth/login") || ruta.StartsWithSegments("/api/auth/estado");
+    if (!authOp.Habilitado || publica || !(esHub || ruta.StartsWithSegments("/api"))) { await next(); return; }
+    if (!seguridad.Listo)
+    {
+        ctx.Response.StatusCode = 503;
+        await ctx.Response.WriteAsJsonAsync(new { error = "SEGURIDAD_NO_DISPONIBLE", detalle = seguridad.ErrorInicio });
+        return;
+    }
+    var cab = ctx.Request.Headers.Authorization.ToString();
+    var token = cab.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? cab[7..].Trim() : null;
+    if (string.IsNullOrEmpty(token) && esHub) token = ctx.Request.Query["access_token"].ToString();
+    var sesion = string.IsNullOrEmpty(token) ? null : await seguridad.ValidarAsync(token);
+    if (sesion is null)
+    {
+        ctx.Response.StatusCode = 401;
+        await ctx.Response.WriteAsJsonAsync(new { error = "SESION_INVALIDA" });
+        return;
+    }
+    ctx.Items["auth.sesion"] = sesion;
+    ctx.Items["auth.token"] = token;
+    await next();
+});
+
+/* null = permitido; si no, la respuesta 401/403. Sin autenticación habilitada no restringe. */
+IResult? Requiere(HttpContext ctx, string rolMinimo)
+{
+    if (!authOp.Habilitado) return null;
+    var s = SesionDe(ctx);
+    if (s is null) return Results.Json(new { error = "SESION_INVALIDA" }, statusCode: 401);
+    return ControlAuth.AlMenos(s.Rol, rolMinimo) ? null : Results.Json(new { error = "PERMISO_INSUFICIENTE", requiere = rolMinimo }, statusCode: 403);
+}
+IResult? SoloConAuth() => authOp.Habilitado
+    ? (seguridad.Listo ? null : Results.Json(new { error = "SEGURIDAD_NO_DISPONIBLE", detalle = seguridad.ErrorInicio }, statusCode: 503))
+    : Results.Json(new { error = "AUTENTICACION_DESHABILITADA" }, statusCode: 409);
 
 /* ---------------------------- salud de contenedores ----------------------------
    /health/live  : el proceso responde (no depende de nada externo).
@@ -175,6 +249,42 @@ void SinCacheHtml(StaticFileResponseContext ctx)
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = SinCacheHtml });
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", service = "MCP Industrial API", timestamp = DateTimeOffset.Now }));
+
+/* ------------------------------------------- autenticación ------------------------------------------- */
+app.MapGet("/api/auth/estado", () => Results.Ok(new { habilitado = authOp.Habilitado, listo = seguridad.Listo, horasSesion = authOp.HorasSesion }));
+app.MapPost("/api/auth/login", async (SolicitudLogin sol, HttpContext ctx) =>
+{
+    if (SoloConAuth() is { } no) return no;
+    var (s, token, error) = await seguridad.LoginAsync(sol.Usuario, sol.Password, IpDe(ctx), ctx.Request.Headers.UserAgent.ToString());
+    if (s is null) return Results.Json(new { error }, statusCode: error == "DEMASIADOS_INTENTOS" ? 429 : 401);
+    return Results.Ok(new { token, usuario = s.Usuario, nombre = s.Nombre, rol = s.Rol, expira = s.Expira });
+});
+app.MapPost("/api/auth/logout", async (HttpContext ctx) =>
+{
+    if (SesionDe(ctx) is { } s && ctx.Items["auth.token"] is string t && s.UsuarioId > 0) await seguridad.LogoutAsync(t, s.Usuario, IpDe(ctx));
+    return Results.Ok(new { ok = true });
+});
+app.MapGet("/api/auth/yo", (HttpContext ctx) => SesionDe(ctx) is { } s
+    ? Results.Ok(new { habilitado = true, usuario = s.Usuario, nombre = s.Nombre, rol = s.Rol, expira = s.Expira })
+    : Results.Ok(new { habilitado = false, usuario = "local", nombre = "Sin autenticación", rol = "admin" }));
+app.MapGet("/api/auth/usuarios", async (HttpContext ctx) =>
+    SoloConAuth() ?? Requiere(ctx, "admin") ?? Results.Ok(await seguridad.UsuariosAsync()));
+app.MapPost("/api/auth/usuarios", async (SolicitudUsuario sol, HttpContext ctx) =>
+{
+    if ((SoloConAuth() ?? Requiere(ctx, "admin")) is { } no) return no;
+    var error = await seguridad.CrearAsync(sol.Usuario, sol.Nombre, sol.Rol, sol.Password, SesionDe(ctx)!.Usuario, IpDe(ctx));
+    return error is null ? Results.Ok(new { ok = true }) : Results.BadRequest(new { error });
+});
+app.MapPut("/api/auth/usuarios/{id:int}", async (int id, SolicitudUsuario sol, HttpContext ctx) =>
+{
+    if ((SoloConAuth() ?? Requiere(ctx, "admin")) is { } no) return no;
+    var error = await seguridad.ActualizarAsync(id, sol.Nombre, sol.Rol, sol.Activo,
+        string.IsNullOrEmpty(sol.Password) ? null : sol.Password, SesionDe(ctx)!, IpDe(ctx));
+    return error is null ? Results.Ok(new { ok = true }) : Results.BadRequest(new { error });
+});
+app.MapGet("/api/auth/accesos", async (HttpContext ctx, int? limit) =>
+    SoloConAuth() ?? Requiere(ctx, "admin") ?? Results.Ok(await seguridad.AccesosAsync(limit ?? 200)));
+
 app.MapGet("/api/equipment", (PlantState plant) => Results.Ok(plant.GetAll()));
 app.MapGet("/api/equipment/{id}", (string id, PlantState plant) => plant.Get(id) is { } item ? Results.Ok(item) : Results.NotFound());
 app.MapGet("/api/equipment/nivel-mcn09/signals", (NivelState nivel) => Results.Ok(nivel.Snapshot()));
@@ -185,17 +295,41 @@ app.MapGet("/api/equipment/{id}/detail", (string id, PlantState plant) =>
     id == "nivel-mcn09" ? Results.Ok(plant.GetLevel()) : Results.NotFound(new { error = "Detalle disponible solo para nivel-mcn09" }));
 app.MapGet("/api/history", (PlantState plant, string? equipmentId, int? limit) => Results.Ok(plant.GetHistory(equipmentId, limit ?? 300)));
 app.MapGet("/api/agent/tools", () => Results.Ok(PlantState.Tools()));
-app.MapGet("/api/agent/status", (AgentService agent) => Results.Ok(agent.Status()));
-app.MapPost("/api/agent/ask", async (AgentAskRequest request, AgentService agent, ConversacionesStore chats, CancellationToken token) =>
+/* Servidores MCP reales del sistema multiagente (catálogo retenido del orquestador, bat 31) */
+app.MapGet("/api/mcp/catalogo", async (OrquestadorMultiagente multi, CancellationToken ct) =>
 {
-    var reply = await agent.AskAsync(request.Message, token, request.Model, request.History);
-    // cada pregunta/respuesta queda registrada en su conversacion (registros/conversaciones)
-    var id = chats.Registrar(request.ConversacionId, request.Origen, (request.Message ?? "").Trim(), reply);
+    var enLinea = await multi.EnLineaAsync(ct);
+    var cat = await multi.CatalogoAsync(ct);
+    return Results.Ok(new { disponible = enLinea && cat is not null, catalogo = cat });
+});
+app.MapGet("/api/agent/status", async (AgentService agent, OrquestadorMultiagente multi, CancellationToken ct) =>
+{
+    var st = JsonSerializer.SerializeToElement(agent.Status());
+    var d = st.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value);
+    d["multiagente"] = await multi.EnLineaAsync(ct);
+    return Results.Ok(d);
+});
+app.MapPost("/api/agent/ask", async (AgentAskRequest request, HttpContext ctx, AgentService agent, OrquestadorMultiagente multi, ConversacionesStore chats, CancellationToken token) =>
+{
+    /* 1º el SISTEMA MULTIAGENTE MCP (Python, bat 31): intérprete → 4 analistas con su servidor MCP → veredicto.
+       Si no está corriendo, responde el agente clásico y se avisa. */
+    var pregunta = (request.Message ?? "").Trim();
+    var reply = await multi.PreguntarAsync(pregunta.Length > 0 ? pregunta : "¿Cómo está la planta ahora?", request.History, request.Model, SesionDe(ctx)?.Usuario, token);
+    if (reply is null)
+    {
+        reply = await agent.AskAsync(request.Message, token, request.Model, request.History);
+        reply = reply with { Reply = "ℹ️ Sistema multiagente no disponible (abre el bat 31); respondió el agente clásico.\n\n" + reply.Reply };
+    }
+    // cada pregunta/respuesta queda registrada en su conversacion (registros/conversaciones), con su usuario
+    var id = chats.Registrar(request.ConversacionId, request.Origen, (request.Message ?? "").Trim(), reply, SesionDe(ctx)?.Usuario);
     return Results.Ok(reply with { ConversacionId = id });
 });
-app.MapGet("/api/agent/conversaciones", (ConversacionesStore chats) => Results.Ok(chats.Listar()));
-app.MapGet("/api/agent/conversaciones/{id}", (string id, ConversacionesStore chats) =>
-    chats.Leer(id) is { } c ? Results.Ok(c) : Results.NotFound());
+/* cada usuario ve sus chats; supervisor y admin ven todos (evidencia de la tesis) */
+bool VeTodosLosChats(HttpContext ctx) => !authOp.Habilitado || ControlAuth.AlMenos(SesionDe(ctx)?.Rol, "supervisor");
+app.MapGet("/api/agent/conversaciones", (HttpContext ctx, ConversacionesStore chats) =>
+    Results.Ok(chats.Listar(VeTodosLosChats(ctx) ? null : SesionDe(ctx)?.Usuario ?? "-")));
+app.MapGet("/api/agent/conversaciones/{id}", (string id, HttpContext ctx, ConversacionesStore chats) =>
+    chats.Leer(id) is { } c && (VeTodosLosChats(ctx) || c.Usuario == SesionDe(ctx)?.Usuario) ? Results.Ok(c) : Results.NotFound());
 
 /* --------------------------------- API de control (NO en modo agents) --------------------------------- */
 if (!agentsOnly)
@@ -325,8 +459,9 @@ async Task<bool> PublicarSim(IConfiguration cfg, string topico, string cuerpo, C
     catch { return false; }
 }
 app.MapGet("/api/planta/modo", () => Results.Ok(new { modo = modoPlanta }));
-if (!agentsOnly) app.MapPost("/api/sim/llave", async (SolicitudLlave sol, IConfiguration cfg, CancellationToken ct) =>
+if (!agentsOnly) app.MapPost("/api/sim/llave", async (SolicitudLlave sol, HttpContext ctx, IConfiguration cfg, CancellationToken ct) =>
 {
+    if (Requiere(ctx, "operador") is { } no) return no;
     if (modoPlanta != "simulado") return Results.Json(new { error = "PLANTA_REAL: las llaves reales son manuales" }, statusCode: 409);
     if (sol.Modulo is null || !basesSim.TryGetValue(sol.Modulo, out var b)) return Results.BadRequest(new { error = "MODULO_DESCONOCIDO" });
     var id = (sol.Id ?? "").Trim().ToUpperInvariant();
@@ -336,8 +471,9 @@ if (!agentsOnly) app.MapPost("/api/sim/llave", async (SolicitudLlave sol, IConfi
         ? Results.Ok(new { ok = true, modulo = sol.Modulo, id, abierta = sol.Abierta })
         : Results.Json(new { error = "MQTT_NO_DISPONIBLE" }, statusCode: 503);
 });
-if (!agentsOnly) app.MapPost("/api/sim/reiniciar", async (SolicitudLlave sol, IConfiguration cfg, CancellationToken ct) =>
+if (!agentsOnly) app.MapPost("/api/sim/reiniciar", async (SolicitudLlave sol, HttpContext ctx, IConfiguration cfg, CancellationToken ct) =>
 {
+    if (Requiere(ctx, "operador") is { } no) return no;
     if (modoPlanta != "simulado") return Results.Json(new { error = "PLANTA_REAL" }, statusCode: 409);
     if (sol.Modulo is null || !basesSim.TryGetValue(sol.Modulo, out var b)) return Results.BadRequest(new { error = "MODULO_DESCONOCIDO" });
     return await PublicarSim(cfg, b + "/sim/cmd/reiniciar", "{}", ct) ? Results.Ok(new { ok = true }) : Results.Json(new { error = "MQTT_NO_DISPONIBLE" }, statusCode: 503);
@@ -350,3 +486,5 @@ app.Run();
 public record AgentAskRequest(string? Message, string? Model = null, List<TurnoChat>? History = null, string? ConversacionId = null, string? Origen = null);
 public record TurnoChat(string? Rol, string? Texto);
 public record SolicitudLlave(string? Modulo, string? Id, bool Abierta);
+public record SolicitudLogin(string? Usuario, string? Password);
+public record SolicitudUsuario(string? Usuario, string? Nombre, string? Rol, string? Password, bool? Activo);

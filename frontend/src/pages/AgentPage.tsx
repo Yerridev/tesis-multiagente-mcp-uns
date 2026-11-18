@@ -10,6 +10,7 @@ import { CajaChat } from '../components/agents/CajaChat';
 import { HistorialChats } from '../components/agents/HistorialChats';
 import { useSesion } from '../components/agents/useSesion';
 import type { ConversacionCompleta } from '../types';
+import { TextoMd } from '../components/agents/TextoMd';
 
 interface ChatMessage {
   id: number;
@@ -26,33 +27,26 @@ interface Action {
   ok: boolean;
 }
 
+/* Sistema multiagente MCP (Python, bat 31): orquestador + un analista por módulo, cada uno con su servidor MCP */
 const AGENTES = [
-  { key: 'orquestador', name: 'Agente Orquestador', desc: 'Recibe tu pregunta y reparte el trabajo a los demás', server: 'Ninguno directo (delega)' },
-  { key: 'ingesta', name: 'Agente de Ingesta', desc: 'Trae los datos que llegan del PLC', server: 'Tiempo real' },
-  { key: 'validacion', name: 'Agente de Validación y Calidad', desc: 'Revisa si un dato es válido o está fuera de rango', server: 'Tiempo real' },
-  { key: 'analisis', name: 'Agente de Análisis', desc: 'Busca anomalías y tendencias', server: 'Histórico y análisis' },
-  { key: 'reportes', name: 'Agente de Reportes y Trazabilidad', desc: 'Arma informes y guarda qué se hizo', server: 'Histórico y análisis y trazabilidad' },
+  { key: 'orquestador', name: 'Agente Orquestador', desc: 'Intérprete: reparte la pregunta · Veredicto: integra los informes', server: 'Ninguno directo (coordina por MQTT)' },
+  { key: 'analista-nivel', name: 'Analista de Nivel', desc: 'Analiza el módulo MCN-09 (MicroLogix)', server: 'Servidor MCP · Nivel :8001' },
+  { key: 'analista-caudal', name: 'Analista de Caudal', desc: 'Analiza el módulo MCC-09 (S7-200)', server: 'Servidor MCP · Caudal :8002' },
+  { key: 'analista-presion', name: 'Analista de Presión', desc: 'Analiza el módulo MCP-09 (cFP-2200)', server: 'Servidor MCP · Presión :8003' },
+  { key: 'analista-temperatura', name: 'Analista de Temperatura', desc: 'Analiza el módulo MCT-09 (Twido)', server: 'Servidor MCP · Temperatura :8004' },
 ];
+const NOMBRE: Record<string, string> = Object.fromEntries(AGENTES.map((a) => [a.key, a.name]));
 
-const TOOL_AGENT: Record<string, string> = {
-  estado_planta: 'Agente de Ingesta',
-  leer_equipo: 'Agente de Ingesta',
-  estado_plc: 'Agente de Ingesta',
-  verificar_alarma: 'Agente de Validación y Calidad',
-  resumen_historico: 'Agente de Análisis',
-  ayuda: 'Agente Orquestador',
-};
+/** Traza → agente: "interprete"/"veredicto" = orquestador · "analista-x" y "mcp-x.herramienta" = analista x. */
+function agenteDe(tool: string): string {
+  const m = /^(?:analista|mcp)-(nivel|caudal|presion|temperatura)/.exec(tool);
+  return m ? `analista-${m[1]}` : 'orquestador';
+}
 
 const AGENT_KEY = (key: string) => `mcp-agente-${key}`;
 
-/* Agente -> servidores MCP que ilumina en el diagrama */
-const AGENTE_SERVIDORES: Record<string, string[]> = {
-  ingesta: ['srv-rt'], validacion: ['srv-rt'], analisis: ['srv-hist'], reportes: ['srv-hist', 'srv-traz'],
-};
-const NOMBRE_A_KEY: Record<string, string> = Object.fromEntries(AGENTES.map((a) => [a.name, a.key]));
-
 export function AgentPage() {
-  const { link, health, history, load, error, reload } = usePlant();
+  const { link, health, load, error, reload } = usePlant();
   /* el chat se conserva al cambiar de módulo o refrescar; se borra con "Nuevo chat" o al cerrar el navegador */
   const [messages, setMessages] = useSesion<ChatMessage[]>('mcp.chat.agentes.mensajes', []);
   const [actions, setActions] = useSesion<Action[]>('mcp.chat.agentes.acciones', []);
@@ -93,20 +87,9 @@ export function AgentPage() {
   }, [messages, busy]);
 
   const dotState = (key: string): string => {
-    switch (key) {
-      case 'orquestador':
-        return busy ? 'busy' : health === 'ok' ? 'ok' : health === 'error' ? 'err' : 'pending';
-      case 'ingesta':
-        return link === 'connected' ? 'ok' : link === 'disconnected' ? 'err' : 'busy';
-      case 'validacion':
-        return link === 'connected' ? 'ok' : 'pending';
-      case 'analisis':
-        return history.length ? 'ok' : 'pending';
-      case 'reportes':
-        return actions.length ? 'ok' : 'pending';
-      default:
-        return 'pending';
-    }
+    if (key === 'orquestador') return busy ? 'busy' : multi ? 'ok' : health === 'error' ? 'err' : 'pending';
+    if (busy && activos.has(key)) return 'busy';
+    return multi ? (link === 'disconnected' ? 'err' : 'ok') : 'pending';
   };
 
   const lastTask = (agentName: string) => {
@@ -116,9 +99,12 @@ export function AgentPage() {
   };
 
   const llm = status?.mode === 'llm';
-  const modeText = llm
-    ? `IA activa · OpenRouter · ${ia.actual?.nombre ?? status?.model}${ia.actual?.gratis ? ' · gratis (límite diario)' : ''}`
-    : 'Motor de reglas · sin modelo LLM conectado';
+  const multi = status?.multiagente === true;
+  const modeText = multi
+    ? `Sistema multiagente MCP · 5 agentes · 4 servidores MCP · ${ia.actual?.nombre ?? status?.model}`
+    : llm
+      ? `Agente clásico (abre el bat 31 para el multiagente) · ${ia.actual?.nombre ?? status?.model}`
+      : 'Motor de reglas · sin modelo LLM conectado';
 
   const toggleCard = (key: string) => {
     setOpen((prev) => {
@@ -147,11 +133,10 @@ export function AgentPage() {
       {
         const on = new Set<string>(['orquestador']);
         for (const tool of reply.tools) {
-          const key = NOMBRE_A_KEY[TOOL_AGENT[tool.name] ?? ''] ?? 'orquestador';
+          const key = agenteDe(tool.name);
           on.add(key);
-          for (const srv of AGENTE_SERVIDORES[key] ?? []) on.add(srv);
+          if (tool.name.startsWith('mcp-')) on.add(tool.name.split('.')[0]);
         }
-        on.add('reportes'); on.add('srv-traz');   // toda respuesta queda registrada
         setActivos(on);
         if (apagar.current) clearTimeout(apagar.current);
         apagar.current = setTimeout(() => setActivos(new Set()), 6000);
@@ -159,14 +144,14 @@ export function AgentPage() {
       setActions((prev) => {
         const rows: Action[] = reply.tools.map((tool) => ({
           ts: reply.ts,
-          agent: TOOL_AGENT[tool.name] ?? 'Agente Orquestador',
-          what: `${tool.name}: ${tool.result}`,
+          agent: NOMBRE[agenteDe(tool.name)],
+          what: `${tool.name}${tool.result ? `: ${tool.result}` : ''}${tool.ms ? ` · ${tool.ms} ms` : ''}`,
           ok: tool.ok,
         }));
         rows.push({
           ts: reply.ts,
           agent: 'Agente Orquestador',
-          what: `Respondió a: «${message}»${reply.tools.length ? ` · usó ${reply.tools.map((t) => t.name).join(', ')}` : ''}`,
+          what: `Respondió a: «${message}»${reply.mode === 'multiagente' ? ' · sistema multiagente' : ''}`,
           ok: true,
         });
         return [...rows.reverse(), ...prev].slice(0, 50);
@@ -256,8 +241,8 @@ export function AgentPage() {
         <section className="panel ag-flow">
           <div className="panel-head">
             <div>
-              <h2>Agentes de IA</h2>
-              <span className="panel-sub">Flujo en tiempo real · rojo = trabajando ahora</span>
+              <h2>Sistema multiagente MCP</h2>
+              <span className="panel-sub">{multi ? 'En línea' : 'Fuera de línea (bat 31)'} · rojo = trabajando ahora</span>
             </div>
           </div>
           <AgentFlow agentes={AGENTES} estado={dotState} tarea={lastTask} activos={activos} ocupado={busy}
@@ -270,14 +255,19 @@ export function AgentPage() {
             <div>
               <h2>Asistente de agentes IA</h2>
               <span className="panel-sub" id="chatStatus">
-                {busy ? (llm ? 'Consultando la IA…' : 'Consultando el asistente…') : modeText}
+                {busy ? (multi ? 'Los agentes están analizando sus módulos…' : llm ? 'Consultando la IA…' : 'Consultando el asistente…') : modeText}
               </span>
             </div>
             <div className="hc-acciones">
               <button type="button" className="hc-btn" onClick={() => setHistorialAbierto(true)} title="Ver conversaciones guardadas">Historial</button>
               <button type="button" className="hc-btn" onClick={nuevoChat} disabled={busy || messages.length === 0} title="Empezar una conversación nueva">Nuevo chat</button>
             </div>
-            {llm ? (
+            {multi ? (
+              <span className="pill pill-ok pill-live">
+                <i />
+                MULTIAGENTE
+              </span>
+            ) : llm ? (
               <span className="pill pill-ok pill-live">
                 <i />
                 IA ACTIVA
@@ -291,7 +281,9 @@ export function AgentPage() {
             {messages.length === 0 ? (
               <div className="msg msg-agent">
                 <div className="msg-body">
-                  {llm
+                  {multi
+                    ? 'Hola. Te atiende el sistema multiagente MCP: el orquestador interpreta tu pregunta, los analistas de nivel, caudal, presión y temperatura consultan su servidor MCP y el veredicto integra todo. Solo lectura: no doy órdenes al PLC.'
+                    : llm
                     ? 'Hola. Soy el asistente de MCP-INDUSTRIAL (IA vía OpenRouter, me atiende el Agente Orquestador). Pregúntame por caudal, nivel, presión o temperatura: respondo con los datos en vivo de la planta.'
                     : 'Hola. Soy el asistente de MCP-INDUSTRIAL (motor de reglas de supervisión, me atiende el Agente Orquestador). Pregúntame por caudal, nivel, presión o temperatura.'}
                 </div>
@@ -300,12 +292,12 @@ export function AgentPage() {
               messages.map((message) => (
                 <div key={message.id} className={`msg msg-${message.role}`}>
                   <div className="msg-body">
-                    {message.text}
+                    {message.role === 'agent' ? <TextoMd texto={message.text} /> : message.text}
                     {message.tools?.length || message.model ? (
                       <div className="msg-tools">
                         {message.model ? <span className="tag tag-warn">{message.model}</span> : null}
-                        {message.tools?.map((tool) => (
-                          <span key={tool.name} className={`tag ${tool.ok ? 'tag-ok' : 'tag-err'}`}>
+                        {message.tools?.map((tool, i) => (
+                          <span key={`${tool.name}-${i}`} className={`tag ${tool.ok ? 'tag-ok' : 'tag-err'}`}>
                             {tool.name} · {tool.ms} ms
                           </span>
                         ))}

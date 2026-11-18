@@ -12,6 +12,8 @@ public sealed class Conversacion
 {
     public string Id { get; set; } = "";
     public string Origen { get; set; } = "agentes";
+    /// <summary>Usuario que inició el chat (null en chats previos a la autenticación).</summary>
+    public string? Usuario { get; set; }
     public string Titulo { get; set; } = "";
     public DateTimeOffset Creada { get; set; }
     public DateTimeOffset Actualizada { get; set; }
@@ -49,7 +51,7 @@ public sealed class ConversacionesStore
     }
 
     /// <summary>Agrega la pregunta y la respuesta; crea la conversación si no existe. Devuelve su id.</summary>
-    public string Registrar(string? id, string? origen, string pregunta, AgentReply r)
+    public string Registrar(string? id, string? origen, string pregunta, AgentReply r, string? usuario = null)
     {
         lock (_sync)
         {
@@ -59,6 +61,7 @@ public sealed class ConversacionesStore
                 Origen = string.IsNullOrWhiteSpace(origen) ? "agentes" : origen.Trim()[..Math.Min(40, origen.Trim().Length)],
                 Titulo = pregunta.Length > 70 ? pregunta[..70] + "…" : pregunta,
                 Creada = DateTimeOffset.Now,
+                Usuario = usuario,
             };
             var llm = r.Tools.FirstOrDefault(t => t.Name == "consulta_openrouter");
             conv.Mensajes.Add(new MensajeGuardado("user", pregunta, DateTimeOffset.Now));
@@ -74,7 +77,8 @@ public sealed class ConversacionesStore
         }
     }
 
-    public IReadOnlyList<object> Listar(int max = 200)
+    /// <param name="usuario">null = todas; si no, solo las de ese usuario.</param>
+    public IReadOnlyList<object> Listar(string? usuario = null, int max = 200)
     {
         lock (_sync)
         {
@@ -82,10 +86,10 @@ public sealed class ConversacionesStore
             return Directory.GetFiles(_dir, "*.json")
                 .OrderByDescending(File.GetLastWriteTimeUtc).Take(max)
                 .Select(f => { try { return JsonSerializer.Deserialize<Conversacion>(File.ReadAllText(f), Json); } catch { return null; } })
-                .Where(c => c is not null)
+                .Where(c => c is not null && (usuario is null || c.Usuario == usuario))
                 .Select(c => (object)new
                 {
-                    id = c!.Id, origen = c.Origen, titulo = c.Titulo, creada = c.Creada, actualizada = c.Actualizada,
+                    id = c!.Id, origen = c.Origen, usuario = c.Usuario, titulo = c.Titulo, creada = c.Creada, actualizada = c.Actualizada,
                     mensajes = c.Mensajes.Count,
                     modelos = c.Mensajes.Where(m => m.Modelo is not null).Select(m => m.Modelo!).Distinct().ToArray(),
                 })

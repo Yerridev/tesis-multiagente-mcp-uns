@@ -12,7 +12,7 @@ import { HistoricoModal } from '../components/scada/HistoricoModal';
 import { ConfirmarOrden } from '../components/common/Emergente';
 import { ageSeconds, formatAge, isStale, num, timeOnly } from '../utils/format';
 import type { ControlOrden, PresionSenales } from '../types';
-import { enviarControlPresion, estadoControlPresion, listarOrdenesPresion, tokenControl } from '../services/control';
+import { enviarControlPresion, estadoControlPresion, listarOrdenesPresion, nombreControl } from '../services/control';
 
 const ID = 'presion-mcp09';
 
@@ -281,7 +281,7 @@ export function ModulePresionPage() {
                 </button>
                 <button type="button" className="co-ver" onClick={() => setHistoricoAbierto(true)}>Histórico</button>
               </div>
-              <small>{tokenControl()} · supervisor</small>
+              <small>{nombreControl()}</small>
               <div className="lv-opt-btns">
                 <button
                   disabled={sim ? !plcOk || plc.marcha : !armado || !online || setpointPendiente || pidAplicando || bloqueoSim}

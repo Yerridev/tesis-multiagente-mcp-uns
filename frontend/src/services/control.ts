@@ -1,3 +1,4 @@
+import { sesionActual, tokenSesion } from './auth';
 /** Cliente de la API de control (dry-run). El token por defecto es de desarrollo (rol supervisor). */
 
 const BASE = '';
@@ -5,9 +6,17 @@ const BASE = '';
 export const CONTROL_TOKEN_KEY = 'mcp.control.token';
 export const CONTROL_TOKEN_DEFECTO = 'dev-supervisor';
 
+/** Token para el control: el de la sesión; las claves dev-… solo sirven sin autenticación. */
 export function tokenControl(): string {
+  const s = tokenSesion();
+  if (s) return s;
   if (typeof localStorage === 'undefined') return CONTROL_TOKEN_DEFECTO;
   return localStorage.getItem(CONTROL_TOKEN_KEY) ?? CONTROL_TOKEN_DEFECTO;
+}
+
+/** Nombre a mostrar del usuario que da las órdenes (nunca el token). */
+export function nombreControl(): string {
+  return sesionActual()?.usuario ?? tokenControl();
 }
 
 export interface RespuestaControl<T> {

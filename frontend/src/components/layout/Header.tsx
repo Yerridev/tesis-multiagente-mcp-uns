@@ -3,6 +3,8 @@ import type { LinkState } from '../../types';
 import { timeOnly, dateOnly } from '../../utils/format';
 import { IconMenu } from '../common/Icons';
 import { usePlantaModo } from '../scada/plantaSimulada';
+import { alMenos, autenticacionHabilitada, cerrarSesion, ROL_TEXTO, useRol, useUsuario } from '../../services/auth';
+import type { Route } from '../../router';
 
 interface Props {
   title: string;
@@ -11,6 +13,7 @@ interface Props {
   now: number;
   onOpenMenu: () => void;
   onAction: (message: string) => void;
+  onNavigate?: (route: Route) => void;
 }
 
 const LINK_LABEL: Record<LinkState, { text: string; cls: string }> = {
@@ -20,8 +23,12 @@ const LINK_LABEL: Record<LinkState, { text: string; cls: string }> = {
   disconnected: { text: 'Sin conexión', cls: 'pill-err' },
 };
 
-export function Header({ title, subtitle, link, now, onOpenMenu, onAction }: Props) {
+export function Header({ title, subtitle, link, now, onOpenMenu, onAction, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
+  const usuario = useUsuario();
+  const rol = useRol();
+  const nombre = usuario?.nombre ?? (autenticacionHabilitada() ? 'Sin sesión' : 'Modo desarrollo');
+  const inicial = (nombre.trim()[0] ?? '?').toUpperCase();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,10 +76,10 @@ export function Header({ title, subtitle, link, now, onOpenMenu, onAction }: Pro
             aria-expanded={open}
             aria-haspopup="menu"
           >
-            <span className="user-av">K</span>
+            <span className="user-av">{inicial}</span>
             <span className="user-name">
-              <b>Keysi B.</b>
-              <small>Operadora · supervisión</small>
+              <b>{nombre}</b>
+              <small>{usuario ? `${usuario.usuario} · ${ROL_TEXTO[rol]}` : 'sin login (dev)'}</small>
             </span>
             <span aria-hidden="true">▾</span>
           </button>
@@ -81,26 +88,31 @@ export function Header({ title, subtitle, link, now, onOpenMenu, onAction }: Pro
               type="button"
               onClick={() => {
                 setOpen(false);
-                onAction('Perfil de operadora: pendiente de implementar.');
+                onAction(usuario
+                  ? `${usuario.nombre} (${usuario.usuario}) · ${ROL_TEXTO[rol]} · sesión hasta ${new Date(usuario.expira).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Sin autenticación: el backend corre sin base de usuarios (modo desarrollo).');
               }}
             >
               Mi perfil
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onAction('Configuración: pendiente de implementar.');
-              }}
-            >
-              Configuración
-            </button>
+            {alMenos(rol, 'admin') && onNavigate ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate('usuarios');
+                }}
+              >
+                Usuarios y accesos
+              </button>
+            ) : null}
             <div className="drop-sep" />
             <button
               type="button"
               onClick={() => {
                 setOpen(false);
-                onAction('La autenticación aún no está implementada.');
+                if (usuario) void cerrarSesion();
+                else onAction('Sin autenticación habilitada no hay sesión que cerrar.');
               }}
             >
               Cerrar sesión

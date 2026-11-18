@@ -53,7 +53,11 @@ docker info >nul 2>&1
 if %errorlevel% neq 0 (
   echo   Docker no esta corriendo: se aplicara cuando lo abras ^(no hace falta nada mas^)
 ) else (
-  docker restart mcp-mosquitto
+  rem se RECREA (no solo restart) para que vuelva a publicar el puerto en 192.168.114.100
+  pushd "%~dp0.."
+  call "%~dp0_modo-planta.bat"
+  docker compose -f compose.yaml -f compose.override.yaml up -d mosquitto
+  popd
 )
 echo.
 echo ===================== IP guardadas en "%ADAPTADOR%" =====================

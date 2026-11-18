@@ -1,0 +1,390 @@
+{
+ "equipo": "presion-mcp09",
+ "nodos": {
+  "transmisor": {
+   "nombre": "Transmisor de presion Danfoss MBS 3000 (0-6 bar, 4-20 mA)",
+   "tipo": "sensor",
+   "variables": [
+    "presion/psi",
+    "presion/transmisor_ma",
+    "presion/ai0_ma"
+   ]
+  },
+  "valvula": {
+   "nombre": "Valvula proporcional Danfoss EV260B (0-10 V)",
+   "tipo": "actuador",
+   "variables": [
+    "valvula/salida",
+    "pid/valvula_pc"
+   ]
+  },
+  "pid": {
+   "nombre": "PID de LabVIEW RT en el cFP-2200",
+   "tipo": "control",
+   "variables": [
+    "pid/setpoint_pc",
+    "pid/setpoint_hmi",
+    "pid/cv",
+    "pid/kp",
+    "pid/ti",
+    "pid/td"
+   ]
+  },
+  "tanque_t2": {
+   "nombre": "Tanque presurizado T2 (AISI 316, 20,4 L)",
+   "tipo": "proceso",
+   "variables": [
+    "presion/psi",
+    "presion/transmisor_ma"
+   ]
+  },
+  "variador": {
+   "nombre": "Variador Schneider Altivar 11 (ATV11HU29M3A)",
+   "tipo": "actuador",
+   "variables": [
+    "bomba/salida_variador",
+    "estado/bomba_habilitada"
+   ]
+  },
+  "selector": {
+   "nombre": "Selector CONTROL LOCAL - REMOTO",
+   "tipo": "mando",
+   "variables": [
+    "estado/selector_remoto",
+    "estado/selector_local"
+   ]
+  },
+  "tanque_t1": {
+   "nombre": "Tanque T1 de recogida (AISI 316, 30,8 L)",
+   "tipo": "equipo",
+   "variables": [
+    "estado/switch_nivel_bajo",
+    "estado/switch_nivel_alto"
+   ]
+  },
+  "supervisor": {
+   "nombre": "Supervisor: SCADA PRESION.exe (PC .80) o HMI TPC-2106T",
+   "tipo": "mando",
+   "variables": [
+    "pid/setpoint_pc",
+    "pid/setpoint_hmi",
+    "pid/valvula_pc"
+   ]
+  },
+  "presostato": {
+   "nombre": "Presostato Danfoss KPI",
+   "tipo": "sensor",
+   "variables": [
+    "estado/presostato"
+   ]
+  },
+  "pulsadores": {
+   "nombre": "Pulsadores ARRANQUE / PARADA MANUAL",
+   "tipo": "mando",
+   "variables": [
+    "estado/pulsador_arranque",
+    "estado/pulsador_parada"
+   ]
+  },
+  "potenciometro_variador": {
+   "nombre": "Perilla frontal del Altivar 11",
+   "tipo": "mando",
+   "variables": []
+  },
+  "interruptores_nivel_t1": {
+   "nombre": "Interruptores de nivel de T1 (Kobold NKP)",
+   "tipo": "sensor",
+   "variables": [
+    "estado/switch_nivel_bajo",
+    "estado/switch_nivel_alto",
+    "estado/alarma_nivel_bajo",
+    "estado/alarma_nivel_alto"
+   ]
+  },
+  "pac": {
+   "nombre": "PAC NI Compact FieldPoint cFP-2200 (192.168.114.8)",
+   "tipo": "control",
+   "variables": []
+  },
+  "bomba": {
+   "nombre": "Bomba centrifuga Pentax Ultra U5 120/3T (1,2 HP)",
+   "tipo": "equipo",
+   "variables": [
+    "estado/bomba_habilitada",
+    "estado/sistema_funcionando"
+   ]
+  }
+ },
+ "relaciones": [
+  {
+   "nota": "La bomba aspira de T1",
+   "de": "tanque_t1",
+   "a": "bomba",
+   "rel": "alimenta"
+  },
+  {
+   "nota": "Nivel bajo de T1: protege la bomba de trabajar en seco (logica sin confirmar)",
+   "de": "interruptores_nivel_t1",
+   "a": "bomba",
+   "rel": "protege"
+  },
+  {
+   "de": "variador",
+   "a": "bomba",
+   "rel": "acciona"
+  },
+  {
+   "nota": "21-oct-2026: el Altivar toma la velocidad de su perilla frontal, NO de la salida 0-10 V del cFP",
+   "de": "potenciometro_variador",
+   "a": "variador",
+   "rel": "fija_velocidad"
+  },
+  {
+   "nota": "En REMOTO la salida del PID (0-10 V, AO0) es la consigna de velocidad; hoy el variador no la obedece",
+   "de": "pid",
+   "a": "variador",
+   "rel": "controla"
+  },
+  {
+   "nota": "Al entrar agua al tanque cerrado se comprime el aire",
+   "de": "bomba",
+   "a": "tanque_t2",
+   "rel": "presuriza"
+  },
+  {
+   "nota": "Salida de T2 hacia T1; mas apertura = menos presion (perturbacion)",
+   "de": "valvula",
+   "a": "tanque_t2",
+   "rel": "despresuriza"
+  },
+  {
+   "de": "tanque_t2",
+   "a": "tanque_t1",
+   "rel": "descarga_en"
+  },
+  {
+   "nota": "psi = (mA - 4)/16 x 87; validado contra la HMI",
+   "de": "transmisor",
+   "a": "tanque_t2",
+   "rel": "mide"
+  },
+  {
+   "nota": "Corte por sobrepresion (logica sin confirmar)",
+   "de": "presostato",
+   "a": "tanque_t2",
+   "rel": "protege"
+  },
+  {
+   "nota": "TRANS_PRESION es la PV del PID",
+   "de": "pid",
+   "a": "transmisor",
+   "rel": "lee"
+  },
+  {
+   "nota": "REMOTO habilita el PID con el supervisor; LOCAL = marcha con pulsadores",
+   "de": "selector",
+   "a": "pid",
+   "rel": "habilita"
+  },
+  {
+   "nota": "En LOCAL: habilita el variador y abre la valvula al 50 %",
+   "de": "pulsadores",
+   "a": "bomba",
+   "rel": "arranca"
+  },
+  {
+   "nota": "SP, Kp, Ti, Td y apertura de valvula",
+   "de": "supervisor",
+   "a": "pid",
+   "rel": "fija_setpoint"
+  },
+  {
+   "de": "supervisor",
+   "a": "valvula",
+   "rel": "fija_apertura"
+  },
+  {
+   "de": "pac",
+   "a": "pid",
+   "rel": "ejecuta"
+  }
+ ],
+ "senales": [
+  {
+   "clave": "presion/transmisor_ma",
+   "descripcion": "Corriente del transmisor Danfoss MBS 3000 segun el programa (TRANS_PRESION viene en A)",
+   "unidad": "mA",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/TRANS_PRESION"
+  },
+  {
+   "clave": "presion/psi",
+   "descripcion": "Presion de T2: (mA-4)/16*87, misma escala que la HMI del programa original (validado 21-oct-2026)",
+   "unidad": "psi",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/TRANS_PRESION"
+  },
+  {
+   "clave": "presion/ai0_ma",
+   "descripcion": "Canal crudo AIO-610 Input 0 (respaldo independiente del programa)",
+   "unidad": "mA",
+   "hipotesis": false,
+   "direccion": "FP/3AIO/00"
+  },
+  {
+   "clave": "bomba/potenciometro_v",
+   "descripcion": "Perilla CONTROL MANUAL del tablero (AIO-610 Input 3, 0-10 V); en LOCAL el programa la copia a la consigna del variador (AO0)",
+   "unidad": "V",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/POTENCIOMETRO"
+  },
+  {
+   "clave": "bomba/salida_variador",
+   "descripcion": "Consigna 0-10 V al variador Altivar 11 (AIO-610 Output 0); = salida del PID en REMOTO, 0 en LOCAL",
+   "unidad": "V",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/VARIADOR"
+  },
+  {
+   "clave": "valvula/salida",
+   "descripcion": "Consigna 0-10 V a la valvula proporcional Danfoss EV260B (AIO-610 Output 1); 1 V = 10 % de apertura",
+   "unidad": "V",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/VAL_PROPOR"
+  },
+  {
+   "clave": "estado/selector_remoto",
+   "descripcion": "Selector CONTROL en REMOTO = mando automatico, PID con supervisor PC/HMI (DI Ch0; prueba 21-oct-2026)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/SEL_AUTO"
+  },
+  {
+   "clave": "estado/selector_local",
+   "descripcion": "Selector CONTROL en LOCAL = mando manual con pulsadores (DI Ch1)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/SEL_MANUAL"
+  },
+  {
+   "clave": "estado/control_pc",
+   "descripcion": "Arbitraje del supervisor original: True = PC, False = HMI TPC-2106T",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/PC_TPM"
+  },
+  {
+   "clave": "estado/pulsador_arranque",
+   "descripcion": "Pulsador ARRANQUE (DI Ch2, pulso corto)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/ARRANQUE_MANUAL"
+  },
+  {
+   "clave": "estado/pulsador_parada",
+   "descripcion": "Pulsador PARADA (DI Ch3; activo en reposo, probablemente NC)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "DATOS_PAC/PARADA_MANUAL"
+  },
+  {
+   "clave": "estado/presostato",
+   "descripcion": "Presostato Danfoss KPI (DI Ch4)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "DATOS_PAC/PRESOS"
+  },
+  {
+   "clave": "estado/switch_nivel_bajo",
+   "descripcion": "Interruptor de nivel bajo T1 (DI Ch5)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "DATOS_PAC/SWITCH_NB"
+  },
+  {
+   "clave": "estado/switch_nivel_alto",
+   "descripcion": "Interruptor de nivel alto T1 (DI Ch6)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "DATOS_PAC/SWITCH_NA"
+  },
+  {
+   "clave": "estado/sistema_funcionando",
+   "descripcion": "Piloto sistema funcionando (DO Ch0)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/LED_SIST_FUN"
+  },
+  {
+   "clave": "estado/bomba_habilitada",
+   "descripcion": "Habilitacion/marcha del variador (DO Ch1)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/ACT_VARIADOR"
+  },
+  {
+   "clave": "estado/alarma_nivel_alto",
+   "descripcion": "Piloto nivel alto (DO Ch2)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/LED_NA"
+  },
+  {
+   "clave": "estado/alarma_nivel_bajo",
+   "descripcion": "Piloto nivel bajo (DO Ch3)",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "DATOS_PAC/LED_NB"
+  },
+  {
+   "clave": "pid/setpoint_pc",
+   "descripcion": "Setpoint en psi cuando supervisa el SCADA de la PC (10 y 20 psi en la prueba del 21-oct-2026)",
+   "unidad": "psi",
+   "hipotesis": false,
+   "direccion": "pid/setpoint_pc"
+  },
+  {
+   "clave": "pid/setpoint_hmi",
+   "descripcion": "Setpoint cuando supervisa la HMI TPC-2106T",
+   "unidad": "psi",
+   "hipotesis": true,
+   "direccion": "pid/SETPOINT_TPM"
+  },
+  {
+   "clave": "pid/cv",
+   "descripcion": "Salida del PID en V (0-10 V hacia el variador); se satura en 10 V",
+   "unidad": "V",
+   "hipotesis": false,
+   "direccion": "pid/salida_pid"
+  },
+  {
+   "clave": "pid/valvula_pc",
+   "descripcion": "Apertura de valvula fijada desde el SCADA en V (3 = 30 %)",
+   "unidad": "V",
+   "hipotesis": false,
+   "direccion": "pid/valvula_pc"
+  },
+  {
+   "clave": "pid/kp",
+   "descripcion": "Ganancia proporcional (PC); 3.0 el 21-oct-2026",
+   "unidad": "",
+   "hipotesis": false,
+   "direccion": "pid/Kp_PC"
+  },
+  {
+   "clave": "pid/ti",
+   "descripcion": "Tiempo integral (PC)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "pid/Ti_PC"
+  },
+  {
+   "clave": "pid/td",
+   "descripcion": "Tiempo derivativo (PC)",
+   "unidad": "",
+   "hipotesis": true,
+   "direccion": "pid/Td_PC"
+  }
+ ],
+ "conocimiento": "CONOCIMIENTO DE LOS MÓDULOS (grafo de conocimiento de los lienzos + mímicos).\nLas llaves manuales V1-V7 y VF NO tienen señal al PLC: en la planta real su posición no se conoce (solo en la planta simulada).\n\n### PRESIÓN MCP-09 [presion-mcp09]\nTanques y llaves (mímico): T1 = tanque de RECOGIDA abajo (AISI 316, 30,8 L) con switches de nivel alto y bajo. T2 = tanque PRESURIZADO cerrado (AISI 316, 20,4 L) con transmisor de presión, presostato y cargador de aire (colchón de aire).\nCircuito: bomba aspira de T1 → V5 → entra a T2 (al entrar agua se comprime el aire y sube la presión); T2 → válvula proporcional (perturbación) → V2 → retorno a T1. VF + V1 llenan T1; V7 drena T1; V3, V4 y V6 son ramales.\nCondiciones de arranque: T1 sin nivel alto ni bajo; V2 y V5 abiertas; V1, V3, V4, V6, V7 y VF cerradas; consigna > 0; selector en AUTOMÁTICO.\nComponentes: Transmisor de presion Danfoss MBS 3000 (0-6 bar, 4-20 mA) (sensor); Valvula proporcional Danfoss EV260B (0-10 V) (actuador); PID de LabVIEW RT en el cFP-2200 (control); Tanque presurizado T2 (AISI 316, 20,4 L) (proceso); Variador Schneider Altivar 11 (ATV11HU29M3A) (actuador); Selector CONTROL LOCAL - REMOTO (mando); Tanque T1 de recogida (AISI 316, 30,8 L) (equipo); Supervisor: SCADA PRESION.exe (PC .80) o HMI TPC-2106T (mando); Presostato Danfoss KPI (sensor); Pulsadores ARRANQUE / PARADA MANUAL (mando); Perilla frontal del Altivar 11 (mando); Interruptores de nivel de T1 (Kobold NKP) (sensor); PAC NI Compact FieldPoint cFP-2200 (192.168.114.8) (control); Bomba centrifuga Pentax Ultra U5 120/3T (1,2 HP) (equipo)\nRelaciones:\n- Tanque T1 de recogida —alimenta→ Bomba centrifuga Pentax Ultra U5 120/3T: La bomba aspira de T1\n- Interruptores de nivel de T1 —protege→ Bomba centrifuga Pentax Ultra U5 120/3T: Nivel bajo de T1: protege la bomba de trabajar en seco (logica sin confirmar)\n- Variador Schneider Altivar 11 —acciona→ Bomba centrifuga Pentax Ultra U5 120/3T\n- Perilla frontal del Altivar 11 —fija_velocidad→ Variador Schneider Altivar 11: 21-oct-2026: el Altivar toma la velocidad de su perilla frontal, NO de la salida 0-10 V del cFP\n- PID de LabVIEW RT en el cFP-2200 —controla→ Variador Schneider Altivar 11: En REMOTO la salida del PID (0-10 V, AO0) es la consigna de velocidad; hoy el variador no la obedece\n- Bomba centrifuga Pentax Ultra U5 120/3T —presuriza→ Tanque presurizado T2: Al entrar agua al tanque cerrado se comprime el aire\n- Valvula proporcional Danfoss EV260B —despresuriza→ Tanque presurizado T2: Salida de T2 hacia T1; mas apertura = menos presion (perturbacion)\n- Tanque presurizado T2 —descarga_en→ Tanque T1 de recogida\n- Transmisor de presion Danfoss MBS 3000 —mide→ Tanque presurizado T2: psi = (mA - 4)/16 x 87; validado contra la HMI\n- Presostato Danfoss KPI —protege→ Tanque presurizado T2: Corte por sobrepresion (logica sin confirmar)\n- PID de LabVIEW RT en el cFP-2200 —lee→ Transmisor de presion Danfoss MBS 3000: TRANS_PRESION es la PV del PID\n- Selector CONTROL LOCAL - REMOTO —habilita→ PID de LabVIEW RT en el cFP-2200: REMOTO habilita el PID con el supervisor; LOCAL = marcha con pulsadores\n- Pulsadores ARRANQUE / PARADA MANUAL —arranca→ Bomba centrifuga Pentax Ultra U5 120/3T: En LOCAL: habilita el variador y abre la valvula al 50 %\n- Supervisor: SCADA PRESION.exe —fija_setpoint→ PID de LabVIEW RT en el cFP-2200: SP, Kp, Ti, Td y apertura de valvula\n- Supervisor: SCADA PRESION.exe —fija_apertura→ Valvula proporcional Danfoss EV260B\n- PAC NI Compact FieldPoint cFP-2200 —ejecuta→ PID de LabVIEW RT en el cFP-2200"
+}

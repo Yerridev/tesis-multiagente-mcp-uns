@@ -14,6 +14,10 @@ Todos muestran en pantalla lo que van haciendo. Se ejecutan con **doble clic**.
 |---|---|---|
 | **00-instalar-python** | Crea el Python propio del proyecto (`.venv`) e instala las librerías de `requirements.txt` | **Primero de todo** en una PC nueva, o si un bat dice "FALTA .venv" |
 | **29-arranque-automatico** | Rehace el arranque de Windows con los lectores reales (caudal, nivel, presión, temperatura) | Una vez, después del 00. Deja respaldo `.bak` |
+| **30-restablecer-admin** | Borra todos los usuarios/sesiones y vuelve a crear el admin del `.env` | Si olvidas la clave del admin o cambias `ADMIN_PASSWORD` |
+| **31-sistema-multiagente** | Levanta 4 servidores MCP + 4 agentes analistas + orquestador (solo lectura) | Para usar/probar los agentes; dejar abierta |
+| **32-preguntar-agentes** | Hace preguntas al orquestador y muestra plan, informes y veredicto | Con el 31 corriendo |
+| **33-evaluar-agentes** | 30 preguntas automaticas, compara con el backend y calcula los indicadores de la tesis; evidencia en la carpeta 05 | Con el 31 corriendo (~15 min) |
 
 > Todo queda **dentro del proyecto**: Python en `.venv\`, logs de los lectores en `logs\` (rotan a los 20 MB),
 > chats en `registros\`. Solo presión usa además `C:\Users\KST\NI-DS` (sus DLL de NI) y `C:\Python37-32` (32 bits).

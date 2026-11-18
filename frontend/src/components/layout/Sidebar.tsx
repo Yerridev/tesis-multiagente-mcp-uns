@@ -2,6 +2,7 @@ import { useEffect, useState, type ComponentType } from 'react';
 import logoAg from '../../assets/logo-ag.svg';
 import logoMini from '../../assets/logo-40x40.svg';
 import { NAV, type Route } from '../../router';
+import { alMenos, useRol } from '../../services/auth';
 import {
   IconAgent,
   IconCanvas,
@@ -23,6 +24,7 @@ import {
   IconTank,
   IconThermometer,
   IconTopology,
+  IconUsers,
   type IconProps,
 } from '../common/Icons';
 
@@ -45,6 +47,7 @@ const ICONS: Record<string, ComponentType<IconProps>> = {
   bars: IconBarChart,
   chart: IconChart,
   settings: IconSettings,
+  users: IconUsers,
 };
 
 const renderIcon = (key: string) => {
@@ -65,6 +68,7 @@ interface Props {
 
 export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse, open, onCloseMobile }: Props) {
   const [groups, setGroups] = useState<Record<string, boolean>>({});
+  const rol = useRol();
 
   useEffect(() => {
     const initial: Record<string, boolean> = {};
@@ -122,7 +126,7 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse, open, 
           <div key={section.header}>
             <span className="nav-label">{section.header}</span>
 
-            {section.entries.map((entry) =>
+            {section.entries.filter((entry) => entry.kind === 'group' || !entry.rol || alMenos(rol, entry.rol)).map((entry) =>
               entry.kind === 'group' ? (
                 <div className="nav-groupwrap" key={entry.key}>
                   <button

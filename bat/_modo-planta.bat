@@ -18,4 +18,8 @@ if /i "%MODO_ACTUAL%"=="simulado" (
 ) else (
   set "MODO_PLANTA=real"
 )
+rem Broker Mosquitto de Docker (puerto 1884): en la IP del laboratorio si el cable esta conectado
+set "MQTT_LAB_IP=127.0.0.1"
+for /f %%I in ('powershell -NoProfile -Command "if (Get-NetIPAddress -IPAddress 192.168.114.100 -ErrorAction SilentlyContinue | Where-Object { (Get-NetAdapter -InterfaceIndex $_.InterfaceIndex -ErrorAction SilentlyContinue).Status -eq 'Up' }) { '192.168.114.100' } else { '127.0.0.1' }"') do set "MQTT_LAB_IP=%%I"
 echo Modo de planta guardado: %MODO_ACTUAL%  (se mantiene al reconstruir)
+if "%MQTT_LAB_IP%"=="127.0.0.1" (echo Red del laboratorio: SIN CABLE - broker 1884 solo en esta PC; con cable corre 01-red-laboratorio) else (echo Red del laboratorio: OK - broker 1884 en 192.168.114.100)

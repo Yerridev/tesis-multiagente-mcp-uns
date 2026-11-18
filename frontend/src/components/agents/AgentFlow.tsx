@@ -49,23 +49,25 @@ interface Props {
   llm: { activo: boolean; modelo?: string | null };  // modelo de lenguaje (OpenRouter en la nube)
 }
 
-/* Posiciones fijas (x, y) del diagrama */
+/* Posiciones fijas (x, y): operador → orquestador → 4 analistas → 4 servidores MCP (uno por módulo) */
 const POS: Record<string, [number, number]> = {
-  usuario: [300, 0],
-  orquestador: [300, 120],
-  llm: [620, 120],
-  ingesta: [0, 280], validacion: [215, 280], analisis: [430, 280], reportes: [645, 280],
-  'srv-rt': [105, 460], 'srv-hist': [430, 460], 'srv-traz': [645, 460],
+  usuario: [435, 0],
+  orquestador: [435, 120],
+  llm: [800, 120],
+  'analista-nivel': [0, 290], 'analista-caudal': [290, 290], 'analista-presion': [580, 290], 'analista-temperatura': [870, 290],
+  'mcp-nivel': [0, 460], 'mcp-caudal': [290, 460], 'mcp-presion': [580, 460], 'mcp-temperatura': [870, 460],
 };
 
 const SERVIDORES = [
-  { key: 'srv-rt', titulo: 'Servidor MCP · Tiempo real', sub: 'SignalR /hubs/plant · /api/equipment' },
-  { key: 'srv-hist', titulo: 'Servidor MCP · Histórico y análisis', sub: '/api/history · PostgreSQL' },
-  { key: 'srv-traz', titulo: 'Servidor MCP · Trazabilidad', sub: 'auditoría de acciones' },
+  { key: 'mcp-nivel', titulo: 'Servidor MCP · Nivel', sub: ':8001 · 7 herramientas · solo lectura' },
+  { key: 'mcp-caudal', titulo: 'Servidor MCP · Caudal', sub: ':8002 · 7 herramientas · solo lectura' },
+  { key: 'mcp-presion', titulo: 'Servidor MCP · Presión', sub: ':8003 · 7 herramientas · solo lectura' },
+  { key: 'mcp-temperatura', titulo: 'Servidor MCP · Temperatura', sub: ':8004 · 7 herramientas · solo lectura' },
 ];
 
 const USA: Record<string, string[]> = {
-  ingesta: ['srv-rt'], validacion: ['srv-rt'], analisis: ['srv-hist'], reportes: ['srv-hist', 'srv-traz'],
+  'analista-nivel': ['mcp-nivel'], 'analista-caudal': ['mcp-caudal'],
+  'analista-presion': ['mcp-presion'], 'analista-temperatura': ['mcp-temperatura'],
 };
 
 function Diagrama({ agentes, estado, tarea, activos, ocupado, llm }: Props) {
@@ -81,7 +83,7 @@ function Diagrama({ agentes, estado, tarea, activos, ocupado, llm }: Props) {
       n.push({
         id: a.key, type: 'agente', position: { x, y },
         data: {
-          titulo: a.name.startsWith('Agente') ? a.name : `Agente ${a.name}`, sub: a.key === 'orquestador' ? 'Delega el trabajo' : undefined,
+          titulo: a.name.startsWith('Agente') ? a.name : `Agente ${a.name}`, sub: a.key === 'orquestador' ? 'Intérprete + veredicto' : 'Analista · usa su servidor MCP',
           tarea: tarea(a.name), estado: estado(a.key) as EstadoNodo,
           activo: activos.has(a.key) || (a.key === 'orquestador' && ocupado), tipo: 'agente',
         },
@@ -90,7 +92,7 @@ function Diagrama({ agentes, estado, tarea, activos, ocupado, llm }: Props) {
     for (const s of SERVIDORES) {
       n.push({
         id: s.key, type: 'agente', position: { x: POS[s.key][0], y: POS[s.key][1] },
-        data: { titulo: s.titulo, sub: s.sub, estado: 'ok', activo: activos.has(s.key), tipo: 'servidor' },
+        data: { titulo: s.titulo, sub: s.sub, estado: estado(s.key) as EstadoNodo, activo: activos.has(s.key), tipo: 'servidor' },
       });
     }
     n.push({
@@ -111,12 +113,12 @@ function Diagrama({ agentes, estado, tarea, activos, ocupado, llm }: Props) {
     const e: Edge[] = [
       { id: 'u-o', source: 'usuario', target: 'orquestador', animated: ocupado, className: ocupado ? 'af-edge-on' : '' },
       { id: 'o-llm', source: 'orquestador', sourceHandle: 'der', target: 'llm', targetHandle: 'izq', animated: llmOn,
-        label: llm.activo ? 'API externa' : 'desconectado', className: llmOn ? 'af-edge-on' : llm.activo ? '' : 'af-edge-off' },
+        label: llm.activo ? 'OpenRouter' : 'desconectado', className: llmOn ? 'af-edge-on' : llm.activo ? '' : 'af-edge-off' },
     ];
     for (const a of agentes) {
       if (a.key === 'orquestador') continue;
       const on = activos.has(a.key);
-      e.push({ id: `o-${a.key}`, source: 'orquestador', target: a.key, animated: on, className: on ? 'af-edge-on' : '' });
+      e.push({ id: `o-${a.key}`, source: 'orquestador', target: a.key, animated: on, label: on ? 'MQTT' : undefined, className: on ? 'af-edge-on' : '' });
       for (const s of USA[a.key] ?? []) {
         const on2 = on && activos.has(s);
         e.push({ id: `${a.key}-${s}`, source: a.key, target: s, animated: on2, className: on2 ? 'af-edge-on' : '' });
@@ -125,7 +127,7 @@ function Diagrama({ agentes, estado, tarea, activos, ocupado, llm }: Props) {
     return e;
   }, [agentes, activos, ocupado, llm]);
 
-  const { nodes, onNodesChange, onNodeDragStop } = useNodosEstables('diagrama-agentes-v2', base);
+  const { nodes, onNodesChange, onNodeDragStop } = useNodosEstables('diagrama-agentes-v3', base);
 
   return (
     <ReactFlow nodes={nodes} onNodesChange={onNodesChange} onNodeDragStop={onNodeDragStop} nodesDraggable edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.12 }}

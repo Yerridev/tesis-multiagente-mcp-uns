@@ -30,28 +30,36 @@ function Diagrama({ servidores, tools }: { servidores: ServidorMcp[]; tools: Age
   const { nodes: base, edges } = useMemo(() => {
     const nodes: Node<Datos>[] = [];
     const edges: Edge[] = [];
-    let y = 0;
-    for (const s of servidores) {
+    /* Cuadrícula de 2 columnas: cada servidor a la izquierda y sus herramientas a la derecha */
+    const COLUMNAS = 2;
+    const ANCHO_COL = 560;
+    const altoDe = (s: ServidorMcp) => Math.max(1, tools.filter((t) => t.server === s.key).length) * ALTO_TOOL;
+    servidores.forEach((s, idx) => {
+      const col = idx % COLUMNAS;
+      const fila = Math.floor(idx / COLUMNAS);
+      const x0 = col * ANCHO_COL;
+      let y = 0;   // la fila empieza debajo de la fila anterior más alta
+      for (let f = 0; f < fila; f++)
+        y += Math.max(...servidores.slice(f * COLUMNAS, f * COLUMNAS + COLUMNAS).map(altoDe)) + SEP * 2;
       const propias = tools.filter((t) => t.server === s.key);
-      const alto = Math.max(1, propias.length) * ALTO_TOOL;
-      nodes.push({ id: s.key, type: 'n', position: { x: 0, y: y + alto / 2 - 40 },
+      const alto = altoDe(s);
+      nodes.push({ id: s.key, type: 'n', position: { x: x0, y: y + alto / 2 - 40 },
         data: { titulo: `Servidor MCP · ${s.name}`, sub: s.desc, estado: s.estado, tipo: 'servidor' } });
       propias.forEach((t, i) => {
         const id = `${s.key}:${t.name}`;
-        nodes.push({ id, type: 'n', position: { x: 300, y: y + i * ALTO_TOOL }, data: { titulo: t.name, sub: t.description, tipo: 'tool' } });
+        nodes.push({ id, type: 'n', position: { x: x0 + 300, y: y + i * ALTO_TOOL }, data: { titulo: t.name, sub: t.description, tipo: 'tool' } });
         edges.push({ id: `e-${id}`, source: s.key, target: id, className: s.estado === 'ok' ? 'mf-edge-ok' : 'mf-edge' });
       });
       if (!propias.length) {
         const id = `${s.key}:vacio`;
-        nodes.push({ id, type: 'n', position: { x: 300, y }, data: { titulo: 'sin herramientas publicadas', tipo: 'tool' } });
+        nodes.push({ id, type: 'n', position: { x: x0 + 300, y }, data: { titulo: s.estado === 'ok' ? 'sin herramientas publicadas' : 'servidor fuera de línea', tipo: 'tool' } });
         edges.push({ id: `e-${id}`, source: s.key, target: id, className: 'mf-edge' });
       }
-      y += alto + SEP;
-    }
+    });
     return { nodes, edges };
   }, [servidores, tools]);
 
-  const { nodes, onNodesChange, onNodeDragStop } = useNodosEstables('diagrama-servidores-mcp-v2', base);
+  const { nodes, onNodesChange, onNodeDragStop } = useNodosEstables('diagrama-servidores-mcp-v4', base);
 
   return (
     <ReactFlow nodes={nodes} onNodesChange={onNodesChange} onNodeDragStop={onNodeDragStop} nodesDraggable edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.08 }}

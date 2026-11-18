@@ -260,6 +260,15 @@ export const IconSettings = (p: IconProps) => (
   </Icon>
 );
 
+export const IconUsers = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.5 19c0-3.2 2.5-5.4 5.5-5.4s5.5 2.2 5.5 5.4" />
+    <circle cx="17" cy="9" r="2.4" />
+    <path d="M16 13.8c2.6 0 4.5 1.9 4.5 4.6" />
+  </Icon>
+);
+
 export const IconPanel = (p: IconProps) => (
   <Icon {...p}>
     <rect x="3.5" y="4.5" width="17" height="15" rx="2" />

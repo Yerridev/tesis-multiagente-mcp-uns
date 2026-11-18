@@ -80,6 +80,12 @@ services:
       Health__DatabaseEnabled: "true"
       Health__DatabaseHost: timescaledb
       Health__DatabasePort: "5432"
+      # usuarios, sesiones (8 h) e historial de accesos en TimescaleDB (esquema seguridad)
+      Auth__Conexion: Host=timescaledb;Port=5432;Database=${POSTGRES_DB:-mcpindustrial};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-cambiar_esto}
+      Auth__HorasSesion: "8"
+      Auth__AdminUsuario: ${ADMIN_USUARIO:-}
+      Auth__AdminPassword: ${ADMIN_PASSWORD:-}
+      Auth__TokenServicio: ${SERVICIO_TOKEN:-}
     volumes:
       - backend-auditoria:/data/auditoria
       # chats con los agentes (un JSON por conversacion) visibles en la PC: registros/conversaciones
@@ -111,7 +117,9 @@ services:
     # los conectores edge de la VM de presion (192.168.114.80) publiquen aqui.
     # No se publica en la Wi-Fi ni en loopback: el stackDocker sigue siendo interno.
     ports:
-      - "192.168.114.100:1884:1883"
+      # 192.168.114.100 solo existe con el cable del laboratorio; sin el, se publica en 127.0.0.1
+      # (lo decide bat\_modo-planta.bat; 01-red-laboratorio lo vuelve a poner en .100)
+      - "${MQTT_LAB_IP:-192.168.114.100}:1884:1883"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 1883 || exit 1"]
@@ -262,6 +270,8 @@ services:
     environment:
       BACKEND_URL: http://backend:8080
       MCP_NIVEL_PUERTO: "8000"
+      # token de solo lectura para consultar el backend (el backend exige sesion)
+      SERVICIO_TOKEN: ${SERVICIO_TOKEN:-}
     networks:
       - application_net
     depends_on:
@@ -285,6 +295,8 @@ services:
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
       OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
       ASPNETCORE_URLS: http://+:8080
+      # contenedor interno de solo lectura (sin control): sin login
+      Auth__Habilitado: "false"
     networks:
       - application_net
     depends_on:

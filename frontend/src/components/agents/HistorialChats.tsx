@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import type { ConversacionCompleta, ConversacionResumen } from '../../types';
 import { Emergente } from '../common/Emergente';
+import { TextoMd } from './TextoMd';
 
 const ORIGEN: Record<string, string> = { agentes: 'Agentes de IA', lienzo: 'Lienzo' };
 const fecha = (iso: string) => new Date(iso).toLocaleString('es-PE', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -60,7 +61,7 @@ export function HistorialChats({ abierto, onCerrar, onContinuar }: {
         <div className="hc-conv">
           {abiertaConv.mensajes.map((m, i) => (
             <div key={i} className={`hc-msg hc-msg--${m.rol}`}>
-              <div className="hc-burbuja">{m.texto}</div>
+              <div className="hc-burbuja">{m.rol === 'user' ? m.texto : <TextoMd texto={m.texto} />}</div>
               <small>{new Date(m.ts).toLocaleTimeString('es-PE', { hour12: false })}{m.modelo ? ` · ${m.modelo.split('/').pop()}` : m.rol === 'agente' && m.modo === 'rules' ? ' · reglas' : ''}{m.ms ? ` · ${(m.ms / 1000).toFixed(1)} s` : ''}</small>
             </div>
           ))}

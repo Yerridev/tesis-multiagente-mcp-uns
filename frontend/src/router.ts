@@ -15,6 +15,7 @@ export type Route =
   | 'reports'
   | 'status'
   | 'config'
+  | 'usuarios'
   | 'nivel'
   | 'lienzo-planta'
   | 'lienzo-caudal'
@@ -27,6 +28,8 @@ export interface NavItem {
   id: Route;
   label: string;
   icon: string;
+  /** rol mínimo para verla en el menú */
+  rol?: 'operador' | 'supervisor' | 'admin';
 }
 
 export interface NavGroup {
@@ -94,7 +97,11 @@ export const NAV: NavSection[] = [
   },
   {
     header: 'Sistema',
-    entries: [item('status', 'Estado del sistema', 'chart'), item('config', 'Configuración', 'settings')],
+    entries: [
+      item('status', 'Estado del sistema', 'chart'),
+      { ...item('usuarios', 'Usuarios y accesos', 'users'), rol: 'admin' },
+      item('config', 'Configuración', 'settings'),
+    ],
   },
 ];
 
@@ -113,6 +120,7 @@ const TITLES: Record<Route, { title: string; subtitle: string }> = {
   reports: { title: 'Reportes', subtitle: 'Resumen estadístico por módulo' },
   status: { title: 'Estado del sistema', subtitle: 'Verificación en vivo' },
   config: { title: 'Configuración', subtitle: 'Parámetros de la plataforma' },
+  usuarios: { title: 'Usuarios y accesos', subtitle: 'Cuentas, roles e historial de entradas · solo administrador' },
   nivel: { title: 'Módulo de Nivel · MCN-09', subtitle: 'SCADA completo · solo lectura' },
   'lienzo-planta': { title: 'Lienzo · Vista general', subtitle: 'USS Chiclayo · Laboratorio de Automatización y Simulación de Procesos · aula SL01LA07' },
   'lienzo-caudal': { title: 'Lienzo de caudal · MCC-09/002', subtitle: 'Siemens S7-200 CPU226 + CP243-1 · 192.168.114.7 · solo lectura' },

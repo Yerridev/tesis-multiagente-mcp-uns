@@ -4,6 +4,7 @@ import type {
   ConversacionResumen,
   AgentStatus,
   AgentTool,
+  CatalogoMcpRespuesta,
   Equipment,
   HealthInfo,
   HistorySample,
@@ -50,6 +51,9 @@ export const api = {
   temperaturaSenales: () => request<TemperaturaSenales>('/api/equipment/temp-mct09/signals'),
 
   agentTools: () => request<AgentTool[]>('/api/agent/tools'),
+
+  /** servidores MCP reales del sistema multiagente (bat 31): herramientas publicadas y últimas llamadas */
+  mcpCatalogo: () => request<CatalogoMcpRespuesta>('/api/mcp/catalogo'),
 
   agentStatus: () => request<AgentStatus>('/api/agent/status'),
 

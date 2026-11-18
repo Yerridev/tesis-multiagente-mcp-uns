@@ -11,7 +11,7 @@ import { HistoricoModal } from '../components/scada/HistoricoModal';
 import { ConfirmarOrden } from '../components/common/Emergente';
 import { ageSeconds, formatAge, num, timeOnly } from '../utils/format';
 import type { ControlOrden, TemperaturaSenales } from '../types';
-import { enviarControlTemperatura, estadoControlTemperatura, listarOrdenesTemperatura, tokenControl } from '../services/control';
+import { enviarControlTemperatura, estadoControlTemperatura, listarOrdenesTemperatura, nombreControl } from '../services/control';
 
 const ID = 'temp-mct09';
 function real(s: TemperaturaSenales | null, key: string): number | null { const v=s?.valores?.[key]?.valor; if(typeof v==='number') return Number.isFinite(v)?v:null; if(typeof v==='boolean') return v?1:0; const n=typeof v==='string'?Number(v):NaN; return Number.isFinite(n)?n:null; }
@@ -27,7 +27,7 @@ export function ModuleTempPage() {
   const eq=byId[ID]; const samples=useMemo(()=>historyFor(ID).slice(-300),[historyFor]);
   const [pid,setPid]=useState({kp:'',ti:'',td:''});
   const [modo,setModo]=useState<Modo>('real'), [historicoAbierto,setHistoricoAbierto]=useState(false);
-  const [armado,setArmado]=useState(false), [mensaje,setMensaje]=useState('Comprobando control protegido…'), [ordenes,setOrdenes]=useState<ControlOrden[]>([]), [abierto,setAbierto]=useState(false), [sp,setSp]=useState(25), [spArrastre,setSpArrastre]=useState<number|null>(null), [usuario,setUsuario]=useState(tokenControl());
+  const [armado,setArmado]=useState(false), [mensaje,setMensaje]=useState('Comprobando control protegido…'), [ordenes,setOrdenes]=useState<ControlOrden[]>([]), [abierto,setAbierto]=useState(false), [sp,setSp]=useState(25), [spArrastre,setSpArrastre]=useState<number|null>(null), [usuario,setUsuario]=useState(nombreControl());
   // PLC virtual (solo SIMULADOR): recibe las llaves que el operador mueve en el mímico
   const [confirmar,setConfirmar]=useState<'Iniciar'|'Detener'|null>(null);
   const [valvSim,setValvSim]=useState<Record<string,boolean|null>>({}), [spSim,setSpSim]=useState(25);
@@ -35,7 +35,7 @@ export function ModuleTempPage() {
   const simulada=usePlantaModo()==='simulado';   // backend con MODO_PLANTA=simulado
   const [avisoLlave,setAvisoLlave]=useState<string|null>(null);
   const onLlave=useCallback((id:string,abierta:boolean)=>{setAvisoLlave(`${id}: ${abierta?'abriendo':'cerrando'}…`);void moverLlave(ID,id,abierta).then((e)=>setAvisoLlave(e?`${id}: ${e}`:null));},[]);
-  const cargar=async()=>{ const [estado,lista]=await Promise.all([estadoControlTemperatura(),listarOrdenesTemperatura()]); const e=estado.datos?.datos; setArmado(estado.ok&&e?.realArmado===true); setUsuario(estado.datos?.usuario??tokenControl()); if(lista.ok&&lista.datos)setOrdenes(lista.datos); if(!estado.ok)setMensaje(`Control: ${estado.error??'sin respuesta'}`); else if(!e?.realArmado)setMensaje('Control físico bloqueado: modo REAL no armado'); else if(e.proceso.selector!=='PC')setMensaje('Control bloqueado: selector en HMI/local'); else if(!e.telemetria.fresca)setMensaje('Control bloqueado: telemetría vencida'); else setMensaje('Control REAL habilitado · M30 y MW100-MW103'); };
+  const cargar=async()=>{ const [estado,lista]=await Promise.all([estadoControlTemperatura(),listarOrdenesTemperatura()]); const e=estado.datos?.datos; setArmado(estado.ok&&e?.realArmado===true); setUsuario(estado.datos?.usuario??nombreControl()); if(lista.ok&&lista.datos)setOrdenes(lista.datos); if(!estado.ok)setMensaje(`Control: ${estado.error??'sin respuesta'}`); else if(!e?.realArmado)setMensaje('Control físico bloqueado: modo REAL no armado'); else if(e.proceso.selector!=='PC')setMensaje('Control bloqueado: selector en HMI/local'); else if(!e.telemetria.fresca)setMensaje('Control bloqueado: telemetría vencida'); else setMensaje('Control REAL habilitado · M30 y MW100-MW103'); };
   useEffect(()=>{ void cargar(); const i=window.setInterval(()=>void cargar(),3000); return()=>window.clearInterval(i); },[]);
   if(load==='loading')return <LoadingBlock label="Cargando SCADA de temperatura…"/>;
   if(load==='error'||!eq)return <ErrorBlock message={error??'No se recibió el módulo de temperatura.'} onRetry={reload}/>;
@@ -68,7 +68,9 @@ export function ModuleTempPage() {
     window.setTimeout(()=>void cargar(),700);
   };
   // Guarda de una vez los parámetros PID que se hayan escrito (cada uno se verifica con lectura del PLC)
-  const guardarPidTodos=async()=>{ for(const k of ['kp','ti','td'] as const){ if(pid[k]!=='') await guardarPid(k); } };
+  // Solo se envían los parámetros que el operador cambió respecto a lo que tiene el PLC
+  const pidCambiados=()=>(['kp','ti','td'] as const).filter(k=>pid[k]!==''&&Number(pid[k])!==pidVal(k));
+  const guardarPidTodos=async()=>{ for(const k of pidCambiados()) await guardarPid(k); setPid({kp:'',ti:'',td:''}); };
   const estadoCom:EstadoCom=online?'conectado':link==='reconnecting'||link==='connecting'?'reconectando':'sin-comunicacion';
   // SIMULADOR: solo cambia lo que se DIBUJA en el mímico; las órdenes quedan deshabilitadas.
   const sim=modo==='simulador';
@@ -146,9 +148,9 @@ export function ModuleTempPage() {
             <section className="lv-control-card lv-pid"><h3>Control PID</h3>
               <div className="lv-pid-body">
                 <dl>
-                  {(['kp','ti','td'] as const).map(k=><div key={k}><dt>{k==='kp'?'Kp':k==='ti'?'Ti':'Td'}</dt><dd><input type="number" min="0" max="10000" step="1" value={pid[k]} placeholder={pidVal(k)==null?'—':String(pidVal(k))} onChange={e=>setPid({...pid,[k]:e.target.value})}/></dd></div>)}
+                  {(['kp','ti','td'] as const).map(k=><div key={k}><dt>{k==='kp'?'Kp':k==='ti'?'Ti':'Td'}</dt><dd><input type="number" min="0" max="10000" step="1" value={pid[k]!==''?pid[k]:(pidVal(k)==null?'':String(pidVal(k)))} placeholder="—" onChange={e=>setPid({...pid,[k]:e.target.value})}/></dd></div>)}
                 </dl>
-                <button className="lv-pid-apply" disabled={sim||!puede||(pid.kp===''&&pid.ti===''&&pid.td==='')} onClick={()=>void guardarPidTodos()}>Aplicar PID</button>
+                <button className="lv-pid-apply" disabled={sim||!puede||pidCambiados().length===0} title={!puede?'Requiere control armado, PLC en línea y selector en PC':pidCambiados().length===0?'Cambia Kp, Ti o Td para poder aplicar':'Envía los valores cambiados al PLC'} onClick={()=>void guardarPidTodos()}>Aplicar PID</button>
               </div>
             </section>
           </div>

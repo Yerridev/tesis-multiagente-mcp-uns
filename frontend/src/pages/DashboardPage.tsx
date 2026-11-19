@@ -45,7 +45,7 @@ export function DashboardPage({ onNavigate }: Props) {
     <>
       {link === 'disconnected' ? (
         <Banner tone="err">
-          <b>Sin conexión con el hub SignalR /hubs/plant.</b>
+          <b>Sin conexión con el canal SSE /api/stream.</b>
           <span className="spacer" />
           Los valores mostrados son los últimos recibidos; se reintentará automáticamente.
         </Banner>
@@ -83,7 +83,7 @@ export function DashboardPage({ onNavigate }: Props) {
             <i /> Modo supervisión
           </span>
           <span className={`pill ${link === 'connected' ? 'pill-ok pill-live' : 'pill-warn'}`}>
-            <i /> SignalR {link === 'connected' ? 'en vivo' : link}
+            <i /> SSE {link === 'connected' ? 'en vivo' : link}
           </span>
           <span className="pill pill-dark">
             <i /> Última telemetría {lastUpdate ? timeOnly(lastUpdate) : '—'}
@@ -104,7 +104,7 @@ export function DashboardPage({ onNavigate }: Props) {
         <div className={`status-chip ${link === 'connected' ? 'ok' : link === 'disconnected' ? 'err' : 'warn'}`}>
           <span className="dot" />
           <div>
-            <strong>SignalR /hubs/plant</strong>
+            <strong>SSE /api/stream</strong>
             <small>
               {link === 'connected'
                 ? 'Telemetría cada 1 s'
@@ -167,7 +167,7 @@ export function DashboardPage({ onNavigate }: Props) {
           <div>
             <h2>Telemetría en tiempo real</h2>
             <span className="panel-sub">
-              Serie en vivo recibida por SignalR · {historyFor(equipment[0]?.id ?? '').length} muestras en búfer
+              Serie en vivo recibida por SSE · {historyFor(equipment[0]?.id ?? '').length} muestras en búfer
             </span>
           </div>
           <span className={`pill ${link === 'connected' ? 'pill-ok pill-live' : 'pill-idle'}`}>
@@ -175,7 +175,7 @@ export function DashboardPage({ onNavigate }: Props) {
             {link === 'connected' ? 'Recibiendo' : 'En pausa'}
           </span>
         </div>
-        <TrendChart series={charts} size="tall" emptyText="Esperando la primera telemetría del hub SignalR…" />
+        <TrendChart series={charts} size="tall" emptyText="Esperando la primera telemetría del canal SSE…" />
       </section>
 
       {/* Antes era la página "Monitoreo en tiempo real" */}
@@ -213,7 +213,7 @@ export function DashboardPage({ onNavigate }: Props) {
 
       <p className="panel-sub" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          <IconSignal width="14" height="14" /> Hub /hubs/plant
+          <IconSignal width="14" height="14" /> Canal SSE /api/stream
         </span>
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
           <IconDatabase width="14" height="14" /> API /api/equipment · /api/history

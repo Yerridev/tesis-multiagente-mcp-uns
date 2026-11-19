@@ -162,7 +162,7 @@ export type PresionSenales = NivelSenales;
 /** Señales reales del módulo de temperatura (Twido vía MQTT/UNS). */
 export type TemperaturaSenales = NivelSenales;
 
-/** Orden de control remoto (API /api/control + SignalR controlResultado). */
+/** Orden de control remoto (API /api/control + SSE controlResultado). */
 export interface ControlOrden {
   id: string;
   tipo: string;

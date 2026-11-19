@@ -19,6 +19,7 @@ ALTO, BAJO = 85.0, 15.0          # % de los switches de nivel
 LLENADO, VACIADO, TRASVASE = 2.2, 2.5, 2.0   # %/s
 
 RAIZ = "uss/campus/lab-automatizacion/sl01la07"
+FALLAS_PERMITIDAS = {"plc_desconectado", "sensor_congelado"}   # solo existen en el simulador
 
 
 def _ahora() -> str:
@@ -36,6 +37,7 @@ class Llaves:
         self.abiertas = dict(self.nominal)
         self.nivel = {k: (nivel_inicial if nivel_inicial is not None else v) for k, v in self.tanques.items()}
         self._lock = threading.Lock()
+        self._fallas: list[dict] = []     # fallas inyectadas en vivo (evaluacion): <BASE>/sim/cmd/falla
         self._cambio = True
         self._ultimo_pub = 0.0
         self.mq = None
@@ -80,6 +82,12 @@ class Llaves:
                     self.abiertas[ident] = abierta
                     self._cambio = True
                 print(f"  >> llave {ident} {'ABIERTA' if abierta else 'CERRADA'}  (desde el SCADA)")
+        elif topic.endswith("/sim/cmd/falla"):
+            # {"accion": "plc_desconectado", "valor": true}: la aplica el bucle del simulador en el siguiente paso
+            if d.get("accion") in FALLAS_PERMITIDAS:
+                with self._lock:
+                    self._fallas.append({"t": 0, "accion": d["accion"], "valor": d.get("valor"), "nota": "inyectada por MQTT"})
+                print(f"  >> falla recibida: {d['accion']} = {d.get('valor')}")
         elif topic.endswith("/sim/cmd/reiniciar"):
             with self._lock:
                 self.abiertas = dict(self.nominal)
@@ -107,6 +115,11 @@ class Llaves:
                 pub(f"{k}_alto", v >= ALTO)
                 pub(f"{k}_bajo", v <= BAJO)
         pub("planta", "SIMULADA")
+
+    def tomar_fallas(self) -> list[dict]:
+        with self._lock:
+            f, self._fallas = self._fallas, []
+        return f
 
     # ---------------- utilidades ----------------
     def a(self, ident: str) -> bool:
@@ -229,6 +242,9 @@ class ConLlaves:
 
     def resumen(self) -> str:
         return f"{self.plc.resumen()}  |  {self.llaves.resumen()}"
+
+    def tomar_fallas(self) -> list[dict]:
+        return self.llaves.tomar_fallas()
 
     def __getattr__(self, nombre):
         return getattr(self.plc, nombre)

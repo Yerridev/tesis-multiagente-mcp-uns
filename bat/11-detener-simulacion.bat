@@ -26,8 +26,8 @@ set TEMP_CONTROL_HOST=mosquitto
 call "%~dp0_docker-listo.bat" || (pause & exit /b 1)
 call "%~dp0_modo-planta.bat"
 docker compose -f compose.yaml -f compose.override.yaml up -d backend connector-nivel
-echo   arrancando el control real de temperatura (mcp-connector-temperatura)...
-docker start mcp-connector-temperatura
+echo   arrancando el control real de temperatura (mcpy-connector-temperatura)...
+docker start mcpy-connector-temperatura
 echo.
 echo Las ventanas negras de la simulacion quedan abiertas sin proceso: puedes cerrarlas.
 echo Para volver a leer la planta REAL ejecuta: bat\02-iniciar-lectores-reales.bat

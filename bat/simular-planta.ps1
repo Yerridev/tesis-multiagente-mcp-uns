@@ -125,9 +125,9 @@ if (-not (DockerListo)) {
 }
 Push-Location $raiz
 Write-Host '  deteniendo el conector de temperatura REAL de Docker (si existe) para que no tome las ordenes'
-docker stop mcp-connector-temperatura 2>$null | Out-Null
+docker stop mcpy-connector-temperatura 2>$null | Out-Null
 Write-Host '  reiniciando el espejo MQTT (ya no copia ordenes /cmd al broker Docker)'
-docker restart mcp-mirror-tesis 2>$null | Out-Null
+docker restart mcpy-mirror-tesis 2>$null | Out-Null
 Write-Host '  docker compose up -d --build backend connector-nivel frontend  (la primera vez tarda)'
 docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend
 if ($LASTEXITCODE -eq 0) { Write-Host '  backend en MODO_PLANTA=simulado' -ForegroundColor Green } else { Write-Host '  ERROR al levantar Docker: revisa arriba' -ForegroundColor Red }

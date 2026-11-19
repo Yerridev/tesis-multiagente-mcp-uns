@@ -1,5 +1,5 @@
 # =====================================================================
-#  Frontend: React (Node) → Nginx con proxy a /api y /hubs (SignalR/WS)
+#  Frontend: React (Node) → Nginx con proxy a /api y al canal SSE
 #  No incluye tokens ni secretos: la SPA solo habla con el backend vía Nginx.
 # =====================================================================
 FROM node:22-alpine AS build

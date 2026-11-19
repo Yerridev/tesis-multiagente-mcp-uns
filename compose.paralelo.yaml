@@ -1,0 +1,92 @@
+# =====================================================================
+#  STACK PARALELO (Python) — proyecto "mcp-py", INDEPENDIENTE del original
+#
+#  - Solo 2 contenedores: py-backend y py-frontend (web en http://127.0.0.1:8181)
+#  - NO crea Mosquitto, TimescaleDB, conectores, ingestores ni agentes:
+#    LEE el Mosquitto del stack original (red mcp-industrial_application_net)
+#  - SOLO LECTURA: control en DryRun sin escritura + Nginx bloquea POST/PUT
+#    de /api/control y /api/sim -> nunca publica ordenes a los PLC
+#  - Sin login (Auth apagado) y publicado solo en 127.0.0.1
+#
+#  Levantar: bat\39-levantar-py-paralelo.bat   Bajar: bat\40-detener-py-paralelo.bat
+# =====================================================================
+name: mcp-py
+
+services:
+  backend:                      # el nombre "backend" lo usa paralelo.conf (proxy_pass)
+    build:
+      context: .
+      dockerfile: Dockerfile.paralelo-backend
+    container_name: py-backend
+    environment:
+      Mqtt__Host: mcp-mosquitto
+      Mqtt__Port: "1883"
+      Mqtt__CaudalControlHost: host.docker.internal   # solo para el chat: el orquestador (bat 31) escucha ahi
+      Mqtt__CaudalControlPort: "1883"
+      # Broker donde se publicarian las ordenes de cada modulo (aqui NO se publica nada:
+      # Control__Publicar=false).  Se declaran para que la config sea explicita.
+      Mqtt__PresionControlHost: mcp-mosquitto
+      Mqtt__PresionControlPort: "1883"
+      Mqtt__TemperaturaControlHost: mcp-mosquitto
+      Mqtt__TemperaturaControlPort: "1883"
+      # Puente con el orquestador multiagente (que corre en el host con el bat 31).
+      Mqtt__AgentesHost: host.docker.internal
+      Mqtt__AgentesPort: "1883"
+      MODO_PLANTA: real                               # /api/sim responde 409 (ademas lo bloquea Nginx)
+      Control__Modo: DryRun
+      Control__HabilitadoEscritura: "false"
+      CONTROL_REAL: "0"
+      # SOLO LECTURA: el propio backend NO publica ordenes en MQTT (ademas Nginx
+      # bloquea POST/PUT de /api/control y /api/sim).  Doble barrera.
+      Control__Publicar: "false"
+      ControlCaudal__Modo: DryRun
+      ControlCaudal__HabilitadoEscritura: "false"
+      CONTROL_CAUDAL_REAL: "0"
+      ControlPresion__Modo: DryRun
+      ControlPresion__HabilitadoEscritura: "false"
+      CONTROL_PRESION_REAL: "0"
+      ControlTemperatura__Modo: DryRun
+      ControlTemperatura__HabilitadoEscritura: "false"
+      CONTROL_TEMPERATURA_REAL: "0"
+      Control__AuditoriaRuta: /data/auditoria
+      Agente__ConversacionesRuta: /data/conversaciones
+      Lienzo__Ruta: /data/lienzos
+      Auth__Habilitado: "false"
+      Health__DatabaseEnabled: "false"
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
+    volumes:
+      - py-auditoria:/data/auditoria
+      - ./registros/conversaciones:/data/conversaciones   # carpetas del -py, no del original
+      - ./registros/lienzos:/data/lienzos
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - interna
+      - original
+    restart: "no"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.paralelo-frontend
+    container_name: py-frontend
+    ports:
+      - "127.0.0.1:8181:80"
+    networks:
+      - interna
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  py-auditoria:
+
+networks:
+  interna:
+    driver: bridge
+  original:                     # red del stack original: solo para leer su Mosquitto
+    external: true
+    name: mcp-industrial_application_net

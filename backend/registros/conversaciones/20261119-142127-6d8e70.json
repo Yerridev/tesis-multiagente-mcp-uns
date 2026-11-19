@@ -1,0 +1,24 @@
+{
+  "id": "20261119-142127-6d8e70",
+  "origen": "agentes",
+  "usuario": null,
+  "titulo": "estado de la planta",
+  "creada": "2026-11-19T14:21:27.048897-05:00",
+  "actualizada": "2026-11-19T14:21:27.048897-05:00",
+  "mensajes": [
+    {
+      "rol": "user",
+      "texto": "estado de la planta",
+      "ts": "2026-11-19T14:21:27.048897-05:00"
+    },
+    {
+      "rol": "agente",
+      "texto": "No dispongo de datos para esa consulta. Prueba con «estado de la planta», «alarmas», «promedio de caudal» o «estado del PLC».",
+      "ts": "2026-11-19 14:21:27.048897-05:00",
+      "modelo": null,
+      "modo": "rules",
+      "herramientas": [],
+      "ms": null
+    }
+  ]
+}

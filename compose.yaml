@@ -1,12 +1,21 @@
 # =====================================================================
-#  MCP-INDUSTRIAL-NET Â· Docker Compose (base = perfil de producciÃ³n)
-#  Reglas: control DRY-RUN Â· sin secretos en la imagen Â· sin PLC como
-#  requisito de arranque Â· Mosquitto/Postgres/MCP no publicados a la LAN.
+#  MCP-INDUSTRIAL-NET · Docker Compose (base = perfil de producción)
+#  Reglas: control DRY-RUN · sin secretos en la imagen · sin PLC como
+#  requisito de arranque · Mosquitto/Postgres/MCP no publicados a la LAN.
 #  Perfiles: core | simulation | monitoring | edge
 #  Desarrollo/local: usar compose.override.yaml (relaja Mosquitto y
-#  publica solo en loopback los puertos de depuraciÃ³n).
+#  publica solo en loopback los puertos de depuración).
 # =====================================================================
-name: mcp-industrial
+#
+#  STACK COMPLETO PYTHON (proyecto "mcp-industrial-py", contenedores mcpy-*).
+#  Es INDEPENDIENTE del original: otro proyecto, otros contenedores, otros volumenes
+#  (base de datos propia). Usa los MISMOS puertos y los MISMOS PLC que el original,
+#  por eso SOLO se levanta con el original APAGADO:
+#      bat\41-levantar-py-completo.bat   (comprueba que el original este apagado)
+#      bat\42-detener-py-completo.bat
+#  Para mirar el Python con el original encendido: bat 39/40 (solo lectura, :8181).
+# =====================================================================
+name: mcp-industrial-py
 
 x-logging: &logging
   logging:
@@ -21,7 +30,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: mcp-frontend
+    container_name: mcpy-frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     networks:
@@ -38,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: mcp-backend
+    container_name: mcpy-backend
     environment:
       Mqtt__Host: mosquitto
       Mqtt__Port: "1883"
@@ -60,21 +69,26 @@ services:
       Control__AuditoriaRuta: /data/auditoria
       Agente__ConversacionesRuta: /data/conversaciones
       Lienzo__Ruta: /data/lienzos
-      ControlCaudal__Modo: Real
-      ControlCaudal__HabilitadoEscritura: "true"
+      # Control de caudal (S7-200): MODO DRY-RUN por defecto.  Para escribir en
+      # el PLC hacen falta los TRES interruptores a la vez (config + entorno +
+      # selector REMOTO en el tablero): por eso el modo Real NO se arma aquí.
+      ControlCaudal__Modo: ${CONTROL_CAUDAL_MODO:-DryRun}
+      ControlCaudal__HabilitadoEscritura: ${CONTROL_CAUDAL_HABILITADOESCRITURA:-false}
       ControlCaudal__TimeoutSegundos: "12"
       ControlCaudal__ExpiracionSegundos: "20"
-      CONTROL_CAUDAL_REAL: "1"
+      CONTROL_CAUDAL_REAL: ${CONTROL_CAUDAL_REAL:-0}
       # Control de presion (cFP-2200): el conector de escritura vive en la VM
       # LAB-AUTOMATIZACION (192.168.114.80) y usa el mismo broker del stack.
-      ControlPresion__Modo: Real
-      ControlPresion__HabilitadoEscritura: "true"
+      ControlPresion__Modo: ${CONTROL_PRESION_MODO:-DryRun}
+      ControlPresion__HabilitadoEscritura: ${CONTROL_PRESION_HABILITADOESCRITURA:-false}
       ControlPresion__TimeoutSegundos: "12"
       ControlPresion__ExpiracionSegundos: "20"
-      CONTROL_PRESION_REAL: "1"
-      ControlTemperatura__Modo: Real
-      ControlTemperatura__HabilitadoEscritura: "true"
-      CONTROL_TEMPERATURA_REAL: "1"
+      CONTROL_PRESION_REAL: ${CONTROL_PRESION_REAL:-0}
+      ControlTemperatura__Modo: ${CONTROL_TEMPERATURA_MODO:-DryRun}
+      ControlTemperatura__HabilitadoEscritura: ${CONTROL_TEMPERATURA_HABILITADOESCRITURA:-false}
+      ControlTemperatura__TimeoutSegundos: "15"
+      ControlTemperatura__ExpiracionSegundos: "20"
+      CONTROL_TEMPERATURA_REAL: ${CONTROL_TEMPERATURA_REAL:-0}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
       OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
@@ -109,7 +123,7 @@ services:
   # ---------------------------------------------------------------- mosquitto
   mosquitto:
     image: eclipse-mosquitto:2
-    container_name: mcp-mosquitto
+    container_name: mcpy-mosquitto
     volumes:
       - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto-data:/mosquitto/data
@@ -135,7 +149,7 @@ services:
   # ---------------------------------------------------------------- timescaledb
   timescaledb:
     image: timescale/timescaledb:2.17.2-pg16
-    container_name: mcp-timescaledb
+    container_name: mcpy-timescaledb
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mcpindustrial}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -161,7 +175,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcp-ingestor-nivel
+    container_name: mcpy-ingestor-nivel
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -187,7 +201,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcp-ingestor-presion
+    container_name: mcpy-ingestor-presion
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -214,7 +228,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcp-ingestor-caudal
+    container_name: mcpy-ingestor-caudal
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -242,7 +256,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.connector
-    container_name: mcp-connector-nivel
+    container_name: mcpy-connector-nivel
     environment:
       CONECTOR_MODO: ${CONECTOR_MODO:-dry-run}
       CONTROL_REAL: ${CONTROL_REAL:-0}
@@ -269,7 +283,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mcp
-    container_name: mcp-mcp-nivel
+    container_name: mcpy-mcp-nivel
     environment:
       BACKEND_URL: http://backend:8080
       MCP_NIVEL_PUERTO: "8000"
@@ -290,14 +304,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.agents
-    container_name: mcp-agents
+    container_name: mcpy-agents
     environment:
       Mqtt__Host: mosquitto
       Mqtt__Port: "1883"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
       OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
-      ASPNETCORE_URLS: http://+:8080
       # contenedor interno de solo lectura (sin control): sin login
       Auth__Habilitado: "false"
     networks:
@@ -312,7 +325,7 @@ services:
   # ---------------------------------------------------------------- grafana
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: mcp-grafana
+    container_name: mcpy-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-cambiar_esto}
@@ -337,7 +350,7 @@ services:
   # ---------------------------------------------------------------- prometheus
   prometheus:
     image: prom/prometheus:v2.55.1
-    container_name: mcp-prometheus
+    container_name: mcpy-prometheus
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus

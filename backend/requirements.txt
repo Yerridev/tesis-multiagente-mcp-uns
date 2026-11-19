@@ -1,0 +1,16 @@
+# Backend MCP Industrial (Python · FastAPI)
+# Reemplaza al backend ASP.NET Core 10.
+#
+#   python -m pip install -r requirements.txt
+#   uvicorn app.main:app --host 0.0.0.0 --port 5051
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+httpx==0.28.1
+paho-mqtt==2.1.0
+psycopg[binary]==3.2.3
+
+# pruebas
+pytest==8.3.4
+pytest-asyncio==0.25.0

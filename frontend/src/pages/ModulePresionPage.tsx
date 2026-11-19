@@ -376,7 +376,7 @@ export function ModulePresionPage() {
         </div>
       </div>
 
-      <HistoricoModal abierto={historicoAbierto} onClose={() => setHistoricoAbierto(false)} id={eq.id} online={online} muestras={samples.length} ultima={timeOnly(eq.timestamp)} fuente="API REST + SignalR" />
+      <HistoricoModal abierto={historicoAbierto} onClose={() => setHistoricoAbierto(false)} id={eq.id} online={online} muestras={samples.length} ultima={timeOnly(eq.timestamp)} fuente="API REST + SSE" />
       {ordenesAbiertas && (
         <div className="co-modal" role="dialog" aria-modal="true" onClick={() => setOrdenesAbiertas(false)}>
           <div className="co-modal-caja" onClick={(e) => e.stopPropagation()}>

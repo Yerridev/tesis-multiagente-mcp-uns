@@ -14,15 +14,15 @@ if "%POSTGRES_USER%"=="" set POSTGRES_USER=postgres
 if "%POSTGRES_DB%"=="" set POSTGRES_DB=mcpindustrial
 echo.
 echo [1/2] Borrando usuarios y sesiones en TimescaleDB...
-docker exec mcp-timescaledb psql -U %POSTGRES_USER% -d %POSTGRES_DB% -c "TRUNCATE seguridad.sesiones, seguridad.usuarios RESTART IDENTITY;"
-if errorlevel 1 (echo ERROR: no se pudo borrar. Esta levantado mcp-timescaledb? & pause & exit /b 1)
+docker exec mcpy-timescaledb psql -U %POSTGRES_USER% -d %POSTGRES_DB% -c "TRUNCATE seguridad.sesiones, seguridad.usuarios RESTART IDENTITY;"
+if errorlevel 1 (echo ERROR: no se pudo borrar. Esta levantado mcpy-timescaledb? & pause & exit /b 1)
 echo.
 echo [2/2] Recreando el backend para que cree el admin del .env...
-docker compose -f compose.yaml -f compose.override.yaml up -d --force-recreate backend
+docker compose -p mcp-industrial-py -f compose.yaml -f compose.override.yaml up -d --force-recreate backend
 echo.
 echo Esperando 15 s a que arranque...
 timeout /t 15 /nobreak >nul
-docker logs --tail 40 mcp-backend 2>&1 | findstr /i "administrador seguridad"
+docker logs --tail 40 mcpy-backend 2>&1 | findstr /i "administrador seguridad"
 echo.
 echo LISTO. Entra con el usuario y contrasena del .env.
 pause

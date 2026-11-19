@@ -41,7 +41,7 @@ export function MonitorPage() {
             {link === 'connected' ? 'Recibiendo' : 'En pausa'}
           </span>
         </div>
-        <TrendChart series={series} size="tall" emptyText="Esperando telemetría del hub SignalR…" />
+        <TrendChart series={series} size="tall" emptyText="Esperando telemetría del canal SSE…" />
       </section>
 
       <section className="cards-live">

@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Continue'
+$ErrorActionPreference = 'Continue'
 # Rutas DENTRO del proyecto: Python propio (.venv) y logs en logs\ (rotan al pasar 20 MB)
 $raiz = Split-Path -Parent $PSScriptRoot
 $py   = 'C:\Python37-32\python.exe'   # 32 bits: lo exige la DLL de NI-DataSocket

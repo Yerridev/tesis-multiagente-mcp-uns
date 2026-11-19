@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Continue'
+$ErrorActionPreference = 'Continue'
 # Rutas DENTRO del proyecto: Python propio (.venv) y logs en logs\ (rotan al pasar 20 MB)
 $raiz = Split-Path -Parent $PSScriptRoot
 $py   = Join-Path $raiz '.venv\Scripts\python.exe'

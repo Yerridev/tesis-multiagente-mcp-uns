@@ -91,7 +91,7 @@ function Shell() {
 }
 
 export default function App() {
-  /* sin sesión no se monta nada (ni SignalR): login obligatorio. key = token → al cambiar
+  /* sin sesión no se monta nada (ni SSE): login obligatorio. key = token → al cambiar
      de usuario se rehacen la conexión en vivo y los contextos */
   return (
     <AuthGate>

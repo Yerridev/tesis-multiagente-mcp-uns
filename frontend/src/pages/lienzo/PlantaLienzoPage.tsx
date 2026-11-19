@@ -115,7 +115,7 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
 
         <div className="lz-estados">
           <Pill ok={health === 'ok' ? true : health === 'error' ? false : undefined} txt="API REST" />
-          <Pill ok={link === 'connected' ? true : link === 'disconnected' ? false : undefined} txt="SignalR" />
+          <Pill ok={link === 'connected' ? true : link === 'disconnected' ? false : undefined} txt="SSE" />
           <span className="lz-pill">
             <span className="lz-punto" />
             {enLinea}/{EQUIPOS.length} equipos en línea
@@ -131,7 +131,7 @@ export function PlantaLienzoPage({ onNavigate }: { onNavigate: (route: Route) =>
           <section aria-labelledby="lz-t-equipos">
             <div className="lz-sec-cab">
               <h2 id="lz-t-equipos">Equipos integrados</h2>
-              <small>Actualizado {timeOnly(now)} · en vivo por SignalR</small>
+              <small>Actualizado {timeOnly(now)} · en vivo por SSE</small>
             </div>
 
             <div className="lz-tarjetas">

@@ -142,7 +142,7 @@ TAGS = [
 
 
 def ahora():
-    return datetime.now(TZ_LIMA).isoformat(timespec="seconds")
+    return datetime.now(TZ_LIMA).isoformat(timespec="milliseconds")   # ms: para medir la latencia PLC → backend
 
 
 def leer(plc):

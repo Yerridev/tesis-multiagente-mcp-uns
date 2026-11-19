@@ -72,6 +72,5 @@ export const api = {
   conversacion: (id: string) => request<ConversacionCompleta>(`/api/agent/conversaciones/${encodeURIComponent(id)}`),
 };
 
-export const HUB_URL = '/hubs/plant';
 export const EQUIPMENT_IDS = ['caudal-mcc09', 'nivel-mcn09', 'presion-mcp09', 'temp-mct09'] as const;
 export const LEVEL_ID = 'nivel-mcn09';

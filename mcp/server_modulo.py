@@ -153,7 +153,7 @@ def crear_servidor(modulo: str, puerto: int | None = None) -> FastMCP:
     def metadatos() -> dict:
         """Identificación del módulo: código, PLC, IP, protocolo y tópico UNS."""
         return {"modulo": modulo, "equipo": eq_id, "codigo": cfg["codigo"], "plc": cfg["plc"], "ip": cfg["ip"],
-                "protocolo": cfg["protocolo"], "uns_base": f"{UNS}/{eq_id}", "herramientas": "solo lectura"}
+                "protocolo": cfg["protocolo"], "uns_base": cfg["base_uns"], "herramientas": "solo lectura"}
 
     @mcp.tool()
     def grafo_conocimiento() -> dict:

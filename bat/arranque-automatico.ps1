@@ -19,5 +19,5 @@ foreach ($l in $lanz) { $lineas += "start `"$l`" /min powershell -NoProfile -Exe
 Set-Content -Path $cmd -Value $lineas -Encoding Default
 Get-Content $cmd | ForEach-Object { "    $_" }
 
-Write-Host "`n[3/3] Nota: el control de temperatura va en Docker (mcp-connector-temperatura), no aqui." -ForegroundColor Cyan
+Write-Host "`n[3/3] Nota: el control de temperatura va en Docker (mcpy-connector-temperatura), no aqui." -ForegroundColor Cyan
 Write-Host "Listo. Se aplica la proxima vez que inicies sesion en Windows." -ForegroundColor Green

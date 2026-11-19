@@ -25,6 +25,8 @@ obj/
 *.log
 backend/auditoria/*.jsonl
 
+backend/wwwroot/
+
 # Cache incremental de TypeScript
 *.tsbuildinfo
 

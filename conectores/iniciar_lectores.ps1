@@ -1,4 +1,4 @@
-﻿# Arranca los lectores REALES que no esten corriendo y muestra si escriben en logs\
+# Arranca los lectores REALES que no esten corriendo y muestra si escriben en logs\
 $dir  = $PSScriptRoot
 $raiz = Split-Path -Parent $dir
 Write-Host "`n[1/2] Lanzadores (los mismos del arranque automatico)..." -ForegroundColor Cyan

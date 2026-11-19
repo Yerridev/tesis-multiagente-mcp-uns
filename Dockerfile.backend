@@ -1,28 +1,33 @@
 # =====================================================================
-#  Backend ASP.NET Core (multi-stage, usuario sin privilegios)
-#  REST + SignalR + roles + auditoría + control DRY-RUN + lectura MQTT.
+#  Backend MCP Industrial (Python · FastAPI)
+#  REST + SSE + roles + auditoría + control DRY-RUN + lectura MQTT.
 #  Configuración SOLO por variables de entorno (sin claves en la imagen).
 # =====================================================================
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM python:3.12-slim AS build
 WORKDIR /src
-COPY backend/MCP.Industrial.Api.csproj backend/
-RUN dotnet restore backend/MCP.Industrial.Api.csproj
-COPY backend/ backend/
-RUN dotnet publish backend/MCP.Industrial.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+COPY backend/requirements.txt backend/requirements.txt
+RUN python -m venv /opt/venv \
+ && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM python:3.12-slim
 LABEL org.opencontainers.image.title="mcp-industrial-backend"
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH"
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/* \
  && useradd -m -u 10001 -s /usr/sbin/nologin appuser \
  && mkdir -p /data/auditoria && chown appuser:appuser /data/auditoria
 WORKDIR /app
-COPY --from=build /app/publish .
+COPY --from=build /opt/venv /opt/venv
+COPY backend/ /app/
+# La SPA compilada la sirve el propio backend (mismo origen que la API).
+COPY frontend/dist/ /app/wwwroot/
 USER appuser
-ENV ASPNETCORE_URLS=http://+:8080 \
-    DOTNET_EnableDiagnostics=0
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=4s --start-period=20s --retries=5 \
   CMD curl -fsS http://127.0.0.1:8080/health/live >/dev/null || exit 1
-ENTRYPOINT ["dotnet", "MCP.Industrial.Api.dll"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

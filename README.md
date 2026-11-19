@@ -46,7 +46,8 @@ bat\00-instalar-python.bat           # una vez: crea .venv en la raíz
 bat\10-simular-planta.bat            # 4 PLC virtuales + conectores + Docker en modo SIMULADO
 ```
 
-Abrir `http://localhost:8080` y entrar con el usuario de `ADMIN_USUARIO` / `ADMIN_PASSWORD`.
+Abrir `http://localhost:8080` (o el puerto de `FRONTEND_PORT`) y entrar con el usuario de `ADMIN_USUARIO` / `ADMIN_PASSWORD`.
+Si otro programa ocupa el 8080, cambia `FRONTEND_PORT` en `.env` (p. ej. `18080`) y corre `bat\06-reconstruir-frontend.bat`.
 Sistema multiagente: `bat\31-sistema-multiagente.bat` (dejar abierto), luego `bat\32-preguntar-agentes.bat`.
 Para volver a la planta real: `bat\11-detener-simulacion.bat`.
 
@@ -57,7 +58,7 @@ bat\01-red-laboratorio.bat           # IPs fijas en la tarjeta Ethernet + ping a
 bat\02-iniciar-lectores-reales.bat   # lectores de caudal, presión y temperatura
 ```
 
-> ⚠️ La **planta real y la simulada nunca a la vez**. La guía completa de los `.bat` está en [`bat/LEEME-BATS.md`](bat/LEEME-BATS.md).
+> ⚠️ La **planta real y la simulada nunca a la vez**. Tampoco **el stack v1 con la planta simulada**: los ingestores de v1 escuchan el mismo broker y guardarían datos simulados en el histórico real (`uns-timescaledb`). La guía completa de los `.bat` está en [`bat/LEEME-BATS.md`](bat/LEEME-BATS.md).
 
 ### Stack v1 y experimento
 

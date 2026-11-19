@@ -160,7 +160,7 @@ export function ModuleNivelPage() {
           </div>
           <div className="dev-row">
             <span>Origen</span>
-            <b>API + SignalR (simulación)</b>
+            <b>API + SSE (simulación)</b>
           </div>
           <div className="dev-row">
             <span>Comunicación</span>
@@ -177,7 +177,7 @@ export function ModuleNivelPage() {
         <p className="ro-note" style={{ marginTop: 12 }}>
           {stale
             ? `Sin comunicación: la última lectura fue hace ${age ?? 0} s (canal ${link}).`
-            : 'Lectura en vivo recibida por SignalR cada 1 s. Sin escrituras al PLC.'}
+            : 'Lectura en vivo recibida por SSE cada 1 s. Sin escrituras al PLC.'}
         </p>
       </section>
     </div>

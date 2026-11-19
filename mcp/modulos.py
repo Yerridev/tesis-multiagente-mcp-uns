@@ -10,25 +10,31 @@ UNS = "uss/campus/lab-automatizacion/sl01la07"
 
 MODULOS: dict[str, dict] = {
     "nivel": {
-        "equipo": "nivel-mcn09", "codigo": "MCN-09/001", "puerto": 8001,
+        "equipo": "nivel-mcn09", "base_uns": f"{UNS}/nivel-mcn09",
+        "codigo": "MCN-09/001", "puerto": 8001,
         "plc": "Allen-Bradley MicroLogix 1100 + 1762-IF2OF2", "ip": "192.168.114.9",
         "protocolo": "EtherNet/IP (PCCC) TCP 44818",
         "variable": "Nivel del tanque T2 (cm)",
     },
     "caudal": {
-        "equipo": "caudal-mcc09", "codigo": "MCC-09/002", "puerto": 8002,
+        "equipo": "caudal-mcc09", "base_uns": f"{UNS}/caudal-mcc09",
+        "codigo": "MCC-09/002", "puerto": 8002,
         "plc": "Siemens S7-200 CPU226 + CP243-1", "ip": "192.168.114.7",
         "protocolo": "S7comm (ISO-on-TCP) TCP 102",
         "variable": "Caudal de la línea de impulsión (L/min)",
     },
     "presion": {
-        "equipo": "presion-mcp09", "codigo": "MCP-09/001", "puerto": 8003,
+        "equipo": "presion-mcp09", "base_uns": f"{UNS}/presion-mcp09",
+        "codigo": "MCP-09/001", "puerto": 8003,
         "plc": "NI Compact FieldPoint cFP-2200 (LabVIEW RT)", "ip": "192.168.114.8",
         "protocolo": "NI DataSocket / PSP",
         "variable": "Presión del tanque T2 (psi)",
     },
     "temperatura": {
-        "equipo": "temp-mct09", "codigo": "MCT-09/001", "puerto": 8004,
+        # El id del equipo (temp-mct09) NO es la base del topico UNS:
+        # los conectores edge publican en .../temperatura-mct09.
+        "equipo": "temp-mct09", "base_uns": f"{UNS}/temperatura-mct09",
+        "codigo": "MCT-09/001", "puerto": 8004,
         "plc": "Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT", "ip": "192.168.114.10",
         "protocolo": "Modbus TCP 502",
         "variable": "Temperatura del tanque principal (°C)",

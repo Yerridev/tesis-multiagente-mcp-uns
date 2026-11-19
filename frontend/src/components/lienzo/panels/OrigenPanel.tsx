@@ -58,12 +58,12 @@ export function OrigenPanel({ momento, solo }: Props) {
     });
   }, [equipment, historyFor, momento, now, solo]);
 
-  const base = momento === null ? 'GET /api/equipment · /hubs/plant' : `/api/history · momento ${timeOnly(momento)}`;
+  const base = momento === null ? 'GET /api/equipment · /api/stream' : `/api/history · momento ${timeOnly(momento)}`;
 
   return (
     <div className="lz-uns">
       <div className="lz-uns-base" title={base}>
-        backend <b>{momento === null ? ' · SignalR en vivo' : ' · historial'}</b>
+        backend <b>{momento === null ? ' · SSE en vivo' : ' · historial'}</b>
       </div>
       {grupos.map((grupo) => {
         const abierta = abiertas[grupo.id] ?? true;

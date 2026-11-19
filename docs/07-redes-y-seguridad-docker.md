@@ -44,9 +44,19 @@ Verificado con `docker inspect`:
   se inyecta con `OPENROUTER_API_KEY` desde `.env` (gitignored).
 - `docker inspect mcp-backend` confirma `OPENROUTER_API_KEY=` vacío y
   `docker history` no contiene `sk-or-`.
-- ⚠️ **Tarea manual urgente**: la clave `sk-or-v1-6d65…` sigue en el **historial de
-  git** del repo (appsettings viejo). **Rotarla en openrouter.ai** y, si el repo es
-  público/colaborativo, purgarla del historial (`git filter-repo`).
+- ✅ **Rotación de secretos (2026-11-19)**: se comprobó que **ninguna clave
+  completa está en el historial de git** (`git log --all -S "sk-or-v1-"` solo
+  encuentra el prefijo truncado `sk-or-v1-6d65…` de esta misma nota; el barrido
+  de todos los blobs no encuentra ninguna clave de 20+ caracteres). La exposición
+  real eran los archivos `.env` en disco. Se rotaron:
+  `OPENROUTER_API_KEY` (retirada, hay que generar otra y revocar la anterior
+  en openrouter.ai), `ADMIN_PASSWORD`, `SERVICIO_TOKEN`, `POSTGRES_PASSWORD`,
+  `INGESTOR_PASSWORD`, `BACKEND_RO_PASSWORD` y `GRAFANA_ADMIN_PASSWORD`.
+  Las contraseñas de la base y de Grafana se cambiaron **dentro** de los
+  servidores (`ALTER ROLE` y `grafana cli admin reset-admin-password`), no solo
+  en el `.env`: `GF_SECURITY_ADMIN_PASSWORD` y las variables de Postgres solo
+  se aplican al crear el usuario la primera vez.
+  Comprobado: la clave nueva entra y la anterior devuelve 401.
 - `deploy/secrets/` ignorado por git salvo su README (cómo generar passwd/MQTT).
 
 ## 5. Reglas de seguridad cumplidas

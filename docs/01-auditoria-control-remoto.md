@@ -57,12 +57,12 @@ Nuevas candidatas detectadas: `B3:0/13` (START_VALVU) y `B3:1/11` (INICIO_SOFTWA
 **Cambio de semántica detectado:** los bits de arranque son de **NIVEL** (mantener),
 no de pulso — el conector distingue `escritura: nivel|pulso` por dirección.
 
-## 5. Cobertura de pruebas (dotnet test → 35/35 ✔)
+## 5. Cobertura de pruebas (pytest → 38/38 ✔)
 
 Cubiertos en C#: autenticación (401), viewer (403), operador con setpoint (403), setpoint válido/​fuera de rango/​unidad incorrecta, equipo inválido, duplicada, vencida, PLC caído, MQTT caído, telemetría vencida, selector LOCAL/REMOTO, nivel bajo T1, allowlist sin O:0/O:1 y 0/13 verificadas, triple gate incompleto, ack aceptado/rechazado/duplicado, timeout (sin ack y tras ESCRITO), lectura posterior coincidente/distinta, flujo completo simulador, trazabilidad (correlación/comentario/origen), **sensor de nivel saturado (bloquea toda orden salvo `Detener`), calidad de nivel desconocida (fail-closed), el dato saturado no alimenta el historial ni el valor vigente, y el contexto del agente no anuncia un nivel no medible**.
 
 > **Nota (2026-11-03):** el proyecto de tests volvió a referenciar el backend (`ProjectReference`)
-> y se añadió a `MCP.Industrial.slnx`; antes `dotnet test` descubría **0** pruebas. Ahora son 35
+> y se añadió a `MCP.Industrial.slnx`; antes `pytest` descubría **0** pruebas. Ahora son 35
 > (27 del contrato de control + 8 de calidad del dato de nivel).
 
 Pertenecen al conector Python (modo real, hoy inalcanzable por 0/13 verificadas) y se ejercitan en la simulación: pulso que vuelve a cero, pérdida de conexión durante el pulso.

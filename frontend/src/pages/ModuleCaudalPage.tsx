@@ -107,9 +107,17 @@ export function ModuleCaudalPage() {
     const r = await enviarControlCaudal({ tipo, valor, parametro, unidad, comentario: 'Orden desde SCADA de caudal' });
     setMensaje(r.ok ? `${tipo}: enviada; esperando lectura posterior` : `${tipo}: ${r.error ?? 'rechazado'}`);
     window.setTimeout(() => void cargarOrdenes(), 500);
+    return r.ok;
   };
 
-  const aplicarPid = async () => {
+  /* Setpoint + PID: al aplicar la consigna se envía también el PID que muestra el panel
+     (Kc, Ti, Td). El panel CONTROL PID queda para perturbar/ajustar a mano después. */
+  const aplicarSetpoint = async (v: number) => {
+    if (!(await mandar('Setpoint', v, undefined, 'L/min'))) return;
+    await aplicarPid('Setpoint y PID enviados; esperando lecturas posteriores');
+  };
+
+  const aplicarPid = async (mensajeFinal = 'PID enviado; esperando tres lecturas posteriores') => {
     const valores = [
       ['kc', Number(kc)],
       ['ti', Number(ti)],
@@ -133,7 +141,7 @@ export function ModuleCaudalPage() {
         return;
       }
     }
-    setMensaje('PID enviado; esperando tres lecturas posteriores');
+    setMensaje(mensajeFinal);
     window.setTimeout(() => void cargarOrdenes(), 500);
   };
 
@@ -326,7 +334,7 @@ export function ModuleCaudalPage() {
               <KnobControl value={Number(sp)} max={140} ticks={[0, 20, 40, 60, 80, 100, 120, 140]}
                 label={`Setpoint ${eq.unit}`} disabled={sim ? !plcOk : !armado} editable
                 onChange={(v) => setSp(String(v))}
-                onCommit={(v) => (sim ? plc.cargarSetpoint(v) : void mandar('Setpoint', v, undefined, 'L/min'))} />
+                onCommit={(v) => (sim ? plc.cargarSetpoint(v) : void aplicarSetpoint(v))} />
             </div>
         </section>
         </div>
@@ -348,7 +356,7 @@ export function ModuleCaudalPage() {
             <dt>Tasa</dt><dd>1 segundo</dd>
             <dt>Muestras</dt><dd>{samples.length}</dd>
             <dt>Última lectura</dt><dd className={online ? undefined : 'nodata'}>{online ? timeOnly(eq.timestamp) : 'Sin datos'}</dd>
-            <dt>Fuente</dt><dd>API REST + SignalR</dd>
+            <dt>Fuente</dt><dd>API REST + SSE</dd>
           </dl>
         </div>
       </div>}

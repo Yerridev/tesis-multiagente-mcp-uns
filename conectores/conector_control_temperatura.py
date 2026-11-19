@@ -5,7 +5,9 @@ Solo permite memorias de mando identificadas en el programa y SCADA antiguo:
   %M30    inicio/parada del lazo de PC
   %MW100  setpoint PID, 0..4095 = 0..100 C
   %MW101..103 parametros PID Kp, Ti y Td.
-Nunca escribe %Q ni %MW10 (variador).
+  %MW10   velocidad de bomba (variador), se escribe al Iniciar (--bomba-pct, 80 %).
+           Al encender el PLC queda en 0 % y sin bomba el sensor no ve el agua caliente.
+Nunca escribe %Q.
 Modo real exige: --habilitado-real, CONTROL_TEMPERATURA_REAL=1,
 selector PC (%M0) activo, HMI (%M1) inactivo y sin fallas de nivel.
 """
@@ -75,6 +77,7 @@ def main():
     ap.add_argument("--plc", default="192.168.114.10"); ap.add_argument("--unit", type=int, default=1)
     ap.add_argument("--broker", default="127.0.0.1"); ap.add_argument("--puerto", type=int, default=1883)
     ap.add_argument("--habilitado-real", action="store_true")
+    ap.add_argument("--bomba-pct", type=float, default=float(os.getenv("BOMBA_PCT", "80")))
     a = ap.parse_args(); socket.setdefaulttimeout(5)
     real = a.habilitado_real and os.getenv("CONTROL_TEMPERATURA_REAL") == "1"
     plc = Twido(a.plc, a.unit)
@@ -112,7 +115,13 @@ def main():
                 plc.write_reg(direccion, int(valor)); time.sleep(.3); leido = plc.reg(direccion)
                 if leido == int(valor): return ack(client, p, "Confirmado", escrito=True, valor_esperado=valor, valor_leido=leido)
                 return ack(client, p, "Error", "LECTURA_NO_COINCIDE", escrito=True, valor_esperado=valor, valor_leido=leido)
-            valor = tipo == "Iniciar"; plc.write_coil(30, valor); time.sleep(.3)
+            valor = tipo == "Iniciar"
+            if valor:
+                raw_b = round(max(0, min(100, a.bomba_pct)) * 4095 / 100)
+                plc.write_reg(10, raw_b); time.sleep(.3); leido_b = plc.reg(10)
+                print(f"{iso()} bomba %MW10={raw_b} ({a.bomba_pct:.0f} %) leido={leido_b}", flush=True)
+                if abs(leido_b - raw_b) > 1: return ack(client, p, "Error", "BOMBA_NO_COINCIDE", escrito=True, valor_esperado=raw_b, valor_leido=leido_b)
+            plc.write_coil(30, valor); time.sleep(.3)
             escrito = plc.coil(30)
             if escrito != valor: return ack(client, p, "Error", "LECTURA_NO_COINCIDE", escrito=True, valor_esperado=1 if valor else 0, valor_leido=1 if escrito else 0)
             limite = time.time() + 7

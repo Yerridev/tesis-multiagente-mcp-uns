@@ -31,7 +31,7 @@ export interface SesionUsuario {
 const CLAVE = 'mcp.auth';
 const oyentes = new Set<() => void>();
 let actual: SesionUsuario | null = leer();
-/** false = el backend no exige login (dotnet run local sin base): se usan las claves dev-… */
+/** false = el backend no exige login (backend local sin base): se usan las claves dev-… */
 let authHabilitada = true;
 
 function leer(): SesionUsuario | null {

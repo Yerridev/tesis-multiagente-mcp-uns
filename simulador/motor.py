@@ -22,7 +22,8 @@ async def bucle(plc, aplicar: Callable[[dict], None], escenario: dict | None,
         reloj = ahora
         while avanzar > 1e-9:
             dt = min(PASO, avanzar)
-            for ev in rep.pendientes(t_sim):
+            externas = plc.tomar_fallas() if hasattr(type(plc), "tomar_fallas") else []
+            for ev in rep.pendientes(t_sim) + externas:
                 aplicar(ev)
                 print(f"  >> evento t={ev['t']} s: {ev['accion']} = {ev.get('valor')}"
                       + (f"  ({ev['nota']})" if ev.get("nota") else ""))

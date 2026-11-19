@@ -21,7 +21,7 @@ export function StatusPage() {
     },
     {
       ico: <IconSignal />,
-      name: 'Hub SignalR · /hubs/plant',
+      name: 'Canal SSE · /api/stream',
       sub: 'Telemetría en tiempo real cada 1 s',
       cls: link === 'connected' ? 'sys-ok' : link === 'disconnected' ? 'sys-err' : 'sys-warn',
       label:
@@ -37,7 +37,7 @@ export function StatusPage() {
     {
       ico: <IconDatabase />,
       name: 'Fuente de datos',
-      sub: 'API REST + SignalR · historial en memoria del backend (30 min por equipo)',
+      sub: 'API REST + SSE · historial en memoria del backend (30 min por equipo)',
       cls: 'sys-warn',
       label: 'En memoria',
     },

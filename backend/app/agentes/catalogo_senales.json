@@ -1,0 +1,969 @@
+{
+  "Nivel": [
+    {
+      "clave": "nivel/raw",
+      "desc": "PV del PID PD12:0 (sensor ultrasonico TS-30S, mide distancia: baja al llenar)",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "N7:4"
+    },
+    {
+      "clave": "nivel/cm",
+      "desc": "Nivel del tanque 2 calibrado en 4 puntos: (16348 - N7:4)/400, mediana de 3 muestras; valido hasta ~40 cm",
+      "unidad": "cm",
+      "hipotesis": false,
+      "dir": "N7:4"
+    },
+    {
+      "clave": "nivel/pct",
+      "desc": "Nivel del tanque 2 en % de su altura total (60 cm)",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "N7:4"
+    },
+    {
+      "clave": "nivel/fuera_rango_sensor",
+      "desc": "True si el agua supera el rango util del sensor (~40 cm); el valor en cm deja de ser fiable",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "N7:4"
+    },
+    {
+      "clave": "bomba/potenciometro_raw",
+      "desc": "Potenciometro del tablero (consigna de velocidad en modo LOCAL)",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "I:1.5"
+    },
+    {
+      "clave": "bomba/frecuencia_estimada_hz",
+      "desc": "Frecuencia aproximada del variador ATV11 segun el potenciometro (2 puntos: 24,6 y 33 Hz)",
+      "unidad": "Hz",
+      "hipotesis": true,
+      "dir": "I:1.5"
+    },
+    {
+      "clave": "bomba/salida_plc_raw",
+      "desc": "Consigna analogica PLC->variador; 0 en modo manual",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "O:1.0"
+    },
+    {
+      "clave": "estado/bomba_marcha",
+      "desc": "Bomba/variador en marcha",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "O:0/2"
+    },
+    {
+      "clave": "estado/piloto_marcha",
+      "desc": "Salida activa junto con la marcha de la bomba",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "O:0/3"
+    },
+    {
+      "clave": "valvula/abriendo",
+      "desc": "Valvula Belimo LRB24-3 recibiendo orden de ABRIR",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "O:0/4"
+    },
+    {
+      "clave": "valvula/cerrando",
+      "desc": "Valvula Belimo LRB24-3 recibiendo orden de CERRAR",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "O:0/5"
+    },
+    {
+      "clave": "valvula/t_apertura",
+      "desc": "Tiempo acumulado de apertura (base 0.01 s, carrera 35 s)",
+      "unidad": "s",
+      "hipotesis": false,
+      "dir": "T4:0.ACC"
+    },
+    {
+      "clave": "valvula/t_cierre",
+      "desc": "Tiempo acumulado de cierre (base 0.01 s)",
+      "unidad": "s",
+      "hipotesis": true,
+      "dir": "T4:1.ACC"
+    },
+    {
+      "clave": "estado/selector_remoto",
+      "desc": "Selector en REMOTO (control desde PC/SCADA; hoy sin SCADA solo abre la valvula)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I:0/0"
+    },
+    {
+      "clave": "estado/selector_local",
+      "desc": "Selector en LOCAL (bomba por potenciometro y pulsador de arranque)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I:0/1"
+    },
+    {
+      "clave": "estado/tanque1_con_agua",
+      "desc": "Interruptor de nivel bajo del tanque 1 (reserva): False = nivel bajo, la bomba se detiene",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I:0/2"
+    },
+    {
+      "clave": "estado/alarma_nivel_bajo_tanque1",
+      "desc": "Piloto de nivel bajo del tanque 1",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "O:0/1"
+    },
+    {
+      "clave": "estado/mando_i03",
+      "desc": "Probable interruptor de NIVEL ALTO del tanque 1 (manual: T1 tiene interruptores bajo y alto)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I:0/3"
+    },
+    {
+      "clave": "estado/piloto_o00",
+      "desc": "Probable piloto ALARMA NIVEL ALTO del tablero (va junto con I:0/3)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "O:0/0"
+    },
+    {
+      "clave": "estado/pulsador_arranque",
+      "desc": "Pulsador de ARRANQUE (pulso corto; puede no verse a 1 s de muestreo)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I:0/4"
+    },
+    {
+      "clave": "estado/entrada_5",
+      "desc": "Siempre 1 en las pruebas (posible paro de emergencia NC)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I:0/5"
+    },
+    {
+      "clave": "estado/marcha_interna",
+      "desc": "Bit interno = 1 con la bomba en marcha",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "B3:0/1"
+    },
+    {
+      "clave": "pid/setpoint_a_raw",
+      "desc": "Setpoint copiado a PD12:0.SPS en un modo",
+      "unidad": "cuentas",
+      "hipotesis": true,
+      "dir": "N7:5"
+    },
+    {
+      "clave": "pid/setpoint_b_raw",
+      "desc": "Setpoint copiado a PD12:0.SPS en el otro modo",
+      "unidad": "cuentas",
+      "hipotesis": true,
+      "dir": "N7:6"
+    },
+    {
+      "clave": "pid/cv_raw",
+      "desc": "Salida (CV) del PID PD12:0",
+      "unidad": "cuentas",
+      "hipotesis": true,
+      "dir": "N7:14"
+    },
+    {
+      "clave": "pid/kc_a",
+      "desc": "Kc juego A",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:8"
+    },
+    {
+      "clave": "pid/ti_a",
+      "desc": "Ti juego A",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:9"
+    },
+    {
+      "clave": "pid/td_a",
+      "desc": "Td juego A",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:10"
+    },
+    {
+      "clave": "pid/kc_b",
+      "desc": "Kc juego B",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:11"
+    },
+    {
+      "clave": "pid/ti_b",
+      "desc": "Ti juego B",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:12"
+    },
+    {
+      "clave": "pid/td_b",
+      "desc": "Td juego B",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "N7:13"
+    },
+    {
+      "clave": "valvula/t_apertura_sp",
+      "desc": "Preset de apertura enviado a T4:0 en remoto",
+      "unidad": "s",
+      "hipotesis": true,
+      "dir": "N7:1"
+    },
+    {
+      "clave": "valvula/t_cierre_sp",
+      "desc": "Preset de cierre enviado a T4:1 en remoto",
+      "unidad": "s",
+      "hipotesis": true,
+      "dir": "N7:2"
+    }
+  ],
+  "Caudal": [
+    {
+      "clave": "caudal/pv_pid",
+      "desc": "Caudal medido segun el lazo PID (PV normalizada x 140)",
+      "unidad": "L/min",
+      "hipotesis": false,
+      "dir": "VD159"
+    },
+    {
+      "clave": "caudal/caudalimetro_raw",
+      "desc": "Copia de AIW0 (Kobold DRG 4-20 mA); valida solo en modo REMOTO",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "MW3"
+    },
+    {
+      "clave": "caudal/caudalimetro",
+      "desc": "Caudal por calibracion del caudalimetro (0.005498*AIW0-34.896); medida independiente de la PV del PID",
+      "unidad": "L/min",
+      "hipotesis": false,
+      "dir": "MW3"
+    },
+    {
+      "clave": "caudal/setpoint_pid",
+      "desc": "Setpoint efectivo del lazo PID",
+      "unidad": "L/min",
+      "hipotesis": false,
+      "dir": "VD163"
+    },
+    {
+      "clave": "caudal/setpoint",
+      "desc": "Setpoint remoto (PC/SCADA)",
+      "unidad": "L/min",
+      "hipotesis": false,
+      "dir": "VD400"
+    },
+    {
+      "clave": "caudal/setpoint_hmi",
+      "desc": "Setpoint desde la HMI (se usa cuando M0.6 = modo HMI)",
+      "unidad": "L/min",
+      "hipotesis": false,
+      "dir": "VD408"
+    },
+    {
+      "clave": "actuadores/variador_pct",
+      "desc": "Consigna aplicada al variador (VW8 -> AQW2): salida PID en remoto, potenciometro en local",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "VW8"
+    },
+    {
+      "clave": "actuadores/valvula_pct",
+      "desc": "Apertura aplicada a la valvula proporcional (MW25 -> AQW0); 100 % en local",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "MW25"
+    },
+    {
+      "clave": "actuadores/potenciometro",
+      "desc": "Potenciometro del tablero (copia de AIW2); valido solo en modo LOCAL",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "MW2"
+    },
+    {
+      "clave": "pid/salida",
+      "desc": "Salida calculada por el PID (Mn)",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "VD167"
+    },
+    {
+      "clave": "estado/sistema_funcionando",
+      "desc": "Bomba/sistema en marcha",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "Q0.2"
+    },
+    {
+      "clave": "estado/nivel_alto",
+      "desc": "Indicador de nivel alto del tanque",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "Q0.0"
+    },
+    {
+      "clave": "estado/nivel_bajo",
+      "desc": "Indicador de nivel bajo del tanque (Q0.1 = NOT I0.2)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "Q0.1"
+    },
+    {
+      "clave": "estado/selector_remoto",
+      "desc": "Selector en REMOTO (control por PID)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I0.0"
+    },
+    {
+      "clave": "estado/selector_local",
+      "desc": "Selector en LOCAL (control por potenciometro)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "I0.1"
+    },
+    {
+      "clave": "estado/start_remoto",
+      "desc": "Orden de arranque remota",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "M0.2"
+    },
+    {
+      "clave": "estado/modo_hmi_pc",
+      "desc": "1 = mando desde HMI, 0 = mando desde PC",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "M0.3"
+    },
+    {
+      "clave": "io/i0_3",
+      "desc": "Entrada sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I0.3"
+    },
+    {
+      "clave": "io/i0_4",
+      "desc": "Entrada sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I0.4"
+    },
+    {
+      "clave": "io/i0_5",
+      "desc": "Entrada sin documentar, siempre ON. NO es el guardamotor (10-nov: no cambio con el GV2 en STOP); candidata: contacto OF del C60H o paro de emergencia",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I0.5"
+    },
+    {
+      "clave": "io/i0_6",
+      "desc": "Entrada sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I0.6"
+    },
+    {
+      "clave": "io/i0_7",
+      "desc": "Entrada sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "I0.7"
+    },
+    {
+      "clave": "io/q0_3",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q0.3"
+    },
+    {
+      "clave": "io/q0_4",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q0.4"
+    },
+    {
+      "clave": "io/q0_5",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q0.5"
+    },
+    {
+      "clave": "io/q0_6",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q0.6"
+    },
+    {
+      "clave": "io/q0_7",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q0.7"
+    },
+    {
+      "clave": "io/q1_0",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.0"
+    },
+    {
+      "clave": "io/q1_1",
+      "desc": "Orden de marcha (RUN) al variador Altivar 11: sigue a Q0.2 (verificado 10-nov con Detener/Iniciar)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "Q1.1"
+    },
+    {
+      "clave": "io/q1_2",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.2"
+    },
+    {
+      "clave": "io/q1_3",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.3"
+    },
+    {
+      "clave": "io/q1_4",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.4"
+    },
+    {
+      "clave": "io/q1_5",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.5"
+    },
+    {
+      "clave": "io/q1_6",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.6"
+    },
+    {
+      "clave": "io/q1_7",
+      "desc": "Salida sin documentar",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "Q1.7"
+    },
+    {
+      "clave": "pid/kc",
+      "desc": "Ganancia proporcional Kc del lazo",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "VD171"
+    },
+    {
+      "clave": "pid/ti",
+      "desc": "Tiempo integral Ti (no es una ganancia Ki)",
+      "unidad": "min",
+      "hipotesis": false,
+      "dir": "VD179"
+    },
+    {
+      "clave": "pid/td",
+      "desc": "Tiempo derivativo Td (no es una ganancia Kd)",
+      "unidad": "min",
+      "hipotesis": false,
+      "dir": "VD183"
+    },
+    {
+      "clave": "pid/ts",
+      "desc": "Tiempo de muestreo del lazo",
+      "unidad": "s",
+      "hipotesis": false,
+      "dir": "VD175"
+    },
+    {
+      "clave": "pid/mx",
+      "desc": "Bias / suma integral del lazo",
+      "unidad": "fraccion 0-1",
+      "hipotesis": false,
+      "dir": "VD187"
+    }
+  ],
+  "Presion": [
+    {
+      "clave": "presion/transmisor_ma",
+      "desc": "Corriente del transmisor Danfoss MBS 3000 segun el programa (TRANS_PRESION viene en A)",
+      "unidad": "mA",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/TRANS_PRESION"
+    },
+    {
+      "clave": "presion/psi",
+      "desc": "Presion de T2: (mA-4)/16*87, misma escala que la HMI del programa original (validado 21-oct-2026)",
+      "unidad": "psi",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/TRANS_PRESION"
+    },
+    {
+      "clave": "presion/ai0_ma",
+      "desc": "Canal crudo AIO-610 Input 0 (respaldo independiente del programa)",
+      "unidad": "mA",
+      "hipotesis": false,
+      "dir": "FP/3AIO/00"
+    },
+    {
+      "clave": "bomba/potenciometro_v",
+      "desc": "Perilla CONTROL MANUAL del tablero (AIO-610 Input 3, 0-10 V); en LOCAL el programa la copia a la consigna del variador (AO0)",
+      "unidad": "V",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/POTENCIOMETRO"
+    },
+    {
+      "clave": "bomba/salida_variador",
+      "desc": "Consigna 0-10 V al variador Altivar 11 (AIO-610 Output 0); = salida del PID en REMOTO, 0 en LOCAL",
+      "unidad": "V",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/VARIADOR"
+    },
+    {
+      "clave": "valvula/salida",
+      "desc": "Consigna 0-10 V a la valvula proporcional Danfoss EV260B (AIO-610 Output 1); 1 V = 10 % de apertura",
+      "unidad": "V",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/VAL_PROPOR"
+    },
+    {
+      "clave": "estado/selector_remoto",
+      "desc": "Selector CONTROL en REMOTO = mando automatico, PID con supervisor PC/HMI (DI Ch0; prueba 21-oct-2026)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/SEL_AUTO"
+    },
+    {
+      "clave": "estado/selector_local",
+      "desc": "Selector CONTROL en LOCAL = mando manual con pulsadores (DI Ch1)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/SEL_MANUAL"
+    },
+    {
+      "clave": "estado/control_pc",
+      "desc": "Arbitraje del supervisor original: True = PC, False = HMI TPC-2106T",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/PC_TPM"
+    },
+    {
+      "clave": "estado/pulsador_arranque",
+      "desc": "Pulsador ARRANQUE (DI Ch2, pulso corto)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/ARRANQUE_MANUAL"
+    },
+    {
+      "clave": "estado/pulsador_parada",
+      "desc": "Pulsador PARADA (DI Ch3; activo en reposo, probablemente NC)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "DATOS_PAC/PARADA_MANUAL"
+    },
+    {
+      "clave": "estado/presostato",
+      "desc": "Presostato Danfoss KPI (DI Ch4)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "DATOS_PAC/PRESOS"
+    },
+    {
+      "clave": "estado/switch_nivel_bajo",
+      "desc": "Interruptor de nivel bajo T1 (DI Ch5)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "DATOS_PAC/SWITCH_NB"
+    },
+    {
+      "clave": "estado/switch_nivel_alto",
+      "desc": "Interruptor de nivel alto T1 (DI Ch6)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "DATOS_PAC/SWITCH_NA"
+    },
+    {
+      "clave": "estado/sistema_funcionando",
+      "desc": "Piloto sistema funcionando (DO Ch0)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/LED_SIST_FUN"
+    },
+    {
+      "clave": "estado/bomba_habilitada",
+      "desc": "Habilitacion/marcha del variador (DO Ch1)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/ACT_VARIADOR"
+    },
+    {
+      "clave": "estado/alarma_nivel_alto",
+      "desc": "Piloto nivel alto (DO Ch2)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/LED_NA"
+    },
+    {
+      "clave": "estado/alarma_nivel_bajo",
+      "desc": "Piloto nivel bajo (DO Ch3)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "DATOS_PAC/LED_NB"
+    },
+    {
+      "clave": "pid/setpoint_pc",
+      "desc": "Setpoint en psi cuando supervisa el SCADA de la PC (10 y 20 psi en la prueba del 21-oct-2026)",
+      "unidad": "psi",
+      "hipotesis": false,
+      "dir": "pid/setpoint_pc"
+    },
+    {
+      "clave": "pid/setpoint_hmi",
+      "desc": "Setpoint cuando supervisa la HMI TPC-2106T",
+      "unidad": "psi",
+      "hipotesis": true,
+      "dir": "pid/SETPOINT_TPM"
+    },
+    {
+      "clave": "pid/cv",
+      "desc": "Salida del PID en V (0-10 V hacia el variador); se satura en 10 V",
+      "unidad": "V",
+      "hipotesis": false,
+      "dir": "pid/salida_pid"
+    },
+    {
+      "clave": "pid/valvula_pc",
+      "desc": "Apertura de valvula fijada desde el SCADA en V (3 = 30 %)",
+      "unidad": "V",
+      "hipotesis": false,
+      "dir": "pid/valvula_pc"
+    },
+    {
+      "clave": "pid/kp",
+      "desc": "Ganancia proporcional (PC); 3.0 el 21-oct-2026",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "pid/Kp_PC"
+    },
+    {
+      "clave": "pid/ti",
+      "desc": "Tiempo integral (PC)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "pid/Ti_PC"
+    },
+    {
+      "clave": "pid/td",
+      "desc": "Tiempo derivativo (PC)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "pid/Td_PC"
+    }
+  ],
+  "Temperatura": [
+    {
+      "clave": "temperatura/principal_raw",
+      "desc": "Temperatura del tanque principal T2 (con resistencia), copia de %IW0.2.0, PV del PID; sin filtro",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "%MW0"
+    },
+    {
+      "clave": "temperatura/principal_c",
+      "desc": "Temperatura del tanque principal: raw*100/4095, media movil de 10 s (escala del SCADA; falta contraste con termometro)",
+      "unidad": "C",
+      "hipotesis": false,
+      "dir": "%MW0"
+    },
+    {
+      "clave": "temperatura/enfriador_raw",
+      "desc": "Temperatura del tanque de enfriamiento T1, copia de %IW0.2.1; sin filtro",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "%MW1"
+    },
+    {
+      "clave": "temperatura/enfriador_c",
+      "desc": "Temperatura del tanque de enfriamiento: raw*100/4095, media movil de 10 s",
+      "unidad": "C",
+      "hipotesis": false,
+      "dir": "%MW1"
+    },
+    {
+      "clave": "bomba/consigna_raw",
+      "desc": "Consigna PLC -> variador ATV11 (copiada a %QW0.2.0, 0..4095 = 0..10 V)",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "%MW10"
+    },
+    {
+      "clave": "bomba/consigna_pct",
+      "desc": "Velocidad pedida a la bomba en % (100 % = 10 V = 50 Hz con AIt=10U)",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "%MW10"
+    },
+    {
+      "clave": "pid/setpoint_raw",
+      "desc": "Setpoint del PID en cuentas de temperatura; lo escribe el SCADA/HMI y se pierde al apagar el PLC",
+      "unidad": "cuentas",
+      "hipotesis": false,
+      "dir": "%MW100"
+    },
+    {
+      "clave": "pid/setpoint_c",
+      "desc": "Setpoint del PID en C (rango de operacion del fabricante 15-50 C)",
+      "unidad": "C",
+      "hipotesis": false,
+      "dir": "%MW100"
+    },
+    {
+      "clave": "pid/kp",
+      "desc": "Ganancia proporcional (valor de fabrica 5000, unidades internas del Twido)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%MW101"
+    },
+    {
+      "clave": "pid/ti",
+      "desc": "Tiempo integral (fabrica 10; probablemente decimas de segundo)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%MW102"
+    },
+    {
+      "clave": "pid/td",
+      "desc": "Tiempo derivativo (fabrica 10; probablemente decimas de segundo)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%MW103"
+    },
+    {
+      "clave": "pid/salida_pct",
+      "desc": "Ciclo de trabajo del PWM de la resistencia calculado por el PID (0..10000 -> 0..100 %)",
+      "unidad": "%",
+      "hipotesis": false,
+      "dir": "%MW110"
+    },
+    {
+      "clave": "estado/selector_remoto",
+      "desc": "Selector CONTROLADOR en PC (control desde el SCADA de la PC)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M0"
+    },
+    {
+      "clave": "estado/selector_local",
+      "desc": "Selector CONTROLADOR en HMI (control desde la pantalla del tablero); posicion 0 = ambos en False",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M1"
+    },
+    {
+      "clave": "enfriador/pulsador_habilitar",
+      "desc": "Pulsador HABILITAR ENFRIADOR (pulso; puede no verse a 1 s)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M2"
+    },
+    {
+      "clave": "enfriador/pulsador_deshabilitar",
+      "desc": "Pulsador DESHABILITAR ENFRIADOR, contacto NC: True en reposo",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M3"
+    },
+    {
+      "clave": "nivel/principal_alto",
+      "desc": "Interruptor de nivel ALTO del tanque principal activado (True bloquea el lazo)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M4"
+    },
+    {
+      "clave": "nivel/principal_bajo_ok",
+      "desc": "Hay agua sobre el interruptor de nivel BAJO del tanque principal (False bloquea el lazo)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M5"
+    },
+    {
+      "clave": "nivel/enfriador_alto",
+      "desc": "Interruptor de nivel ALTO del tanque de enfriamiento activado",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M6"
+    },
+    {
+      "clave": "nivel/enfriador_bajo_ok",
+      "desc": "Hay agua sobre el interruptor de nivel BAJO del tanque de enfriamiento",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M7"
+    },
+    {
+      "clave": "estado/sistema_funcionando",
+      "desc": "Lazo de control en marcha (piloto SISTEMA FUNCIONANDO, Q0.0.2)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M12"
+    },
+    {
+      "clave": "estado/bomba_marcha",
+      "desc": "Orden de marcha al variador (Q0.0.3 -> LI1 del ATV11)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M13"
+    },
+    {
+      "clave": "estado/resistencia_on",
+      "desc": "Orden PWM a la resistencia (copia de Q0.0.1). Es la ORDEN del PLC: no prueba que circule corriente",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M14"
+    },
+    {
+      "clave": "alarma/nivel_alto_principal",
+      "desc": "Piloto ALARMA NIVEL ALTO del tanque principal",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M15"
+    },
+    {
+      "clave": "alarma/nivel_bajo_principal",
+      "desc": "Piloto ALARMA NIVEL BAJO del tanque principal",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M16"
+    },
+    {
+      "clave": "alarma/nivel_alto_enfriador",
+      "desc": "Piloto ALARMA NIVEL ALTO del tanque de enfriamiento",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M17"
+    },
+    {
+      "clave": "alarma/nivel_bajo_enfriador",
+      "desc": "Piloto ALARMA NIVEL BAJO del tanque de enfriamiento",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M18"
+    },
+    {
+      "clave": "estado/enfriador_on",
+      "desc": "Orden al rele del enfriador (Q0.0.10): enfriador habilitado y temperatura > SP durante %TM0",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M19"
+    },
+    {
+      "clave": "falla/nivel_principal",
+      "desc": "Falla de nivel en el tanque principal: detiene el lazo y borra las ordenes de inicio",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M20"
+    },
+    {
+      "clave": "falla/nivel_enfriador",
+      "desc": "Falla de nivel en el tanque de enfriamiento: detiene el lazo",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M21"
+    },
+    {
+      "clave": "mando/inicio_remoto",
+      "desc": "Orden de inicio desde el SCADA de la PC (se mantiene en True mientras el lazo corre)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M30"
+    },
+    {
+      "clave": "mando/lazo_remoto",
+      "desc": "Lazo en marcha en modo PC",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M31"
+    },
+    {
+      "clave": "mando/inicio_local",
+      "desc": "Orden de inicio desde la HMI del tablero (via SCADA de la PC)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M32"
+    },
+    {
+      "clave": "mando/lazo_local",
+      "desc": "Lazo en marcha en modo HMI",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M33"
+    },
+    {
+      "clave": "enfriador/habilitado_local",
+      "desc": "Enfriador habilitado por los pulsadores del tablero (modo HMI)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "%M40"
+    },
+    {
+      "clave": "enfriador/habilita_pc",
+      "desc": "Habilitacion del enfriador desde el SCADA (no esta en el respaldo del programa de 2009)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "%M41"
+    },
+    {
+      "clave": "enfriador/deshabilita_pc",
+      "desc": "Deshabilitacion del enfriador desde el SCADA (no esta en el respaldo del programa de 2009)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "%M42"
+    },
+    {
+      "clave": "enfriador/permiso_remoto",
+      "desc": "Permiso del enfriador en modo PC (selector PC y sin fallas de nivel)",
+      "unidad": "",
+      "hipotesis": true,
+      "dir": "%M43"
+    },
+    {
+      "clave": "enfriador/t_mayor_sp",
+      "desc": "Temperatura principal mayor que el SP durante el temporizador %TM0 (condicion para enfriar)",
+      "unidad": "",
+      "hipotesis": false,
+      "dir": "%M44"
+    }
+  ]
+}

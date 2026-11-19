@@ -15,7 +15,7 @@ type Estado = 'cargando' | 'sin-backend' | 'abierto' | 'login' | 'dentro';
 /**
  * Puerta de entrada: si el backend exige login (usuarios en TimescaleDB) nada de la
  * plataforma se monta hasta iniciar sesión. `children` recibe el token como key para que
- * SignalR y los contextos se rehagan al cambiar de usuario.
+ * SSE y los contextos se rehagan al cambiar de usuario.
  */
 export function AuthGate({ children }: { children: (clave: string) => ReactNode }) {
   const usuario = useUsuario();

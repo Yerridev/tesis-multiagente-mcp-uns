@@ -62,11 +62,11 @@ def _contexto(historial: list | None) -> str:
     return "Conversación previa:\n" + "\n".join(lineas) + "\n\nPregunta actual: "
 
 
-def interpretar(pregunta: str, llm: LLM, corr: str, historial: list | None = None) -> tuple[dict, str]:
-    """Rol INTÉRPRETE: pregunta → {modulo: subtarea}."""
+def interpretar(pregunta: str, llm: LLM, corr: str, historial: list | None = None, solo_reglas: bool = False) -> tuple[dict, str]:
+    """Rol INTÉRPRETE: pregunta → {modulo: subtarea}. solo_reglas=True es la configuración C (enrutador por reglas, sin IA)."""
     t = time.perf_counter()
     plan, modo = None, "reglas"
-    if llm.disponible:
+    if llm.disponible and not solo_reglas:
         try:
             msg = llm.chat([{"role": "system", "content": INTERPRETE}, {"role": "user", "content": _contexto(historial) + pregunta}])
             j = extraer_json(msg.get("content") or "") or {}
@@ -139,12 +139,13 @@ class Orquestador:
                 if not e["pendientes"]:
                     e["listo"].set()
 
-    def preguntar(self, pregunta: str, origen: str = "cli", historial: list | None = None, modelo: str | None = None) -> dict:
+    def preguntar(self, pregunta: str, origen: str = "cli", historial: list | None = None, modelo: str | None = None,
+                  enrutador_reglas: bool = False) -> dict:
         corr = nuevo_id()
         t0 = time.perf_counter()
         llm = LLM(modelo) if modelo else self.llm   # el chat web puede elegir el modelo
         traza("pregunta", corr=corr, agente="orquestador", origen=origen, pregunta=pregunta[:300], modelo=llm.modelo)
-        plan, modo_int = interpretar(pregunta, llm, corr, historial)
+        plan, modo_int = interpretar(pregunta, llm, corr, historial, solo_reglas=enrutador_reglas)
         espera = {"pendientes": set(plan), "informes": [], "listo": threading.Event()}
         with self._lock:
             self._esperas[corr] = espera

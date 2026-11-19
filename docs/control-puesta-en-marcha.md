@@ -83,7 +83,7 @@ VERIFICADA** (cambiar `verificada: false → true` en ambos archivos) y solo ent
 ```powershell
 # backend (sirve también el frontend en http://127.0.0.1:5050)
 cd backend
-dotnet run --no-launch-profile --urls http://127.0.0.1:5050
+python run.py --puerto 5050
 
 # conector de control (opcional; sin él las órdenes quedan en TIMEOUT tras 10 s)
 ..\tesis-multiagente-mcp-uns\historiador\.venv\Scripts\python.exe `
@@ -122,10 +122,10 @@ motivo, detalle) y en `GET /api/control/auditoria` (solo supervisor+).
 
 ```powershell
 cd tests\MCP.Industrial.Api.Tests
-dotnet test
+pytest
 ```
 
-Cubren (35 pruebas, `dotnet test` en verde): usuario inexistente · viewer sin permiso ·
+Cubren (35 pruebas, `pytest` en verde): usuario inexistente · viewer sin permiso ·
 operador con setpoint · setpoint válido/fuera de rango/unidad incorrecta · equipo inválido ·
 duplicada · vencida · PLC desconectado · MQTT desconectado · telemetría vencida ·
 selector LOCAL/REMOTO · nivel bajo de T1 · allowlist sin O:0/O:1 y todas NO_VERIFICADAS ·

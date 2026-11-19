@@ -18,7 +18,7 @@ interface Props {
 
 const LINK_LABEL: Record<LinkState, { text: string; cls: string }> = {
   connecting: { text: 'Conectando…', cls: 'pill-idle' },
-  connected: { text: 'SignalR en vivo', cls: 'pill-ok pill-live' },
+  connected: { text: 'SSE en vivo', cls: 'pill-ok pill-live' },
   reconnecting: { text: 'Reconectando…', cls: 'pill-warn pill-live' },
   disconnected: { text: 'Sin conexión', cls: 'pill-err' },
 };

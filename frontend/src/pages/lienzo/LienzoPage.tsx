@@ -189,7 +189,7 @@ export function LienzoPage({ equipo, onNavigate, compacto = false, onAmpliar, am
 
         <div className="lz-estados">
           <Pill ok={health === 'ok' ? true : health === 'error' ? false : undefined} txt="API REST" />
-          <Pill ok={link === 'connected' ? true : link === 'disconnected' ? false : undefined} txt="SignalR" />
+          <Pill ok={link === 'connected' ? true : link === 'disconnected' ? false : undefined} txt="SSE" />
           <Pill ok={samples.length > 0 ? true : undefined} txt="Historial" />
           <Pill ok={eq.status === 'ONLINE'} txt="PLC" />
           <span className="lz-pill lz-modo">{modo}</span>

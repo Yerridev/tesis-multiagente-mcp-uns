@@ -18,6 +18,10 @@ Todos muestran en pantalla lo que van haciendo. Se ejecutan con **doble clic**.
 | **31-sistema-multiagente** | Levanta 4 servidores MCP + 4 agentes analistas + orquestador (solo lectura) | Para usar/probar los agentes; dejar abierta |
 | **32-preguntar-agentes** | Hace preguntas al orquestador y muestra plan, informes y veredicto | Con el 31 corriendo |
 | **33-evaluar-agentes** | 30 preguntas automaticas, compara con el backend y calcula los indicadores de la tesis; evidencia en la carpeta 05 | Con el 31 corriendo (~15 min) |
+| **34-medir-latencia** | Mide 2 min la latencia PLC → backend de los 4 modulos (VD-03); evidencia en la carpeta 05 | Simulada desde casa; real en el laboratorio |
+| **35-evaluar-fallas** | Evaluacion con falla de comunicacion inyectada en cada PLC virtual, un modulo a la vez; resumen en la carpeta 05 | Solo planta simulada (bat 10 + bat 31) |
+| **36-comparar-arquitecturas** | Experimento: A agente unico vs B orquestador IA + analistas vs C enrutador por reglas; resumen comparativo en la carpeta 05 | Planta simulada (bat 10 + bat 31) |
+| **37-comparar-fallas** | Evaluacion con falla de comunicacion para las configuraciones A y C (la B es el bat 35) | Planta simulada (bat 10 + bat 31) |
 
 > Todo queda **dentro del proyecto**: Python en `.venv\`, logs de los lectores en `logs\` (rotan a los 20 MB),
 > chats en `registros\`. Solo presión usa además `%NIDS_DIR%` (por defecto `%USERPROFILE%\NI-DS`) (sus DLL de NI) y `C:\Python37-32` (32 bits).
@@ -66,6 +70,7 @@ Todos **respetan el modo guardado** (real o simulado): no lo pierden.
 | Bat | Qué hace | Cuándo usarlo |
 |---|---|---|
 | **18-reiniciar-caudal-real** | Mata y relanza el lector/control de caudal (S7-200) | Caudal congelado o "PLC desconectado" |
+| **38-reiniciar-nivel-real** | Mata y relanza el lector de nivel (MicroLogix 1100) y reinicia su conector de control en Docker (conserva DRY-RUN/REAL); muestra el log | Nivel congelado o "PLC desconectado" (solo en modo REAL) |
 | **19-reiniciar-presion-nids** | Reinicia la pila NI-DS del cFP-2200 | Presión sin datos y el 20 no lo arregla |
 | **20-reiniciar-edge-presion** | Reinicia solo el lector de presión | Presión congelada |
 | **21-reiniciar-control-presion-real** | Reinicia el conector de órdenes de presión real | Órdenes de **presión** con Timeout en planta real |
@@ -108,3 +113,17 @@ UNA ORDEN DA TIMEOUT
    real:     caudal 18 · presión 21 · temperatura 04
    simulado: 12 estado-simulacion → presión 14
 ```
+
+## Stack paralelo Python (solo lectura, no toca el original)
+
+| Bat | Qué hace |
+|---|---|
+| **39-levantar-py-paralelo** | Construye y levanta `py-backend` + `py-frontend` (proyecto `mcp-py`) en http://127.0.0.1:8181; lee el Mosquitto del original; control y simulación bloqueados |
+| **40-detener-py-paralelo** | Baja solo los contenedores `py-*` |
+
+## Stack completo Python (independiente; solo con el original APAGADO)
+
+| Bat | Qué hace |
+|---|---|
+| **41-levantar-py-completo** | Comprueba que el original (`mcp-*`) y el paralelo (`py-*`) estén apagados y levanta el stack `mcp-industrial-py` (contenedores `mcpy-*`, BD propia) en http://127.0.0.1:8080 |
+| **42-detener-py-completo** | Baja los `mcpy-*` (conserva volúmenes) |

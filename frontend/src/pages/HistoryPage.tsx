@@ -76,7 +76,7 @@ export function HistoryPage({ onNavigate }: Props) {
         <div>
           <div className="eyebrow">Datos almacenados</div>
           <h2>Históricos de mediciones</h2>
-          <p>Búfer de telemetría del backend (/api/history) ampliado en vivo por SignalR.</p>
+          <p>Búfer de telemetría del backend (/api/history) ampliado en vivo por SSE.</p>
         </div>
         <button type="button" className="btn btn-ghost" onClick={reload}>
           <IconRefresh width="15" height="15" /> Actualizar
@@ -139,7 +139,7 @@ export function HistoryPage({ onNavigate }: Props) {
           <EmptyBlock
             icon={<IconHistory />}
             title="Sin mediciones en el rango seleccionado"
-            message="Amplía el rango o espera nuevas muestras del hub SignalR."
+            message="Amplía el rango o espera nuevas muestras del canal SSE."
           />
         )}
       </section>

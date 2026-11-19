@@ -125,9 +125,9 @@ if (-not (DockerListo)) {
 }
 Push-Location $raiz
 Write-Host '  deteniendo el conector de temperatura REAL de Docker (si existe) para que no tome las ordenes'
-docker stop mcp-connector-temperatura 2>$null | Out-Null
+docker stop mcpy-connector-temperatura 2>$null | Out-Null
 Write-Host '  reiniciando el espejo MQTT (ya no copia ordenes /cmd al broker Docker)'
-docker restart mcp-mirror-tesis 2>$null | Out-Null   # si no existe, lo crea el compose de abajo
+docker restart mcpy-mirror-tesis 2>$null | Out-Null   # si no existe, lo crea el compose de abajo
 Write-Host '  docker compose up -d --build backend connector-nivel frontend mirror-tesis ingestores  (la primera vez tarda)'
 # mirror-tesis e ingestores se crean aqui: en una PC nueva no existen y sin el espejo no llegan caudal/presion/temperatura
 docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend mirror-tesis ingestor-caudal ingestor-presion

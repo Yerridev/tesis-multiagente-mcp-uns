@@ -1,9 +1,8 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { HubConnection } from '@microsoft/signalr';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CaudalSenales, ControlOrden, Equipment, HistorySample, LinkState, LoadState, NivelSenales, PresionSenales, TemperaturaSenales } from '../types';
 import { api } from '../services/api';
 import { listarOrdenes } from '../services/control';
-import { createConnection } from '../services/signalr';
+import { createStream } from '../services/stream';
 import { valorMedible } from '../utils/format';
 
 const HISTORY_LIMIT = 600;
@@ -20,14 +19,14 @@ interface PlantContextValue {
   health: 'checking' | 'ok' | 'error';
   now: number;
   lastUpdate: string | null;
-  /** SeÃ±ales reales del mÃ³dulo de nivel (MQTT/UNS). */
+  /** Señales reales del módulo de nivel (MQTT/UNS). */
   senal: NivelSenales | null;
   caudalSenal: CaudalSenales | null;
   presionSenal: PresionSenales | null;
   temperaturaSenal: TemperaturaSenales | null;
-  /** Ãšltimas Ã³rdenes de control (SignalR controlResultado + REST). */
+  /** Últimas órdenes de control (SSE controlResultado + REST). */
   controlOrdenes: ControlOrden[];
-  /** Recarga las Ã³rdenes desde la API (tras un envÃ­o y al montar). */
+  /** Recarga las órdenes desde la API (tras un envío y al montar). */
   controlRecargar: () => void;
   reload: () => void;
 }
@@ -51,9 +50,9 @@ export function PlantProvider({ children }: { children: ReactNode }) {
   const [reloadToken, setReloadToken] = useState(0);
 
   const lastTs = useRef<Record<string, string>>({});
-  const connection = useRef<HubConnection | null>(null);
+  const stream = useRef<EventSource | null>(null);
 
-  /* reloj compartido (antigÃ¼edad de los datos) */
+  /* reloj compartido (antigüedad de los datos) */
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
@@ -69,7 +68,7 @@ export function PlantProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setEquipment(items);
         setHistory(samples);
-        for (const s of samples) lastTs.current[s.id] = s.ts;
+        for (const s of samples) { const t = Date.parse(s.ts); if (Number.isFinite(t)) lastTs.current[s.id] = String(Math.max(t, Number(lastTs.current[s.id] ?? 0))); }
         setLastUpdate(
           items.reduce<string | null>((max, i) => (!max || i.timestamp > max ? i.timestamp : max), null),
         );
@@ -85,72 +84,78 @@ export function PlantProvider({ children }: { children: ReactNode }) {
     };
   }, [reloadToken]);
 
-  /* canal SignalR Â· telemetrÃ­a en vivo */
+  /* canal SSE · telemetría en vivo */
   useEffect(() => {
-    const conn = createConnection();
-    connection.current = conn;
-
-    conn.on('telemetry', (items: Equipment[]) => {
-      if (!Array.isArray(items)) return;
-      /* Fusionar en vez de reemplazar: si un paquete llega sin algún equipo (p. ej. PLC apagado),
-         se conserva el último conocido y su SCADA no desaparece de la pantalla. */
-      setEquipment((prev) => {
-        const nuevos = new Map(items.map((i) => [i.id, i]));
-        const fusion = prev.map((p) => nuevos.get(p.id) ?? p);
-        for (const i of items) if (!prev.some((p) => p.id === i.id)) fusion.push(i);
-        return fusion;
-      });
-      setHistory((prev) => {
-        const next = prev.slice();
-for (const item of items) {
-          const seen = lastTs.current[item.id];
-          if (seen && seen >= item.timestamp) continue;
-          lastTs.current[item.id] = item.timestamp;
-          /* Un dato no medible (sensor fuera de rango) NO entra al historial: meter un 0
-             o un valor de relleno pintaría una curva plana que parece una medida real. */
-          if (!valorMedible(item.calidad) || item.value == null) continue;
-          next.push({
-            id: item.id,
-            variable: item.variable,
-            unit: item.unit,
-            value: item.value,
-            ts: item.timestamp,
-          });
-        }
-        const total: Record<string, number> = {};
-        for (const s of next) total[s.id] = (total[s.id] ?? 0) + 1;
-        const seenCount: Record<string, number> = {};
-        return next.filter((s) => {
-          seenCount[s.id] = (seenCount[s.id] ?? 0) + 1;
-          return seenCount[s.id] > (total[s.id] ?? 0) - HISTORY_LIMIT;
+    const source = createStream({
+      telemetry: (datos) => {
+        const items = datos as Equipment[];
+        if (!Array.isArray(items)) return;
+        /* Fusionar en vez de reemplazar: si un paquete llega sin algún equipo (p. ej. PLC apagado),
+           se conserva el último conocido y su SCADA no desaparece de la pantalla. */
+        setEquipment((prev) => {
+          const nuevos = new Map(items.map((i) => [i.id, i]));
+          const fusion = prev.map((p) => nuevos.get(p.id) ?? p);
+          for (const i of items) if (!prev.some((p) => p.id === i.id)) fusion.push(i);
+          return fusion;
         });
-      });
-      setLastUpdate(items.reduce<string | null>((max, i) => (!max || i.timestamp > max ? i.timestamp : max), null));
-    });
+        setHistory((prev) => {
+          const next = prev.slice();
+          for (const item of items) {
+            /* Se compara la HORA (no el texto ISO): distintos offsets o decimales
+               hacían que '…T20:10' (UTC) pareciera mayor que '…T15:11-05:00' y la
+               tendencia dejaba de avanzar hasta refrescar con F5. */
+            const t = Date.parse(item.timestamp);
+            const seen = lastTs.current[item.id];
+            if (!Number.isFinite(t)) continue;
+            if (seen !== undefined && t <= Number(seen)) continue;
+            lastTs.current[item.id] = String(t);
+            /* Un dato no medible (sensor fuera de rango) NO entra al historial: meter un 0
+               o un valor de relleno pintaría una curva plana que parece una medida real. */
+            if (!valorMedible(item.calidad) || item.value == null) continue;
+            next.push({
+              id: item.id,
+              variable: item.variable,
+              unit: item.unit,
+              value: item.value,
+              ts: item.timestamp,
+            });
+          }
+          const total: Record<string, number> = {};
+          for (const s of next) total[s.id] = (total[s.id] ?? 0) + 1;
+          const seenCount: Record<string, number> = {};
+          return next.filter((s) => {
+            seenCount[s.id] = (seenCount[s.id] ?? 0) + 1;
+            return seenCount[s.id] > (total[s.id] ?? 0) - HISTORY_LIMIT;
+          });
+        });
+        setLastUpdate(items.reduce<string | null>((max, i) => (!max || i.timestamp > max ? i.timestamp : max), null));
+      },
 
-    conn.on('nivelSenales', (s: NivelSenales) => setSenal(s));
-    conn.on('caudalSenales', (s: CaudalSenales) => setCaudalSenal(s));
-    conn.on('presionSenales', (s: PresionSenales) => setPresionSenal(s));
-    conn.on('temperaturaSenales', (s: TemperaturaSenales) => setTemperaturaSenal(s));
-    conn.on('controlResultado', (orden: ControlOrden) => {
-      if (!orden || typeof orden.id !== 'string') return;
-      setControlOrdenes((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)].slice(0, 8));
-    });
-    conn.on('temperaturaControlResultado', (orden: ControlOrden) => {
-      if (!orden || typeof orden.id !== 'string') return;
-      setControlOrdenes((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)].slice(0, 8));
-    });
-    conn.onreconnecting(() => setLink('reconnecting'));
-    conn.onreconnected(() => setLink('connected'));
-    conn.onclose(() => setLink('disconnected'));
+      nivelSenales: (datos) => setSenal(datos as NivelSenales),
+      caudalSenales: (datos) => setCaudalSenal(datos as CaudalSenales),
+      presionSenales: (datos) => setPresionSenal(datos as PresionSenales),
+      temperaturaSenales: (datos) => setTemperaturaSenal(datos as TemperaturaSenales),
 
-    conn.start()
-      .then(() => setLink('connected'))
-      .catch(() => setLink('disconnected'));
+      controlResultado: (datos) => {
+        const orden = datos as ControlOrden;
+        if (!orden || typeof orden.id !== 'string') return;
+        setControlOrdenes((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)].slice(0, 8));
+      },
+      temperaturaControlResultado: (datos) => {
+        const orden = datos as ControlOrden;
+        if (!orden || typeof orden.id !== 'string') return;
+        setControlOrdenes((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)].slice(0, 8));
+      },
+    });
+    stream.current = source;
+
+    source.onopen = () => setLink('connected');
+    /* EventSource reconecta solo: mientras intenta, el canal está 'reconectando'. */
+    source.onerror = () => setLink('reconnecting');
 
     return () => {
-      void conn.stop();
-      connection.current = null;
+      source.close();
+      stream.current = null;
     };
   }, []);
 
@@ -162,7 +167,7 @@ for (const item of items) {
     return () => { cancelado = true; };
   }, []);
 
-  /* seÃ±ales reales del mÃ³dulo de nivel (carga inicial; luego llegan por SignalR) */
+  /* señales reales del módulo de nivel (carga inicial; luego llegan por el canal SSE) */
   useEffect(() => {
     let cancelado = false;
     api
@@ -171,7 +176,7 @@ for (const item of items) {
         if (!cancelado) setSenal(s);
       })
       .catch(() => {
-        /* sin seÃ±ales: la interfaz muestra SIN DATOS */
+        /* sin señales: la interfaz muestra SIN DATOS */
       });
     return () => {
       cancelado = true;
@@ -203,7 +208,7 @@ for (const item of items) {
         if (r.ok && Array.isArray(r.datos)) setControlOrdenes(r.datos);
       })
       .catch(() => {
-        /* sin Ã³rdenes: se siguen viendo las llegadas por SignalR */
+        /* sin órdenes: se siguen viendo las llegadas por el canal */
       });
   }, []);
 

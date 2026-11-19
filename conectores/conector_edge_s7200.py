@@ -174,7 +174,7 @@ TAMANO = {"real": 4, "int": 2, "bool": 1}
 
 
 def ahora():
-    return datetime.now(TZ_LIMA).isoformat(timespec="seconds")
+    return datetime.now(TZ_LIMA).isoformat(timespec="milliseconds")   # ms: para medir la latencia PLC → backend
 
 
 class LectorPLC:

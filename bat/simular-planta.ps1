@@ -127,9 +127,10 @@ Push-Location $raiz
 Write-Host '  deteniendo el conector de temperatura REAL de Docker (si existe) para que no tome las ordenes'
 docker stop mcp-connector-temperatura 2>$null | Out-Null
 Write-Host '  reiniciando el espejo MQTT (ya no copia ordenes /cmd al broker Docker)'
-docker restart mcp-mirror-tesis 2>$null | Out-Null
-Write-Host '  docker compose up -d --build backend connector-nivel frontend  (la primera vez tarda)'
-docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend
+docker restart mcp-mirror-tesis 2>$null | Out-Null   # si no existe, lo crea el compose de abajo
+Write-Host '  docker compose up -d --build backend connector-nivel frontend mirror-tesis ingestores  (la primera vez tarda)'
+# mirror-tesis e ingestores se crean aqui: en una PC nueva no existen y sin el espejo no llegan caudal/presion/temperatura
+docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend mirror-tesis ingestor-caudal ingestor-presion
 if ($LASTEXITCODE -eq 0) { Write-Host '  backend en MODO_PLANTA=simulado' -ForegroundColor Green } else { Write-Host '  ERROR al levantar Docker: revisa arriba' -ForegroundColor Red }
 Pop-Location
 foreach ($v in 'MODO_PLANTA','PLC_NIVEL_IP','CONECTOR_MODO','CONTROL_REAL','CONTROL_MODO','CONTROL_HABILITADOESCRITURA','PRESION_CONTROL_HOST','TEMP_CONTROL_HOST','MQTT_LAB_IP') { Remove-Item "Env:$v" -ErrorAction SilentlyContinue }

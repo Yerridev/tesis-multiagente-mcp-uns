@@ -17,9 +17,9 @@ El cFP-2200 (LabVIEW RT 8.6) publica sus variables de red con el protocolo **PSP
 (`psp://<cFP>/<libreria>/<variable>`). El DataSocket instalado con LabVIEW 2023+ (`nids.dll 26.3`)
 **no incluye** ese protocolo ("Unrecognized Protocol"). La solución aplicada en el host:
 
-1. Copiar el `nids.dll` **4.9.0f0** (de la VM, con PSP) + `nipspxts.dll` 4.9.1 a `C:\Users\KST\NI-DS\`.
+1. Copiar el `nids.dll` **4.9.0f0** (de la VM, con PSP) + `nipspxts.dll` 4.9.1 a `%NIDS_DIR%\` (por defecto `%USERPROFILE%\NI-DS\`).
 2. Registrar la clase COM **por usuario** (sin admin):
-   `HKCU\Software\Classes\CLSID\{A7C10FE5-E3FC-11D0-80E8-00A02454310A}\InprocServer32` -> `C:\Users\KST\NI-DS\nids.dll`
+   `HKCU\Software\Classes\CLSID\{A7C10FE5-E3FC-11D0-80E8-00A02454310A}\InprocServer32` -> `%NIDS_DIR%\nids.dll`
 3. Instalar **Python 3.7 de 32 bits** en `C:\Python37-32` (el `nids.dll` 4.9 es 32 bits) con `pywin32` y `paho-mqtt==1.6.1`.
 
 Con eso el host lee y escribe las variables del cFP-2200 sin la VM.

@@ -20,7 +20,7 @@ Todos muestran en pantalla lo que van haciendo. Se ejecutan con **doble clic**.
 | **33-evaluar-agentes** | 30 preguntas automaticas, compara con el backend y calcula los indicadores de la tesis; evidencia en la carpeta 05 | Con el 31 corriendo (~15 min) |
 
 > Todo queda **dentro del proyecto**: Python en `.venv\`, logs de los lectores en `logs\` (rotan a los 20 MB),
-> chats en `registros\`. Solo presión usa además `C:\Users\KST\NI-DS` (sus DLL de NI) y `C:\Python37-32` (32 bits).
+> chats en `registros\`. Solo presión usa además `%NIDS_DIR%` (por defecto `%USERPROFILE%\NI-DS`) (sus DLL de NI) y `C:\Python37-32` (32 bits).
 
 ## 🏭 Planta REAL (laboratorio) · uso diario
 

@@ -1,0 +1,894 @@
+{
+  "uid": "uns-temperatura-mct09",
+  "title": "Modulo de temperatura MCT-09 - UNS",
+  "description": "PLC Twido (192.168.114.10, Modbus TCP). Temperaturas = raw*100/4095 con media movil de 10 s. Rango de operacion 15-50 C (fabricante).",
+  "timezone": "America/Lima",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "uns",
+    "temperatura",
+    "tesis"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "fuente",
+        "label": "Fuente de datos",
+        "type": "custom",
+        "query": "uns,lvm",
+        "current": {
+          "text": "uns",
+          "value": "uns"
+        },
+        "options": [
+          {
+            "text": "uns",
+            "value": "uns",
+            "selected": true
+          },
+          {
+            "text": "lvm",
+            "value": "lvm",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "T tanque principal",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'temperatura-mct09/temperatura/principal_c' AND fuente = '$fuente' ORDER BY time DESC LIMIT 1"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "celsius",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "T tanque enfriador",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'temperatura-mct09/temperatura/enfriador_c' AND fuente = '$fuente' ORDER BY time DESC LIMIT 1"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "celsius",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Setpoint",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'temperatura-mct09/pid/setpoint_c' AND fuente = '$fuente' ORDER BY time DESC LIMIT 1"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "celsius",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Modo",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT now() AS \"time\", CASE WHEN (SELECT valor FROM mediciones WHERE variable = 'temperatura-mct09/estado/selector_remoto' AND fuente = 'uns' ORDER BY time DESC LIMIT 1) >= 0.5 THEN 2 WHEN (SELECT valor FROM mediciones WHERE variable = 'temperatura-mct09/estado/selector_local' AND fuente = 'uns' ORDER BY time DESC LIMIT 1) >= 0.5 THEN 1 ELSE 0 END AS modo"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^modo$/",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "2": {
+                  "text": "PC (REMOTO)",
+                  "color": "purple",
+                  "index": 0
+                },
+                "1": {
+                  "text": "HMI (LOCAL)",
+                  "color": "orange",
+                  "index": 1
+                },
+                "0": {
+                  "text": "SELECTOR EN 0",
+                  "color": "text",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Lazo de control",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'temperatura-mct09/estado/sistema_funcionando' AND fuente = 'uns' ORDER BY time DESC LIMIT 1"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "EN MARCHA",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "DETENIDO",
+                  "color": "text",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Niveles",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT now() AS \"time\", greatest(coalesce((SELECT valor FROM mediciones WHERE variable = 'temperatura-mct09/falla/nivel_principal' AND fuente = 'uns' ORDER BY time DESC LIMIT 1),0), coalesce((SELECT valor FROM mediciones WHERE variable = 'temperatura-mct09/falla/nivel_enfriador' AND fuente = 'uns' ORDER BY time DESC LIMIT 1),0)) AS falla"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^falla$/",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "FALLA (bloquea)",
+                  "color": "red",
+                  "index": 0
+                },
+                "0": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Temperaturas y setpoint (C) - banda de operacion 15-50 C",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"T principal\" FROM mediciones WHERE variable = 'temperatura-mct09/temperatura/principal_c' AND fuente = '$fuente' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"T enfriador\" FROM mediciones WHERE variable = 'temperatura-mct09/temperatura/enfriador_c' AND fuente = '$fuente' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Setpoint\" FROM mediciones WHERE variable = 'temperatura-mct09/pid/setpoint_c' AND fuente = '$fuente' AND $__timeFilter(time) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": 0,
+          "max": 60,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true,
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(0,0,255,0.06)",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Setpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Actuadores (%): salida del PID a la resistencia y velocidad de la bomba",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Salida PID (PWM resistencia)\" FROM mediciones WHERE variable = 'temperatura-mct09/pid/salida_pct' AND fuente = '$fuente' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Consigna bomba\" FROM mediciones WHERE variable = 'temperatura-mct09/bomba/consigna_pct' AND fuente = '$fuente' AND $__timeFilter(time) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Velocidad de calentamiento del tanque principal (C/min, ventanas de 1 min)",
+      "description": "Pendiente de la temperatura principal. Sirve para detectar calentamiento sin orden del PLC (rele de estado solido en falla) o resistencia sin potencia.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "WITH b AS (SELECT time_bucket('1 minute', time) AS t, avg(valor) AS v FROM mediciones WHERE variable = 'temperatura-mct09/temperatura/principal_c' AND fuente = '$fuente' AND $__timeFilter(time) GROUP BY 1), d AS (SELECT t, v - lag(v) OVER (ORDER BY t) AS dv, extract(epoch FROM t - lag(t) OVER (ORDER BY t)) AS dt FROM b) SELECT t AS \"time\", dv / dt * 60 AS \"dT/dt\" FROM d WHERE dt > 0 AND dt <= 120 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "state-timeline",
+      "title": "Estados (en vivo)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Lazo en marcha\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/sistema_funcionando' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Bomba\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/bomba_marcha' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Orden resistencia\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/resistencia_on' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Enfriador\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/enfriador_on' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Selector PC\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/selector_remoto' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Selector HMI\" FROM mediciones WHERE variable = 'temperatura-mct09/estado/selector_local' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Falla nivel principal\" FROM mediciones WHERE variable = 'temperatura-mct09/falla/nivel_principal' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time AS \"time\", valor AS \"Falla nivel enfriador\" FROM mediciones WHERE variable = 'temperatura-mct09/falla/nivel_enfriador' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#555555",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFF",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Falla.*"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#555555",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.5
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      }
+    }
+  ]
+}

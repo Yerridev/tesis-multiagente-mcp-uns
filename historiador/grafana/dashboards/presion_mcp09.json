@@ -1,0 +1,665 @@
+{
+  "uid": "uns-presion-mcp09",
+  "title": "Modulo de presion MCP-09 - UNS",
+  "description": "NI cFP-2200 (192.168.114.8) leido por DataSocket desde la VM. Presion T2: psi = (mA-4)/16 x 87 (validado contra la HMI). Rango de trabajo 3-40 psi (fabricante).",
+  "timezone": "America/Lima",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "uns",
+    "presion",
+    "tesis"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Presion T2 (psi)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'presion-mcp09/presion/psi' AND fuente = 'uns' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "unit": "pressurepsi",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 3
+              },
+              {
+                "color": "orange",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 43
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Setpoint (SCADA PC)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'presion-mcp09/pid/setpoint_pc' AND fuente = 'uns' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "pressurepsi",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Modo",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT now() AS \"time\", CASE WHEN (SELECT valor FROM mediciones WHERE variable = 'presion-mcp09/estado/selector_remoto' AND fuente = 'uns' ORDER BY time DESC LIMIT 1) >= 0.5 THEN 2 WHEN (SELECT valor FROM mediciones WHERE variable = 'presion-mcp09/estado/selector_local' AND fuente = 'uns' ORDER BY time DESC LIMIT 1) >= 0.5 THEN 1 ELSE 0 END AS modo"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^modo$/",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "2": {
+                  "text": "REMOTO",
+                  "color": "purple",
+                  "index": 0
+                },
+                "1": {
+                  "text": "LOCAL",
+                  "color": "orange",
+                  "index": 1
+                },
+                "0": {
+                  "text": "SELECTOR EN 0",
+                  "color": "text",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Sistema funcionando",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor FROM mediciones WHERE variable = 'presion-mcp09/estado/sistema_funcionando' AND fuente = 'uns' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "EN MARCHA",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "DETENIDA",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Presion del tanque T2 vs setpoint (psi) - escala (mA-4)/16 x 87, igual que la HMI",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Presion T2\" FROM mediciones WHERE variable = 'presion-mcp09/presion/psi' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Setpoint PC\" FROM mediciones WHERE variable = 'presion-mcp09/pid/setpoint_pc' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Setpoint HMI\" FROM mediciones WHERE variable = 'presion-mcp09/pid/setpoint_hmi' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurepsi",
+          "min": 0,
+          "max": 45,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true,
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 35
+              },
+              {
+                "color": "red",
+                "value": 40
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Actuadores (V): salida del PID, consigna al variador y valvula (1 V = 10 %)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Salida PID\" FROM mediciones WHERE variable = 'presion-mcp09/pid/cv' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Consigna variador AO0\" FROM mediciones WHERE variable = 'presion-mcp09/bomba/salida_variador' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Valvula AO1\" FROM mediciones WHERE variable = 'presion-mcp09/valvula/salida' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "volt"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Transmisor de presion (mA) - programa y canal crudo",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"TRANS_PRESION\" FROM mediciones WHERE variable = 'presion-mcp09/presion/transmisor_ma' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"FP/3AIO/00\" FROM mediciones WHERE variable = 'presion-mcp09/presion/ai0_ma' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "mamp"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "state-timeline",
+      "title": "Estados (en vivo)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale-uns"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Sistema funcionando\" FROM mediciones WHERE variable = 'presion-mcp09/estado/sistema_funcionando' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Variador habilitado\" FROM mediciones WHERE variable = 'presion-mcp09/estado/bomba_habilitada' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"LOCAL\" FROM mediciones WHERE variable = 'presion-mcp09/estado/selector_local' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"REMOTO\" FROM mediciones WHERE variable = 'presion-mcp09/estado/selector_remoto' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Alarma nivel bajo T1\" FROM mediciones WHERE variable = 'presion-mcp09/estado/alarma_nivel_bajo' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale-uns"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", valor AS \"Presostato\" FROM mediciones WHERE variable = 'presion-mcp09/estado/presostato' AND fuente = 'uns' AND $__timeFilter(time) ORDER BY 1",
+          "refId": "F"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#555555",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFF",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  }
+}

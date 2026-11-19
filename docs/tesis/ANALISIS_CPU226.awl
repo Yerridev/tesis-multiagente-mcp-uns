@@ -1,0 +1,155 @@
+ORGANIZATION_BLOCK PRINCIPAL:OB1
+TITLE=COMENTARIOS DEL PROGRAMA
+BEGIN
+Network 1 // Título de segmento
+// Comentario de segmento
+LDN    M5.0
+CALL   SBR1, M10.1, MW8, MW11
+Network 2 
+LDN    I0.2
+=      Q0.1
+Network 3 
+LD     I0.3
+=      Q0.0
+=      Q0.4
+Network 4 
+LD     I0.3
+ON     I0.2
+=      M0.0
+Network 5 
+LD     M0.1
+O      M1.1
+=      Q1.1
+=      Q0.2
+Network 6 
+LD     I0.1
+AN     M0.0
+A      I0.5
+LD     I0.4
+O      M0.1
+ALD
+=      M0.1
+Network 7 
+LD     M0.3
+=      M0.6
+Network 8 
+LD     I0.0
+AN     M0.6
+A      M0.2
+LPS
+EU
+AN     M0.0
+S      M0.4, 1
+LPP
+AN     M0.0
+ED
+R      M0.4, 1
+Network 9 
+LD     I0.0
+A      M0.6
+A      M1.2
+LPS
+EU
+AN     M0.0
+S      M0.7, 1
+LPP
+AN     M0.0
+ED
+R      M0.7, 1
+Network 10 
+LD     M0.4
+O      M0.7
+=      M1.1
+Network 11 
+LD     SM0.0
+MOVW   AIW0, MW3
+Network 12 
+LD     I0.1
+MOVW   +32000, MW25
+Network 13 
+LD     I0.0
+LPS
+AN     M0.6
+MOVW   MW5, MW25
+LPP
+A      M0.6
+MOVW   MW15, MW25
+Network 14 
+LD     SM0.0
+MOVW   MW25, AQW0
+Network 15 
+LD     I0.0
+AN     M0.6
+MOVR   VD400, VD202
+Network 16 
+LD     I0.0
+A      M0.6
+MOVR   VD408, VD202
+Network 17 
+LD     I0.0
+AN     M0.6
+MOVR   VD100, VD171
+MOVR   VD108, VD179
+MOVR   VD116, VD183
+Network 18 
+LD     I0.0
+A      M0.6
+MOVR   VD124, VD171
+MOVR   VD132, VD179
+MOVR   VD140, VD183
+Network 19 
+LD     SM0.0
+CALL   SBR2, AIW0, VD202, VW6
+Network 20 
+LD     I0.0
+MOVW   VW6, VW8
+Network 21 
+LD     I0.1
+MOVW   AIW2, MW2
+MOVW   MW2, VW8
+Network 22 
+LD     SM0.0
+MOVW   VW8, AQW2
+END_ORGANIZATION_BLOCK
+SUBROUTINE_BLOCK SBR_0:SBR0
+TITLE=COMENTARIOS DE LA SUBRUTINA
+BEGIN
+Network 1 // Título de segmento
+// Comentario de segmento
+END_SUBROUTINE_BLOCK
+SUBROUTINE_BLOCK ETH0_CTRL:SBR1
+TITLE=
+VAR_OUTPUT
+CP_Ready:BOOL;
+Ch_Ready:WORD;
+Error:WORD;
+END_VAR
+BEGIN
+Network 1 // Para poder modificar o visualizar esta UOP deberá introducir la contraseña correcta.
+
+END_SUBROUTINE_BLOCK
+SUBROUTINE_BLOCK PID0_INIT:SBR2
+TITLE=
+VAR_INPUT
+PV_I:INT;
+Setpoint_R:REAL;
+END_VAR
+VAR_OUTPUT
+Output:INT;
+END_VAR
+BEGIN
+Network 1 // Para poder modificar o visualizar esta UOP deberá introducir la contraseña correcta.
+
+END_SUBROUTINE_BLOCK
+INTERRUPT_BLOCK INT_0:INT0
+TITLE=COMENTARIOS DE LA RUTINA DE INTERRUPCIÓN
+BEGIN
+Network 1 // Título de segmento
+// Comentario de segmento
+END_INTERRUPT_BLOCK
+INTERRUPT_BLOCK PID_EXE:INT1
+TITLE=
+BEGIN
+Network 1 // Para poder modificar o visualizar esta UOP deberá introducir la contraseña correcta.
+
+END_INTERRUPT_BLOCK

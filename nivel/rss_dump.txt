@@ -1,0 +1,160 @@
+ARCHIVO: Y:\Downloads\upload final.RSS
+
+================================================================================
+STREAM: SummaryInformation   (517 bytes)
+  [texto crudo] 111 | @_4 | 05- | UNTITLED | RSLogix 500
+================================================================================
+STREAM: ApplicationHelp/ObjectData   (47 bytes)
+  [texto crudo]  '39 | $3?
+  [zlib @ 16: 23 bytes] CApplicationHelp
+================================================================================
+STREAM: CHANNEL CONFIGURATION/ObjectData   (267 bytes)
+  [texto crudo] CChannelConfig<
+================================================================================
+STREAM: COMPILER/ObjectData   (1271 bytes)
+  [texto crudo] %"N | Mob | L6e | Ia= | +u7 | `mTj$L | -){ | i~J3 | ^k[ | @9w | *F/ | |c)p | nk; | xc`uc{ | J+i | ZzUr | &J  | ^v7 | _\W | 33im | X_" | KG4  | eLI4e | sAI | .yG | N'I | <oe | |c7 | ?fu | SeS | 7SwB
+  [zlib @ 16: 3205 bytes] CompilerInterface | OtP | UNTITLED | 6z? | z?X | t|R
+================================================================================
+STREAM: CUSTOM DATA MONITORS/ObjectData   (93 bytes)
+  [texto crudo] #?'% | $'5
+  [zlib @ 16: 105 bytes] CWatchHolder | CWatchFile | CWatchData | Untitled
+================================================================================
+STREAM: Contents   (12 bytes)
+================================================================================
+STREAM: DATA FILES/ObjectData   (554 bytes)
+  [texto crudo] )?U | *!EBB | zC} | IvI | !ne | *`$ | /y  | dg; | @F'h | ll, | jX' | 5z4 | 6,k | aZ4 | qX01 | Q$-c# | f\!mw | _Gk
+  [zlib @ 16: 2049 bytes] CDataHolder | CDataFile | OUTPUT | INPUT | STATUS | BINARY | TIMER | COUNTER | CONTROL | 6z? | INTEGER | FLOAT | z?X | CSlcMDataFile
+================================================================================
+STREAM: DATALOGGING CONFIGURATION/ObjectData   (53 bytes)
+  [texto crudo] 9?/-3 | $3?
+  [zlib @ 16: 29 bytes] CDataLogConfiguration
+================================================================================
+STREAM: Extensional DATA FILES/ObjectData   (564 bytes)
+  [texto crudo] geK | 8n!M | HCc | uE^ | y`{ | 2CJ | 6"a | (t]a` | cPQ | h#@t{ | *1UF | |Z! | E"+K
+  [zlib @ 16: 2221 bytes] CDataHolder | CDataFile | OUTPUT | INPUT | STATUS | BINARY | TIMER | COUNTER | CONTROL | 6z? | INTEGER | FLOAT | z?X | CSlcMDataFile
+================================================================================
+STREAM: GRAPIC FILES/ObjectData   (103 bytes)
+  [texto crudo]  #3 | #?'% | O,I | pI,Id | ;"t
+  [zlib @ 16: 113 bytes] CGraphicHolder | CGraphicFile | CWatchData | Untitled
+================================================================================
+STREAM: IO CONFIGURATION/ObjectData   (131 bytes)
+  [texto crudo] CIOInfo<
+================================================================================
+STREAM: IO MISC_POWER_CONFIGURATION/ObjectData   (39 bytes)
+  [zlib @ 16: 72 bytes] CIOPwr
+================================================================================
+STREAM: MEM DATABASE/ObjectData   (2986 bytes)
+  [texto crudo] .4K | Oa\* | ;9l3 | 7$6:nS | <N\' | yBR | $TC | 3R4|m | -1(c | {%hU | jJq | l3o | lFw | 1iX | {ND | 6jj | !!L | WJ< | {bN)E | Sq<5lmb. | T<uD | 7I. | NKI | 7L{ | ~Cx | $t> | wYfl9> |  AwR | xaR | 7J(] | 6-U | h,>V) | cjJ | clC9_] | .1n-i | L`, | ii, | k ~+ | ( M | <iB} | .bQY | LI[ | `pEQ; | [.: | $l1 | v|1 | %4M | ,q[ | V{O | x&1 | ~nf | "eO | H\v | k`} | OFC | EDF | hOF0 | $T,? | '0xLbD | <0<_ | $Sg{ | 2x" | 3I4 | i'I | :#v | V@x | \h& | ,&p@] | b[) | JHn|F | :Jx`,? | )=w | Efr | clc= | G0vg= | G`> | {A< | /bXU | x0: | )%{ | 7w)U | S/v | j48 | w%H%7l | @|k | No0I | eEeuj | ty1 | 7<j | 5XU= | d0L | JmF | (u6 | $>_ | R\:^D | -vB | &$^ | g857 | Z$-j | r{e8 | p$t
+  [zlib @ 16: 11391 bytes] DBXMemMap | Valid Database Entry!( | S0002:000 | Arithmetic | Flags | S0002:000/00 | Processor | Arithmetic | Carry | Flag | S0002:000/01 | Processor | Arithmetic | Underflow/ | Overflow | Flag | S0002:000/02 | Processor | Arithmetic | Zero | Flag | S0002:000/03 | Processor | Arithmetic | Sign | Flag | S0002:001 | Processor | Mode | Status/ | Control | S0002:001/00 | Processor | Mode | Bit 0 | S0002:001/01 | Processor | Mode | Bit 1 | S0002:001/02 | Processor | Mode | Bit 2 | S0002:001/03 | Processor | Mode | Bit 3 | S0002:001/04 | Processor | Mode | Bit 4 | S0002:001/05 | Forces | Enabled | S0002:001/06 | Forces | Present | S0002:001/07 | Comms | Active | S0002:001/08 | Fault | Override | at Powerup | S0002:001/09 | Startup | Protection | Fault | S0002:001/10 | Load | Memory | Module on | Memory | Error | S0002:001/11 | Load | Memory | Module | Always | S0002:001/12 | Load | Memory | Module | and RUN | S0002:001/13 | Major | Error | Halted | S0002:001/14 | Access | Denied | S0002:001/15 | First Pass | S0002:002/00 | STI | Pending | S0002:002/01 | STI | Enabled | S0002:002/02 | STI | Executing | S0002:002/03 | Index | Addressing | File Range | S0002:002/04 | Saved with | Debug | Single | Step | S0002:002/05 | DH-485 | Incoming | Command | Pending | S0002:002/06 | DH-485 | Message | Reply | Pending | S0002:002/07 | DH-485 | Outgoing | Message | Command | Pending | S0002:002/15 | Comms | Servicing | Selection | S0002:003 | Current | Scan Time/ | Watchdog | Scan Time | S0002:004 | Time Base | S0002:005/00 | Overflow | Trap | S0002:005/02 | Control | Register | Error | S0002:005/03 | Major Err | Detected | Executing | UserFault | Routine | S0002:005/04 | M0-M1 | Referenced | Disabled | Slot | S0002:005/08 | Memory | Module | Boot | S0002:005/09 | Memory | Module | Password | Mismatch | S0002:005/10 | STI | Overflow | S0002:005/11 | Battery | Low | S0002:006 | Major | Error | Fault | Code | S0002:007 | Suspend | Code | S0002:008 | Suspend | File | S0002:009 | Active | Nodes | S0002:010 | Active | Nodes | S0002:011 | I/O Slot | Enables | S0002:012 | I/O Slot | Enables | S0002:013 | Math | Register | S0002:014 | Math | Register | S0002:015 | Node | Address/ | Baud Rate | S0002:016 | Debug | Single | Step Rung | S0002:017 | Debug | Single | Step File | S0002:018 | Debug | Single | Step | Breakpoint | Rung | S0002:019 | Debug | Single | Step | Breakpoint | File | S0002:020 | Debug | Fault/ | Powerdown | Rung | S0002:021 | Debug | Fault/ | Powerdown | File | S0002:022 | Maximum | Observed | Scan Time | S0002:023 | Average | Scan Time | S0002:024 | Index | Register | S0002:025 | I/O | Interrupt | Pending | S0002:026 | I/O | Interrupt | Pending | S0002:027 | I/O | Interrupt | Enabled | S0002:028 | I/O | Interrupt | Enabled | S0002:029 | User Fault | Routine | File | Number | S0002:030 | STI | Setpoint | S0002:031 | STI File | Number | S0002:032 | I/O | Interrupt | Executing | S0002:033 | Extended | Proc | Status | Control | Word | S0002:033/00 | Incoming | Command | Pending | S0002:033/01 | Message | Reply | Pending | S0002:033/02 | Outgoing | Message | Command | Pending | S0002:033/03 | Selection | Status | User/DF1 | S0002:033/04 | Communicat | Active | S0002:033/05 | Communicat | Servicing | Selection | S0002:033/06 | Message | Servicing | Selection | Channel 0 | S0002:033/07 | Message | Servicing | Selection | Channel 1 | S0002:033/08 | Interrupt | Latency | Control | Flag | S0002:033/09 | Scan | Toggle | Flag | S0002:033/10 | Discrete | Input | Interrupt | Reconfigur | Flag | S0002:033/11 | Online | Edit | Status | S0002:033/12 | Online | Edit | Status | S0002:033/13 | Scan Time | Timebase | Selection | S0002:033/14 | DTR | Control | Bit | S0002:033/15 | DTR Force | Bit | S0002:034 | Pass-thru | Disabled | S0002:034/00 | Pass-Thru | Disabled | Flag | S0002:034/01 | DH+ Active | Node Table | Enable | Flag | S0002:034/02 | Floating | Point | Math Flag Disable,Fl | S0002:035 | Last 1 ms | Scan Time | S0002:036 | Extended | Minor | Error Bits | S0002:036/08 | DII Lost | S0002:036/09 | STI Lost | S0002:036/10 | Memory | Module | Data File | Overwrite | Protection | S0002:037 | Clock | Calendar | Year | S0002:038 | Clock | Calendar | Month | S0002:039 | Clock | Calendar | Day | S0002:040 | Clock | Calendar | Hours | S0002:041 | Clock
+================================================================================
+STREAM: ONLINEIMAGE/CHANNEL CONFIGURATION/ObjectData   (267 bytes)
+  [texto crudo] CChannelConfig<
+================================================================================
+STREAM: ONLINEIMAGE/COMPILER/ObjectData   (1271 bytes)
+  [texto crudo] %"N | Mob | L6e | Ia= | +u7 | `mTj$L | -){ | i~J3 | ^k[ | @9w | *F/ | |c)p | nk; | xc`uc{ | J+i | ZzUr | &J  | ^v7 | _\W | 33im | X_" | KG4  | eLI4e | sAI | .yG | N'I | <oe | |c7 | ?fu | SeS | 7SwB
+  [zlib @ 16: 3205 bytes] CompilerInterface | OtP | UNTITLED | 6z? | z?X | t|R
+================================================================================
+STREAM: ONLINEIMAGE/DATA FILES/ObjectData   (545 bytes)
+  [texto crudo] UKO | IHyD | _zY | ~;= | F9*B | 2urB | oA$EdZb | e.O | Is2 | 4IUO | .Bk8>
+  [zlib @ 16: 2049 bytes] CDataHolder | CDataFile | OUTPUT | INPUT | STATUS | BINARY | TIMER | COUNTER | CONTROL | 6z? | INTEGER | FLOAT | z?X | CSlcMDataFile
+================================================================================
+STREAM: ONLINEIMAGE/Extensional DATA FILES/ObjectData   (550 bytes)
+  [texto crudo] Sh+ | T@|$> | tzg | \<\ | C03 | H":YZ#N | ZFG | e\c | l"8 | f)W, | .Zg | ,O?j | %R* | d > | 3#9 | (te | @.K | 1D|
+  [zlib @ 16: 2221 bytes] CDataHolder | CDataFile | OUTPUT | INPUT | STATUS | BINARY | TIMER | COUNTER | CONTROL | 6z? | INTEGER | FLOAT | z?X | CSlcMDataFile
+================================================================================
+STREAM: ONLINEIMAGE/IO CONFIGURATION/ObjectData   (131 bytes)
+  [texto crudo] CIOInfo<
+================================================================================
+STREAM: ONLINEIMAGE/PROCESSOR/ObjectData   (413 bytes)
+  [texto crudo] CProc< | AB_ETH-1%A000%0000000000000000000000000000000000000000000000000000000000000000000001000100180010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000%D | UNTITLED
+================================================================================
+STREAM: ONLINEIMAGE/PROGRAM FILES/ObjectData   (1385 bytes)
+  [texto crudo] FnQ | ^]M` | ?{> | 3Q/ | BR( ZQy2 | MV& | d)% | dc* | k&& | TdH | a(a6 | 'Ll | j,Ec) | kC> | eh> | =[( | 1M99S | %S@h | z|(x | cx= | `W= | $}[ | *S" | 1W\9/ | {'p | y-G | -Sa | gYx | (.r | <.BU | Tj5 | T't | IyV | (_r | 1CS | iMo# | 3jF | ,[> | ~VejQ | jV*j | wfE) | \`i | m$\ | 6[| | n/} | *)O | 6kv | F7d | k4! | Pje | Y#-'
+  [zlib @ 16: 8570 bytes] CProgHolder | CLadFile | CRung | CBranchLeg | CIns | I:0.0/2 | O:0.0/1 | I:0.0/3 | O:0.0/0 | CBranch | I:0.0/2 | I:0.0/3 | B3:0/0 | B3:0/1 | B3:0/2 | B3:0/6 | O:0.0/2 | O:0.0/3 | I:0.0/1 | B3:0/0 | I:0.0/5 | I:0.0/4 | B3:0/1 | B3:0/1 | I:0.0/0 | B3:0/0 | B3:0/3 | B3:0/4 | B3:0/14 | B3:0/2 | B3:0/2 | B3:0/4 | B3:0/3 | B3:0/12 | B3:0/14 | I:0.0/0 | B3:0/0 | B3:0/3 | B3:0/5 | B3:1/0 | B3:0/6 | B3:0/6 | B3:0/5 | B3:0/3 | B3:0/15 | B3:1/0 | B3:0/4 | B3:0/3 | B3:0/5 | B3:0/3 | T4:4 | 0.01 | 102 | T4:4/DN | B3:0/10 | I:0.0/1 | I:0.0/0 | B3:1/11 | B3:0/8 | B3:0/9 | B3:0/9 | 3500 | 3500 | T4:0.PRE | 3500 | T4:1.PRE | B3:0/7 | I:1.1 | 16192 | N7:4 | 16192 | I:0.0/0 | B3:0/3 | N7:0 | 4914 | O:1.0 | B3:0/3 | N7:3 | 4914 | O:1.0 | I:0.0/1 | I:1.0 | O:1.0 | B3:0/7 | B3:0/13 | O:0.0/4 | T4:0/DN | T4:0.PRE | 3500 | T4:0 | 0.01 | 3500 | O:0.0/4 | B3:0/7 | B3:0/13 | O:0.0/5 | T4:1/DN | T4:1.PRE | T4:1 | 0.01 | O:0.0/5 | I:0.0/0 | B3:1/11 | T4:2 | 1.0 | I:0.0/0 | T4:2/DN | N7:1 | T4:0.PRE | 3500 | N7:2 | 1900 | T4:1.PRE | B3:1/1 | I:0.0/0 | B3:0/14 | B3:1/0 | B3:1/6 | B3:0/10 | B3:0/0 | T4:3/DN | 26000 | 26000 | N7:0 | 4914 | 26000 | 26000 | N7:3 | 4914 | T4:3 | 1.0 | B3:1/6 | T4:3/DN | B3:0/10 | PD12:0 | N7:4 | N7:14 | Setup Screen | B3:1/15 | N7:14 | 2457 | N7:20 | 4914 | N7:20 | 4914 | N7:0 | 4914 | N7:20 | 4914 | N7:3 | 4914 | I:0.0/0 | B3:0/3 | N7:8 | PD12:0.KC | N7:9 | PD12:0.Ti | N7:10 | PD12:0.TD | N7:5 | 14016 | PD12:0.SPS | 14016 | B3:0/3 | N7:11 | 100 | PD12:0.KC | N7:12 | PD12:0.Ti | N7:13 | PD12:0.TD | N7:6 | 16250 | PD12:0.SPS | 12269
+================================================================================
+STREAM: ONLINEIMAGE/RCP HOLDER/ObjectData   (46 bytes)
+  [texto crudo] #?'%
+  [zlib @ 16: 22 bytes] CRCPHolder
+================================================================================
+STREAM: PC5 OPTIONS/ObjectData   (57 bytes)
+  [texto crudo] CPC5Options
+================================================================================
+STREAM: PROCESSOR/ObjectData   (413 bytes)
+  [texto crudo] CProc< | AB_ETH-1%A000%0000000000000000000000000000000000000000000000000000000000000000000001000100180010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000%D | UNTITLED
+================================================================================
+STREAM: PROGRAM FILES/ObjectData   (1392 bytes)
+  [texto crudo] KeC" | N/B | K($ | +@J | VfX | -(lsd@!#&$ | lHV9 | sg: | $}[ | *s" | 1_\ | .Cm | /={ | "^I | y@i+ | h,e | bMl | C * | >G: | mif4 | tH*[ | =pm | H-E | :Tz | s1> | MKu | KkrH | 'Yo | opk | 5,hO | E4# | LN" | QR| | {%ht | H~6J | Y[>y
+  [zlib @ 16: 8590 bytes] CProgHolder | CLadFile | CRung | CBranchLeg | CIns | I:0.0/2 | O:0.0/1 | I:0.0/3 | O:0.0/0 | CBranch | I:0.0/2 | I:0.0/3 | B3:0/0 | B3:0/1 | B3:0/2 | B3:0/6 | O:0.0/2 | O:0.0/3 | I:0.0/1 | B3:0/0 | I:0.0/5 | I:0.0/4 | B3:0/1 | B3:0/1 | I:0.0/0 | B3:0/0 | B3:0/3 | B3:0/4 | B3:0/14 | B3:0/2 | B3:0/2 | B3:0/4 | B3:0/3 | B3:0/12 | B3:0/14 | I:0.0/0 | B3:0/0 | B3:0/3 | B3:0/5 | B3:1/0 | B3:0/6 | B3:0/6 | B3:0/5 | B3:0/3 | B3:0/15 | B3:1/0 | B3:0/4 | B3:0/3 | B3:0/5 | B3:0/3 | T4:4 | 0.01 | 102 | T4:4/DN | B3:0/10 | I:0.0/1 | I:0.0/0 | B3:1/11 | B3:0/8 | B3:0/9 | B3:0/9 | 3500 | 3500 | T4:0.PRE | T4:1.PRE | 760 | B3:0/7 | I:1.1 | 16248 | N7:4 | 16248 | I:0.0/0 | B3:0/3 | N7:0 | 4914 | O:1.0 | 4914 | B3:0/3 | N7:3 | 4914 | O:1.0 | 4914 | I:0.0/1 | I:1.0 | O:1.0 | 4914 | B3:0/7 | B3:0/13 | O:0.0/4 | T4:0/DN | T4:0.PRE | T4:0 | 0.01 | O:0.0/4 | B3:0/7 | B3:0/13 | O:0.0/5 | T4:1/DN | T4:1.PRE | 760 | T4:1 | 0.01 | 760 | O:0.0/5 | I:0.0/0 | B3:1/11 | T4:2 | 1.0 | I:0.0/0 | T4:2/DN | N7:1 | T4:0.PRE | N7:2 | 1900 | T4:1.PRE | 760 | B3:1/1 | I:0.0/0 | B3:0/14 | B3:1/0 | B3:1/6 | B3:0/10 | B3:0/0 | T4:3/DN | 26000 | 26000 | N7:0 | 4914 | 26000 | 26000 | N7:3 | 4914 | T4:3 | 1.0 | B3:1/6 | T4:3/DN | B3:0/10 | PD12:0 | N7:4 | N7:14 | Setup Screen | B3:1/15 | N7:14 | 2457 | N7:20 | 4914 | N7:20 | 4914 | N7:0 | 4914 | N7:20 | 4914 | N7:3 | 4914 | I:0.0/0 | B3:0/3 | N7:8 | PD12:0.KC | 100 | N7:9 | PD12:0.Ti | 1000 | N7:10 | PD12:0.TD | 1000 | N7:5 | 14016 | PD12:0.SPS | 12269 | B3:0/3 | N7:11 | 100 | PD12:0.KC | 100 | N7:12 | PD12:0.Ti | 1000 | N7:13 | PD12:0.TD | 1000 | N7:6 | 16250 | PD12:0.SPS | 12269
+================================================================================
+STREAM: RCP HOLDER/ObjectData   (46 bytes)
+  [texto crudo] #?'%
+  [zlib @ 16: 22 bytes] CRCPHolder
+================================================================================
+STREAM: RECIPE FILES/ObjectData   (112 bytes)
+  [texto crudo] 9(59 | #?'% | $'5 | siQQj^ | >6)
+  [zlib @ 16: 135 bytes] CRecipeHolder | CRecipeFile | CRecipeData | Untitled | Current Recipe
+================================================================================
+STREAM: REPORT OPTIONS/ObjectData   (553 bytes)
+  [texto crudo] CReportOptions | ALL | ALL | Times New Roman | ALL | ALL | 255 | ZZZZZZZZZZZZZZZZZZZZ | Times New Roman | Courier New | Times New Roman
+================================================================================
+STREAM: REVISION NOTES/ObjectData   (114 bytes)
+  [texto crudo] 83?/ | A43 | `hi | ghf | ghh | od`d
+  [zlib @ 16: 103 bytes] CRevisiono | 7Carga de UPLOAD FINAL al PLC 192.168.114.9, 18/10/2026.
+================================================================================
+STREAM: ReportOptionSetup/ObjectData   (53 bytes)
+  [texto crudo] $3? | 71/1=
+  [zlib @ 16: 32 bytes] CReportOptionsManager
+================================================================================
+STREAM: SourceControl/ObjectData   (61 bytes)
+  [texto crudo] (?' 
+  [zlib @ 16: 60 bytes] CSourceControlPersistantData
+================================================================================
+STREAM: TRENDS/ObjectData   (44 bytes)
+  [texto crudo] (5/ | #?'%
+  [zlib @ 16: 20 bytes] CTrendHolder
+================================================================================
+STREAM: VER5XUP REPORT OPTIONS/ObjectData   (3420 bytes)
+  [texto crudo] CReportOptions | ALL | ALL | Times New Roman | ALL | ALL | 255 | ZZZZZZZZZZZZZZZZZZZZ | Times New Roman | Courier New | Times New Roman | ALL | 1Courier New | 1Courier New | 1Courier New | 1Courier New | 1Courier New | 1Courier New | 1Times New Roman | 1Courier New | 1Times New Roman | 1Courier New | 1Times New Roman | 1Courier New | 1Courier New | 1Courier New | 1Times New Roman | 1Times New Roman | 1Courier New | 1Courier New | ALL | ALL | Courier New
+================================================================================
+STREAM: Version/ObjectData   (59 bytes)
+  [texto crudo] 83? | d24
+  [zlib @ 16: 40 bytes] CVersionData | 8.30.00.16 | 8.30.00
+================================================================================
+STREAM: WORKSPACE/ObjectData   (50 bytes)
+  [texto crudo]  19 | 71/1=
+  [zlib @ 16: 26 bytes] CWorkSpaceManager
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/Host Project Item List Data   (20 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/Project_Data_CurVer   (10 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/RSLogix_500_Project/Control List Data/Control List Data   (40 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/RSLogix_500_Project/Control List Data/Control_Data_CurVer   (10 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/RSLogix_500_Project/Project Item Data   (10 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Item Names/RSLogix_500_Project/ReqControl List Data/ReqControl List Data   (10 bytes)
+================================================================================
+STREAM: apc/The VBA Project/Host Project Items   (324 bytes)
+  [texto crudo] RSLogix_500_Project | {EA5F1D05-65BD-11D1-9178-00C04FA30EF3} | {78397A84-65A3-11D1-9178-00C04FA30EF3}
+================================================================================
+STREAM: apc/The VBA Project/VBA Project Data   (228 bytes)
+  [texto crudo] s7v | {78397A84-65A3-11D1-9178-00C04FA30EF3} | E:\INDUCONTROL\MODULO NIVEL\UPLOAD FINAL2.RSS
+================================================================================
+STREAM: apc/The VBA Project/VBA Project Signature   (10 bytes)
+================================================================================
+STREAM: apc/The VBA Project/_VBA_Project/PROJECT   (335 bytes)
+  [texto crudo] ID="{F95F06F9-ECBD-4914-8E04-EA5CAC3819F7}" | Document=RSLogix_500_Project/&H00000000 | Name="VBALogixProject" | HelpContextID="0" | VersionCompatible32="393222000" | CMG="1C1E3C20443A483A483A483A48" | DPB="3A381A463947394739" | GC="585A787B797B7984" | [Host Extender Info] | &H00000001={3832D640-CF90-11CF-8E43-00A0C911005A};VBE;&H00000000
+================================================================================
+STREAM: apc/The VBA Project/_VBA_Project/PROJECTwm   (62 bytes)
+  [texto crudo] RSLogix_500_Project | tRSLogix_500_Project
+================================================================================
+STREAM: apc/The VBA Project/_VBA_Project/VBA/RSLogix_500_Project   (1006 bytes)
+  [texto crudo] Attribut | e VB_Nam | e = "RSL | ogix_500 | _Project | Bas | 0{EA5F1D | 05-65BD- | 11D1-917 | 8-00C04F | A30EF3} | |@Global | pac | IFals | dCreata | PredeHcla | BExpos | Templa | teDeriv | Bustomiz | N0{EA5F1D05-65BD-11D1-9178-00C04FA30EF3}
+================================================================================
+STREAM: apc/The VBA Project/_VBA_Project/VBA/_VBA_PROJECT   (1922 bytes)
+  [texto crudo] RSLogix500 | VBA | Win16 | Win32 | Mac | VBA6 | Project1 | stdole | VBAProject1 | RSLogix_500_Project | _Evaluate | VBALogixProjectJb | LogixProject6L | *\G{000204EF-0000-0000-C000-000000000046}#4.0#9#C:\PROGRA~1\COMMON~1\MICROS~1\VBA\VBA6\VBE6.DLL#Visual Basic For Applications | *\G{78397A84-65A3-11D1-9178-00C04FA30EF3}#5.0#0#C:\Program Files\Rockwell Software\RSLogix 500 English\Rs500.exe#RSLogix 500 with VBA (ver 5.0) | *\G{00020430-0000-0000-C000-000000000046}#2.0#0#C:\Windows\system32\stdole2.tlb#OLE Automation | &RSLogix_500_Project | 014b02ba7e | &RSLogix_500_Project
+================================================================================
+STREAM: apc/The VBA Project/_VBA_Project/VBA/dir   (336 bytes)
+  [texto crudo] VBALogix | Project | 9std | ole> | \G{00020 | 430- | 0046}# | 2.0#0#C: | \Windows | \system3 | e2.tlb | #OLE Aut | omation | y _500_ | 2(" | dol | RSLTgix_

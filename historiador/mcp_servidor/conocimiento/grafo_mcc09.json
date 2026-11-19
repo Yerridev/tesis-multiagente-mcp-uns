@@ -1,0 +1,281 @@
+{
+  "modelo": "Modulo de control de caudal MCC-09 (laboratorio USS SL01LA07)",
+  "version": "1.2",
+  "fuente": "Programa del PLC (ANALISIS_CPU226.awl), proyecto PC Access (OPC_caudal.pca), calibracion del caudalimetro y pruebas en vivo del 19-oct-2026",
+  "nodos": {
+    "tanque": {
+      "tipo": "equipo",
+      "nombre": "Tanque de agua",
+      "variables": [
+        "estado/nivel_bajo",
+        "estado/nivel_alto"
+      ]
+    },
+    "sensor_nivel": {
+      "tipo": "sensor",
+      "nombre": "Sensor de nivel del tanque (I0.2)",
+      "variables": [
+        "estado/nivel_bajo"
+      ]
+    },
+    "bomba": {
+      "tipo": "equipo",
+      "nombre": "Bomba centrifuga",
+      "variables": [
+        "estado/sistema_funcionando"
+      ]
+    },
+    "variador": {
+      "tipo": "actuador",
+      "nombre": "Variador de frecuencia (AQW2)",
+      "variables": [
+        "actuadores/variador_pct"
+      ]
+    },
+    "valvula": {
+      "tipo": "actuador",
+      "nombre": "Valvula proporcional (AQW0)",
+      "variables": [
+        "actuadores/valvula_pct"
+      ]
+    },
+    "linea": {
+      "tipo": "proceso",
+      "nombre": "Linea de impulsion (caudal)",
+      "variables": [
+        "caudal/pv_pid",
+        "caudal/caudalimetro"
+      ]
+    },
+    "caudalimetro": {
+      "tipo": "sensor",
+      "nombre": "Caudalimetro Kobold DRG 4-20 mA (AIW0)",
+      "variables": [
+        "caudal/caudalimetro",
+        "caudal/caudalimetro_raw"
+      ]
+    },
+    "pid": {
+      "tipo": "control",
+      "nombre": "Lazo PID 0 del S7-200 (tabla VB159)",
+      "variables": [
+        "caudal/pv_pid",
+        "caudal/setpoint_pid",
+        "pid/salida",
+        "pid/mx",
+        "pid/kc",
+        "pid/ti",
+        "pid/td",
+        "pid/ts"
+      ]
+    },
+    "plc": {
+      "tipo": "control",
+      "nombre": "PLC S7-200 CPU226 + CP243-1",
+      "variables": []
+    },
+    "selector": {
+      "tipo": "mando",
+      "nombre": "Selector LOCAL/REMOTO del tablero",
+      "variables": [
+        "estado/selector_remoto",
+        "estado/selector_local"
+      ]
+    },
+    "potenciometro": {
+      "tipo": "mando",
+      "nombre": "Potenciometro del tablero (AIW2)",
+      "variables": [
+        "actuadores/potenciometro"
+      ]
+    },
+    "pc_scada": {
+      "tipo": "mando",
+      "nombre": "PC / SCADA (setpoint remoto VD400)",
+      "variables": [
+        "caudal/setpoint",
+        "estado/start_remoto"
+      ]
+    },
+    "hmi": {
+      "tipo": "mando",
+      "nombre": "HMI TPC-2106T (setpoint VD408)",
+      "variables": [
+        "caudal/setpoint_hmi",
+        "estado/modo_hmi_pc"
+      ]
+    },
+    "proteccion_motor": {
+      "tipo": "proteccion",
+      "nombre": "Proteccion del motor (guardamotor / interruptor termico)",
+      "variables": []
+    }
+  },
+  "relaciones": [
+    {
+      "de": "tanque",
+      "rel": "alimenta",
+      "a": "bomba",
+      "nota": "Sin agua la bomba no puede impulsar caudal"
+    },
+    {
+      "de": "sensor_nivel",
+      "rel": "protege",
+      "a": "bomba",
+      "nota": "Nivel bajo activa Q0.1 (alarma)"
+    },
+    {
+      "de": "variador",
+      "rel": "acciona",
+      "a": "bomba",
+      "nota": "La velocidad de la bomba sigue a la consigna del variador"
+    },
+    {
+      "de": "bomba",
+      "rel": "impulsa",
+      "a": "linea"
+    },
+    {
+      "de": "valvula",
+      "rel": "restringe",
+      "a": "linea",
+      "nota": "100 % = totalmente abierta; en LOCAL el PLC la fija en 100 %"
+    },
+    {
+      "de": "caudalimetro",
+      "rel": "mide",
+      "a": "linea"
+    },
+    {
+      "de": "pid",
+      "rel": "lee",
+      "a": "caudalimetro",
+      "nota": "La PV del PID es AIW0 normalizada (fondo 140 L/min)"
+    },
+    {
+      "de": "pid",
+      "rel": "controla",
+      "a": "variador",
+      "nota": "Solo en REMOTO: VW6 (salida PID) -> VW8 -> AQW2"
+    },
+    {
+      "de": "potenciometro",
+      "rel": "controla_en_local",
+      "a": "variador",
+      "nota": "En LOCAL: AIW2 -> MW2 -> VW8 -> AQW2"
+    },
+    {
+      "de": "selector",
+      "rel": "habilita",
+      "a": "pid",
+      "nota": "REMOTO (I0.0) habilita el PID; LOCAL (I0.1) lo deja sin efecto"
+    },
+    {
+      "de": "pc_scada",
+      "rel": "fija_setpoint",
+      "a": "pid",
+      "nota": "VD400 cuando el mando es PC (M0.6 = 0)"
+    },
+    {
+      "de": "hmi",
+      "rel": "fija_setpoint",
+      "a": "pid",
+      "nota": "VD408 cuando el mando es HMI (M0.6 = 1)"
+    },
+    {
+      "de": "plc",
+      "rel": "ejecuta",
+      "a": "pid"
+    },
+    {
+      "de": "proteccion_motor",
+      "rel": "protege",
+      "a": "bomba",
+      "nota": "No tiene senal hacia el PLC; su disparo solo se ve como bomba detenida. Observado 19-oct: se disparo tras 1-2 min con el variador al 100 %"
+    }
+  ],
+  "capacidad_observada": {
+    "caudal_max_lpm": 57.5,
+    "condicion": "Variador 100 %, valvula 100 %, modo REMOTO",
+    "evidencia": "19-oct-2026: 58,5 L/min a las 14:53 y 57,0 L/min a las 15:16 con setpoint 60; historico 2009 tambien quedo ~7 L/min por debajo con setpoint ~60",
+    "validado_por": "PENDIENTE",
+    "riesgo": "Con el variador al 100 % la proteccion del motor se disparo dos veces (14:54 y 15:18 del 19-oct): no operar sostenidamente en saturacion.",
+    "setpoint_max_recomendado_lpm": 50,
+    "nota_setpoint": "Propuesta con margen (a 40 L/min el variador trabaja al 57 %); pendiente de validar con el responsable del laboratorio"
+  },
+  "layout": {
+    "tanque": [
+      0,
+      380
+    ],
+    "sensor_nivel": [
+      0,
+      150
+    ],
+    "bomba": [
+      320,
+      380
+    ],
+    "variador": [
+      320,
+      150
+    ],
+    "valvula": [
+      640,
+      610
+    ],
+    "linea": [
+      640,
+      380
+    ],
+    "caudalimetro": [
+      960,
+      380
+    ],
+    "pid": [
+      640,
+      150
+    ],
+    "plc": [
+      960,
+      150
+    ],
+    "selector": [
+      320,
+      -80
+    ],
+    "potenciometro": [
+      0,
+      -80
+    ],
+    "pc_scada": [
+      640,
+      -80
+    ],
+    "hmi": [
+      960,
+      -80
+    ],
+    "proteccion_motor": [
+      320,
+      610
+    ],
+    "panel:diagnostico": [
+      1300,
+      -80
+    ],
+    "panel:agente": [
+      1300,
+      420
+    ],
+    "panel:tendencia": [
+      0,
+      820
+    ],
+    "panel:uns": [
+      860,
+      820
+    ]
+  },
+  "editado": "2026-10-19T16:41:43-05:00"
+}

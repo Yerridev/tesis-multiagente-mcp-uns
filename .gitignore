@@ -57,3 +57,21 @@ bat/.modo-planta
 registros/*
 # las posiciones de los lienzos SÍ se respaldan en GitHub
 !registros/lienzos/
+
+# =====================================================================
+#  Stack v1 (historiador/, nivel/, presion/, temperatura/) — venía de main
+# =====================================================================
+!**/.env.example
+**/claude_desktop_config.json
+.vscode/
+session-*.md
+historiador/respaldo_*/
+historiador/mcp_servidor/conocimiento/respaldos/
+# Programas originales de los PLC (propiedad del laboratorio / Inducontrol)
+*.mwp
+*.RSS
+*.rss
+nivel/rss_streams/
+
+# Build local de la SPA para `dotnet run` (Docker la construye solo)
+backend/wwwroot/

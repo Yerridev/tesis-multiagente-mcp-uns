@@ -2,7 +2,8 @@
 # Rutas DENTRO del proyecto: Python propio (.venv) y logs en logs\ (rotan al pasar 20 MB)
 $raiz = Split-Path -Parent $PSScriptRoot
 $py   = 'C:\Python37-32\python.exe'   # 32 bits: lo exige la DLL de NI-DataSocket
-$dir  = 'C:\Users\KST\NI-DS\conectores'   # conectores de presion junto a las DLL de NI
+$nids = if ($env:NIDS_DIR) { $env:NIDS_DIR } else { Join-Path $env:USERPROFILE 'NI-DS' }   # carpeta con las DLL de NI (por defecto %USERPROFILE%\NI-DS)
+$dir  = Join-Path $nids 'conectores'   # conectores de presion junto a las DLL de NI
 $log  = Join-Path $raiz 'logs\presion_control.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Rotar { if ((Test-Path $log) -and (Get-Item $log).Length -gt 20MB) { Move-Item -Force $log "$log.1" } }

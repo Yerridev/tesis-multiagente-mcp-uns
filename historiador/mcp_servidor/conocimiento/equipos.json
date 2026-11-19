@@ -1,0 +1,202 @@
+{
+  "version": "1.0",
+  "descripcion": "Registro unico de equipos integrados. El lienzo, el agente y la vista de planta se configuran desde aqui: agregar un PLC = agregar una entrada (mas su conector, servidor MCP y grafo).",
+  "organizacion": {
+    "campus": "USS Chiclayo",
+    "area": "Laboratorio de Automatizacion y Simulacion de Procesos",
+    "aula": "SL01LA07",
+    "uns_raiz": "uss/campus/lab-automatizacion/sl01la07"
+  },
+  "equipos": [
+    {
+      "id": "caudal-mcc09",
+      "alias": "caudal",
+      "nombre": "Control de caudal",
+      "codigo": "MCC-09/002",
+      "proceso": "Caudal",
+      "fabricante": "Inducontrol",
+      "plc": "Siemens S7-200 CPU226 + CP243-1",
+      "ip": "192.168.114.7",
+      "protocolo": "S7 por CP243-1 (enlace 1, TSAP 11.00)",
+      "uns_base": "uss/campus/lab-automatizacion/sl01la07/caudal-mcc09",
+      "prefijo_db": "",
+      "mcp_script": "servidor_mcp.py",
+      "mcp_modulo": "servidor_mcp",
+      "diagnostico": "diagnosticar_lazo",
+      "grafo": "grafo_mcc09.json",
+      "principal": { "variable": "caudal/pv_pid", "nombre": "Caudal", "unidad": "L/min", "decimales": 1, "min": 0, "max": 60 },
+      "secundario": { "variable": "caudal/setpoint_pid", "nombre": "Setpoint", "unidad": "L/min", "decimales": 1 },
+      "marcha": "estado/sistema_funcionando",
+      "velocidad": { "variable": "actuadores/variador_pct", "factor_pct": 1 },
+      "flujo": { "variable": "caudal/pv_pid", "factor": 1 },
+      "tendencia": {
+        "ejes": [ { "nombre": "L/min", "min": 0 }, { "nombre": "%", "min": 0, "max": 100 } ],
+        "series": [
+          { "v": "caudal/setpoint_pid", "nombre": "Setpoint", "eje": 0, "paso": true, "color": "--c-sp" },
+          { "v": "caudal/pv_pid", "nombre": "Caudal (PV)", "eje": 0, "color": "--c-pv", "grueso": true },
+          { "v": "caudal/caudalimetro", "nombre": "Caudalimetro", "eje": 0, "color": "--c-q" },
+          { "v": "actuadores/variador_pct", "nombre": "Variador %", "eje": 1, "color": "--c-var" }
+        ]
+      },
+      "kpis": [
+        { "k": "setpoint_lpm", "n": "Setpoint", "u": "L/min", "d": 1 },
+        { "k": "caudal_promedio_30s_lpm", "n": "Caudal", "u": "L/min", "d": 1 },
+        { "k": "error_lpm", "n": "Error", "u": "L/min", "d": 2 },
+        { "k": "variador_pct", "n": "Variador", "u": "%", "d": 0 }
+      ],
+      "eventos": {
+        "estado/sistema_funcionando": [ "arranque", "Bomba arranca", "parada", "Bomba se detiene" ],
+        "estado/selector_remoto": [ "modo", "Pasa a REMOTO", "modo", "Sale de REMOTO" ],
+        "estado/nivel_bajo": [ "alarma", "Nivel bajo", "modo", "Nivel normal" ]
+      },
+      "sugerencias": [
+        "¿El caudal esta siguiendo al setpoint? Si no, ¿por que?",
+        "Compara el desempeno de hoy con el SCADA de 2008-2011",
+        "¿Que equipos influyen sobre el caudal de la linea?"
+      ]
+    },
+    {
+      "id": "nivel-mcn09",
+      "alias": "nivel",
+      "nombre": "Control de nivel",
+      "codigo": "MCN-09/001",
+      "proceso": "Nivel",
+      "fabricante": "Inducontrol",
+      "plc": "Allen-Bradley MicroLogix 1100 + 1762-IF2OF2",
+      "ip": "192.168.114.9",
+      "protocolo": "EtherNet/IP (PCCC), TCP 44818",
+      "uns_base": "uss/campus/lab-automatizacion/sl01la07/nivel-mcn09",
+      "prefijo_db": "nivel-mcn09/",
+      "mcp_script": "servidor_mcp_nivel.py",
+      "mcp_modulo": "servidor_mcp_nivel",
+      "diagnostico": "diagnosticar_nivel",
+      "grafo": "grafo_mcn09.json",
+      "principal": { "variable": "nivel/cm", "nombre": "Nivel T2", "unidad": "cm", "decimales": 1, "min": 0, "max": 40, "aviso": 35, "alarma": 40 },
+      "secundario": { "variable": "bomba/frecuencia_estimada_hz", "nombre": "Frecuencia bomba (est.)", "unidad": "Hz", "decimales": 1 },
+      "marcha": "estado/bomba_marcha",
+      "velocidad": { "variable": "bomba/frecuencia_estimada_hz", "factor_pct": 1.667 },
+      "flujo": { "variable": "bomba/frecuencia_estimada_hz", "factor": 0.5 },
+      "tendencia": {
+        "ejes": [ { "nombre": "cm", "min": 0, "max": 45 }, { "nombre": "Hz", "min": 0, "max": 60 } ],
+        "series": [
+          { "v": "nivel/cm", "nombre": "Nivel T2", "eje": 0, "color": "--c-pv", "grueso": true },
+          { "v": "bomba/frecuencia_estimada_hz", "nombre": "Frecuencia (est.)", "eje": 1, "color": "--c-var" }
+        ],
+        "lineas": [ { "eje": 0, "valor": 35, "nombre": "Limite de trabajo 35 cm" } ]
+      },
+      "kpis": [
+        { "k": "nivel_t2_cm", "n": "Nivel", "u": "cm", "d": 1 },
+        { "k": "pendiente_cm_min", "n": "Tendencia", "u": "cm/min", "d": 1 },
+        { "k": "caudal_neto_estimado_l_min", "n": "Caudal neto", "u": "L/min", "d": 1 },
+        { "k": "frecuencia_estimada_hz", "n": "Frecuencia", "u": "Hz", "d": 1 }
+      ],
+      "eventos": {
+        "estado/bomba_marcha": [ "arranque", "Bomba arranca", "parada", "Bomba se detiene" ],
+        "estado/selector_local": [ "modo", "Pasa a LOCAL", "modo", "Sale de LOCAL" ],
+        "estado/tanque1_con_agua": [ "modo", "T1 con agua", "alarma", "T1 en nivel bajo" ]
+      },
+      "sugerencias": [
+        "¿Que esta pasando ahora con el tanque 2?",
+        "¿Como se lleno el tanque hoy entre las 12:56 y las 12:59?",
+        "¿Por que no funciona el modo REMOTO?"
+      ]
+    },
+    {
+      "id": "presion-mcp09",
+      "alias": "presion",
+      "nombre": "Control de presion",
+      "codigo": "MCP-09/001",
+      "proceso": "Presion",
+      "fabricante": "Inducontrol",
+      "plc": "NI Compact FieldPoint cFP-2200 (LabVIEW RT 8.6) + DI-301, DO-403, AIO-610",
+      "ip": "192.168.114.8",
+      "protocolo": "NI-PSP via DataSocket (VM Windows 7), solo lectura",
+      "uns_base": "uss/campus/lab-automatizacion/sl01la07/presion-mcp09",
+      "prefijo_db": "presion-mcp09/",
+      "mcp_script": "servidor_mcp_presion.py",
+      "mcp_modulo": "servidor_mcp_presion",
+      "diagnostico": "diagnosticar_presion",
+      "grafo": "grafo_mcp09.json",
+      "principal": { "variable": "presion/psi", "nombre": "Presion T2", "unidad": "psi", "decimales": 2, "min": 0, "max": 45, "aviso": 40, "alarma": 43 },
+      "secundario": { "variable": "pid/setpoint_pc", "nombre": "Setpoint", "unidad": "psi", "decimales": 1 },
+      "marcha": "estado/sistema_funcionando",
+      "velocidad": { "variable": "bomba/salida_variador", "factor_pct": 10 },
+      "flujo": { "variable": "bomba/salida_variador", "factor": 0.5 },
+      "tendencia": {
+        "ejes": [ { "nombre": "psi", "min": 0, "max": 45 }, { "nombre": "V", "min": 0, "max": 10 } ],
+        "series": [
+          { "v": "pid/setpoint_pc", "nombre": "Setpoint", "eje": 0, "paso": true, "color": "--c-sp" },
+          { "v": "presion/psi", "nombre": "Presion (PV)", "eje": 0, "color": "--c-pv", "grueso": true },
+          { "v": "pid/cv", "nombre": "Salida PID (V)", "eje": 1, "color": "--c-var" },
+          { "v": "valvula/salida", "nombre": "Valvula (V)", "eje": 1, "color": "--c-q" }
+        ],
+        "lineas": [ { "eje": 0, "valor": 40, "nombre": "Limite de trabajo 40 psi" } ]
+      },
+      "kpis": [
+        { "k": "setpoint_psi", "n": "Setpoint", "u": "psi", "d": 1 },
+        { "k": "presion_psi", "n": "Presion", "u": "psi", "d": 2 },
+        { "k": "error_psi", "n": "Error", "u": "psi", "d": 2 },
+        { "k": "salida_pid_v", "n": "Salida PID", "u": "V", "d": 1 }
+      ],
+      "eventos": {
+        "estado/sistema_funcionando": [ "arranque", "Sistema arranca", "parada", "Sistema se detiene" ],
+        "estado/selector_remoto": [ "modo", "Pasa a REMOTO", "modo", "Sale de REMOTO" ],
+        "estado/alarma_nivel_bajo": [ "alarma", "Nivel bajo en T1", "modo", "Nivel de T1 normal" ]
+      },
+      "sugerencias": [
+        "¿Por que la presion no siguio al setpoint en la prueba de las 18:52?",
+        "¿Que paso en la prueba manual de las 18:26?",
+        "¿Que equipos influyen sobre la presion del tanque T2?"
+      ]
+    },
+    {
+      "id": "temperatura-mct09",
+      "alias": "temperatura",
+      "nombre": "Control de temperatura",
+      "codigo": "MCT-09/001",
+      "proceso": "Temperatura",
+      "fabricante": "Inducontrol",
+      "plc": "Schneider Twido TWDLCAE40DRF + 2x TWDAMM3HT",
+      "ip": "192.168.114.10",
+      "protocolo": "Modbus TCP 502 (unit id 1), solo lectura",
+      "uns_base": "uss/campus/lab-automatizacion/sl01la07/temperatura-mct09",
+      "prefijo_db": "temperatura-mct09/",
+      "mcp_script": "servidor_mcp_temperatura.py",
+      "mcp_modulo": "servidor_mcp_temperatura",
+      "diagnostico": "diagnosticar_temperatura",
+      "grafo": "grafo_mct09.json",
+      "principal": { "variable": "temperatura/principal_c", "nombre": "Temperatura T2", "unidad": "C", "decimales": 1, "min": 0, "max": 60, "aviso": 50, "alarma": 60 },
+      "secundario": { "variable": "pid/setpoint_c", "nombre": "Setpoint", "unidad": "C", "decimales": 1 },
+      "marcha": "estado/sistema_funcionando",
+      "velocidad": { "variable": "bomba/consigna_pct", "factor_pct": 1 },
+      "flujo": { "variable": "bomba/consigna_pct", "factor": 1 },
+      "tendencia": {
+        "ejes": [ { "nombre": "C", "min": 0, "max": 60 }, { "nombre": "%", "min": 0, "max": 100 } ],
+        "series": [
+          { "v": "pid/setpoint_c", "nombre": "Setpoint", "eje": 0, "paso": true, "color": "--c-sp" },
+          { "v": "temperatura/principal_c", "nombre": "T principal (PV)", "eje": 0, "color": "--c-pv", "grueso": true },
+          { "v": "temperatura/enfriador_c", "nombre": "T enfriador", "eje": 0, "color": "--c-q" },
+          { "v": "pid/salida_pct", "nombre": "Salida PID %", "eje": 1, "color": "--c-var" }
+        ],
+        "lineas": [ { "eje": 0, "valor": 50, "nombre": "Limite de trabajo 50 C" } ]
+      },
+      "kpis": [
+        { "k": "setpoint_c", "n": "Setpoint", "u": "C", "d": 1 },
+        { "k": "temperatura_c", "n": "Temperatura", "u": "C", "d": 1 },
+        { "k": "error_c", "n": "Error", "u": "C", "d": 1 },
+        { "k": "salida_pid_pct", "n": "Salida PID", "u": "%", "d": 0 }
+      ],
+      "eventos": {
+        "estado/sistema_funcionando": [ "arranque", "Lazo arranca", "parada", "Lazo se detiene" ],
+        "estado/selector_remoto": [ "modo", "Pasa a PC (remoto)", "modo", "Sale de PC" ],
+        "falla/nivel_principal": [ "alarma", "Falla de nivel en el tanque principal", "modo", "Nivel del tanque principal normal" ],
+        "estado/enfriador_on": [ "modo", "Enfriador encendido", "modo", "Enfriador apagado" ]
+      },
+      "sugerencias": [
+        "¿Que esta pasando ahora con la temperatura del tanque principal?",
+        "¿Por que se calento el agua el 23-oct con el lazo detenido?",
+        "Compara el calentamiento de hoy con la prueba del SCADA del 24-jul-2010"
+      ]
+    }
+  ]
+}

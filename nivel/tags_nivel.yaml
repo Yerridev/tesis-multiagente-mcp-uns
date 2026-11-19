@@ -1,0 +1,87 @@
+# Diccionario de tags - Modulo Control de Nivel MCN-09/001 (Inducontrol)
+# PLC: MicroLogix 1100 (1763-LEC) + 1762-IF2OF2 | IP 192.168.114.9 | EtherNet/IP (pycomm3 SLCDriver)
+# Acceso: SOLO LECTURA
+# Estado: v0.2 (20-oct-2026) - pruebas en marcha 19 y 20-oct + calibracion 4 puntos + manual del fabricante
+#   confirmado = visto en vivo, coherente con la logica ladder y/o el manual
+#   hipotesis  = deducido, falta prueba dirigida
+# Fuente unica en el codigo: historiador/conector_edge_ml1100.py (v0.2). Este archivo es documentacion.
+
+plc:
+  id: mcn09
+  ip: 192.168.114.9
+  driver: pycomm3.SLCDriver
+  poll_s: 1.0
+  uns_base: uss/campus/lab-automatizacion/sl01la07/nivel-mcn09
+  prefijo_db: nivel-mcn09/
+
+proceso:
+  tanque_t1: {rol: reserva / carga, material: acero AISI 316, capacidad_l: 78, interruptores: [nivel bajo, nivel alto]}
+  tanque_t2: {rol: tanque controlado, material: acrilico, capacidad_l: 43, altura_cm: 60}
+  bomba: Pentax Ultra U5 120/3T (1,2 HP) + variador Schneider Altivar 11 (AI1 0-5 V)
+  sensor_nivel: Senix TS-30S1 ultrasonico sobre T2, 4-20 mA (rango sensor 0,102-4,25 m)
+  valvula: Belimo LRB24-3 (flotante; el PLC la acciona 35 s; ficha 95 s de carrera)
+  rango_trabajo_cm: [0, 35]        # manual p. 11 y 13
+  tablero: [piloto SISTEMA ENERGIZADO, piloto SISTEMA FUNCIONANDO, piloto ALARMA NIVEL ALTO, piloto ALARMA NIVEL BAJO,
+            potenciometro CONTROL MANUAL (0-11), ARRANQUE MANUAL, PARADA MANUAL, selector LOCAL-0-REMOTO, paro de emergencia]
+
+calibracion_nivel:
+  fecha: 2026-10-20
+  formula: "cm = (16348 - N7:4) / 400"
+  puntos: [{cm: 0, raw: 16220}, {cm: 15, raw: 10540}, {cm: 30, raw: 4390}, {cm: 39, raw: 640}]
+  error_max_cm: 0.5
+  rango_util_cm: [0, 40]           # el sensor satura cerca de 41 cm (N7:4 ~ 0)
+  filtro: mediana de 3 muestras en nivel/cm (picos de eco del ultrasonico)
+
+tags:
+  # ---------------- Proceso ----------------
+  nivel/raw:            {addr: N7:4, estado: confirmado, nota: "PV del PID PD12:0; baja al llenar (mide distancia)"}
+  nivel/cm:             {addr: N7:4, unidad: cm, estado: confirmado}
+  nivel/pct:            {addr: N7:4, unidad: "%", estado: confirmado, nota: "% de la altura total de T2 (60 cm)"}
+  nivel/fuera_rango_sensor: {addr: N7:4, estado: confirmado, nota: "N7:4 < 300 (~40 cm)"}
+  bomba/potenciometro_raw:  {addr: "I:1.5", estado: confirmado, nota: "potenciometro CONTROL MANUAL; sigue al mando con la bomba parada"}
+  bomba/frecuencia_estimada_hz: {addr: "I:1.5", estado: hipotesis, nota: "~0,00195 Hz/cuenta (2 puntos: 24,6 y 33 Hz)"}
+  bomba/salida_plc_raw: {addr: "O:1.0", estado: confirmado, nota: "consigna PLC->variador; 0 en LOCAL"}
+
+  # ---------------- Entradas digitales (I:0) ----------------
+  estado/selector_remoto:   {addr: "I:0/0", estado: confirmado}
+  estado/selector_local:    {addr: "I:0/1", estado: confirmado, nota: "posicion 0 = I:0/0 y I:0/1 en 0"}
+  estado/tanque1_con_agua:  {addr: "I:0/2", estado: confirmado, nota: "interruptor NIVEL BAJO de T1; 0 detiene la bomba"}
+  estado/mando_i03:         {addr: "I:0/3", estado: hipotesis, nota: "probable interruptor NIVEL ALTO de T1"}
+  estado/pulsador_arranque: {addr: "I:0/4", estado: confirmado, nota: "ARRANQUE MANUAL (pulso; puede no verse a 1 s)"}
+  estado/entrada_5:         {addr: "I:0/5", estado: hipotesis, nota: "siempre 1: probable paro de emergencia (NC)"}
+  # PARADA MANUAL: efecto confirmado (detiene la bomba), entrada no identificada (pulso < 1 s)
+
+  # ---------------- Salidas digitales (O:0) ----------------
+  estado/piloto_o00:        {addr: "O:0/0", estado: hipotesis, nota: "probable piloto ALARMA NIVEL ALTO (va con I:0/3)"}
+  estado/alarma_nivel_bajo_tanque1: {addr: "O:0/1", estado: confirmado, nota: "piloto ALARMA NIVEL BAJO"}
+  estado/bomba_marcha:      {addr: "O:0/2", estado: confirmado}
+  estado/piloto_marcha:     {addr: "O:0/3", estado: confirmado, nota: "piloto SISTEMA FUNCIONANDO / marcha"}
+  valvula/abriendo:         {addr: "O:0/4", estado: confirmado, nota: "35 s al entrar en LOCAL o REMOTO"}
+  valvula/cerrando:         {addr: "O:0/5", estado: hipotesis}
+  estado/marcha_interna:    {addr: "B3:0/1", estado: hipotesis, nota: "=1 con la bomba en marcha"}
+
+  # ---------------- Valvula ----------------
+  valvula/t_apertura:    {addr: T4:0.ACC, unidad: s, estado: confirmado, nota: "base 0,01 s; PRE 3500"}
+  valvula/t_cierre:      {addr: T4:1.ACC, unidad: s, estado: hipotesis}
+  valvula/t_apertura_sp: {addr: N7:1, unidad: s, estado: hipotesis}
+  valvula/t_cierre_sp:   {addr: N7:2, unidad: s, estado: hipotesis, nota: "19 s"}
+
+  # ---------------- Control (estaticos sin HMI/SCADA) ----------------
+  pid/setpoint_a_raw: {addr: N7:5, estado: hipotesis}
+  pid/setpoint_b_raw: {addr: N7:6, estado: hipotesis}
+  pid/cv_raw:         {addr: N7:14, estado: hipotesis}
+  pid/kc_a: {addr: N7:8,  estado: hipotesis}
+  pid/ti_a: {addr: N7:9,  estado: hipotesis}
+  pid/td_a: {addr: N7:10, estado: hipotesis}
+  pid/kc_b: {addr: N7:11, estado: hipotesis}
+  pid/ti_b: {addr: N7:12, estado: hipotesis}
+  pid/td_b: {addr: N7:13, estado: hipotesis}
+  # F8:4..6 (3,0 / 0,1 / 0,01): mismo formato que P/I/D de la pantalla Control del HMI (1,00 / 0,01 / 0,00)
+
+archivos_plc: {B3: 11, T4: 11, C5: 1, R6: 1, N7: 21, F8: 10, PD12: 1}
+
+hmi_y_scada:
+  estado: "HMI TPC-2106T enciende y muestra su aplicacion, pero no controla; SCADA LabVIEW no opera"
+  causa_probable: "El HMI habla directo con el PLC por Ethernet (manual p. 11) y estaba configurado en 192.168.1.110;
+    el PLC hoy esta en 192.168.114.9 (otra subred). Sin el HMI, el modo REMOTO no recibe setpoint ni parametros."
+  alcance: "Fuera del alcance de solo lectura: no se modifica PLC ni HMI"

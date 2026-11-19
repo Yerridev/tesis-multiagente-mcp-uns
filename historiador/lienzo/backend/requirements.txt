@@ -1,0 +1,7 @@
+fastapi==0.149.0
+uvicorn[standard]==0.53.0
+paho-mqtt==2.1.0
+psycopg[binary]==3.2.3
+anthropic==1.15.0
+mcp==2.2.0
+openai==3.35.1

@@ -295,6 +295,29 @@ app.MapGet("/api/equipment/{id}/detail", (string id, PlantState plant) =>
     id == "nivel-mcn09" ? Results.Ok(plant.GetLevel()) : Results.NotFound(new { error = "Detalle disponible solo para nivel-mcn09" }));
 app.MapGet("/api/history", (PlantState plant, string? equipmentId, int? limit) => Results.Ok(plant.GetHistory(equipmentId, limit ?? 300)));
 app.MapGet("/api/agent/tools", () => Results.Ok(PlantState.Tools()));
+/* Posiciones de los nodos de cada lienzo (y lados de las flechas), guardadas en el servidor:
+   así se ven igual en cualquier navegador/PC y en el panel del sistema multiagente.
+   Archivo por módulo en Lienzo:Ruta (registros/lienzos en la PC). */
+var lienzoDir = app.Configuration["Lienzo:Ruta"] ?? Path.Combine(AppContext.BaseDirectory, "lienzos");
+var lienzoIdOk = new System.Text.RegularExpressions.Regex("^[a-z0-9-]{3,40}$");
+app.MapGet("/api/lienzo/{id}/layout", (string id) =>
+{
+    if (!lienzoIdOk.IsMatch(id)) return Results.BadRequest();
+    var f = Path.Combine(lienzoDir, id + ".json");
+    return File.Exists(f) ? Results.Text(File.ReadAllText(f), "application/json") : Results.NotFound();
+});
+app.MapPut("/api/lienzo/{id}/layout", async (string id, HttpContext ctx) =>
+{
+    if (!lienzoIdOk.IsMatch(id)) return Results.BadRequest();
+    using var lector = new StreamReader(ctx.Request.Body);
+    var cuerpo = await lector.ReadToEndAsync();
+    if (cuerpo.Length > 200_000) return Results.BadRequest(new { error = "DEMASIADO_GRANDE" });
+    try { using var _ = JsonDocument.Parse(cuerpo); } catch { return Results.BadRequest(new { error = "JSON_INVALIDO" }); }
+    Directory.CreateDirectory(lienzoDir);
+    await File.WriteAllTextAsync(Path.Combine(lienzoDir, id + ".json"), cuerpo);
+    return Results.Ok(new { ok = true });
+});
+
 /* Servidores MCP reales del sistema multiagente (catálogo retenido del orquestador, bat 31) */
 app.MapGet("/api/mcp/catalogo", async (OrquestadorMultiagente multi, CancellationToken ct) =>
 {

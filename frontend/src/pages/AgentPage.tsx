@@ -11,6 +11,9 @@ import { HistorialChats } from '../components/agents/HistorialChats';
 import { useSesion } from '../components/agents/useSesion';
 import type { ConversacionCompleta } from '../types';
 import { TextoMd } from '../components/agents/TextoMd';
+import { createPortal } from 'react-dom';
+import { LienzoPage } from './lienzo/LienzoPage';
+import { equipoLienzo } from './lienzo/lienzoData';
 
 interface ChatMessage {
   id: number;
@@ -45,6 +48,52 @@ function agenteDe(tool: string): string {
 
 const AGENT_KEY = (key: string) => `mcp-agente-${key}`;
 
+/* Selector "Vista" del panel: diagrama de agentes, lienzo de un módulo o automático (sigue al agente) */
+const VISTAS: { id: string; nombre: string }[] = [
+  { id: 'agentes', nombre: 'Agentes (diagrama)' },
+  { id: 'auto', nombre: 'Automático (sigue al agente)' },
+  { id: 'nivel-mcn09', nombre: 'Lienzo · Nivel' },
+  { id: 'caudal-mcc09', nombre: 'Lienzo · Caudal' },
+  { id: 'presion-mcp09', nombre: 'Lienzo · Presión' },
+  { id: 'temp-mct09', nombre: 'Lienzo · Temperatura' },
+];
+const EQUIPO_DE: Record<string, string> = { nivel: 'nivel-mcn09', caudal: 'caudal-mcc09', presion: 'presion-mcp09', temperatura: 'temp-mct09' };
+
+
+/** Un solo botón desplegable "Mostrar" con las casillas Servidores MCP y Herramientas. */
+function MenuCapas({ servidores, herramientas, onServidores, onHerramientas }: {
+  servidores: boolean; herramientas: boolean; onServidores: (v: boolean) => void; onHerramientas: (v: boolean) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false); };
+    document.addEventListener('mousedown', fuera);
+    return () => document.removeEventListener('mousedown', fuera);
+  }, [abierto]);
+  const cuenta = (servidores ? 1 : 0) + (herramientas ? 1 : 0);
+  return (
+    <div className="af-capas" ref={ref}>
+      <button type="button" className="af-capas-btn" aria-expanded={abierto} onClick={() => setAbierto((a) => !a)}>
+        Mostrar{cuenta ? ` (${cuenta})` : ''} <span aria-hidden="true">▾</span>
+      </button>
+      {abierto ? (
+        <div className="af-capas-menu" role="menu">
+          <label>
+            <input type="checkbox" checked={servidores} onChange={(e) => onServidores(e.target.checked)} />
+            Servidores MCP
+          </label>
+          <label className={servidores ? '' : 'desactivada'} title={servidores ? 'Herramientas que publica cada servidor MCP' : 'Primero muestra los servidores MCP'}>
+            <input type="checkbox" checked={herramientas} disabled={!servidores} onChange={(e) => onHerramientas(e.target.checked)} />
+            Herramientas
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function AgentPage() {
   const { link, health, load, error, reload } = usePlant();
   /* el chat se conserva al cambiar de módulo o refrescar; se borra con "Nuevo chat" o al cerrar el navegador */
@@ -62,6 +111,22 @@ export function AgentPage() {
   const nextId = useRef(messages.reduce((m, x) => Math.max(m, x.id), 0) + 1);
   const [convId, setConvId] = useSesion<string | null>('mcp.chat.agentes.conversacion', null);   // conversación guardada en curso
   const [historialAbierto, setHistorialAbierto] = useState(false);
+  /* casillas del diagrama: ver servidores MCP y sus herramientas (se recuerdan en este navegador) */
+  const leerVer = (k: string, def: boolean) => { try { const v = localStorage.getItem(k); return v === null ? def : v === '1'; } catch { return def; } };
+  const [verServidores, setVerServidores] = useState(() => leerVer('mcp.diagrama.servidores', true));
+  const [verHerramientas, setVerHerramientas] = useState(() => leerVer('mcp.diagrama.herramientas', false));
+  const guardarVer = (k: string, v: boolean) => { try { localStorage.setItem(k, v ? '1' : '0'); } catch { /* sin almacenamiento */ } };
+  const [herramientas, setHerramientas] = useState<Record<string, { nombre: string; descripcion: string }[]>>({});
+  const [vista, setVista] = useState(() => { try { return localStorage.getItem('mcp.diagrama.vista') ?? 'agentes'; } catch { return 'agentes'; } });
+  const [autoEquipo, setAutoEquipo] = useState<string | null>(null);   // en "Automático": lienzo del módulo que analizó el agente
+  const [ampliado, setAmpliado] = useState(false);   // ventana emergente (agentes o lienzo)
+  const vistaEfectiva = vista === 'auto' ? (autoEquipo ?? 'agentes') : vista;
+  useEffect(() => {
+    if (!ampliado) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliado(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ampliado]);
 
   useEffect(() => {
     api
@@ -69,6 +134,21 @@ export function AgentPage() {
       .then(setStatus)
       .catch(() => setStatus(null));
   }, []);
+
+  /* herramientas reales de cada servidor MCP (list_tools que publica el orquestador cada 15 s) */
+  useEffect(() => {
+    if (!verHerramientas) return;
+    let vivo = true;
+    const cargar = () => api.mcpCatalogo().then((d) => {
+      if (!vivo) return;
+      const m: Record<string, { nombre: string; descripcion: string }[]> = {};
+      for (const s of d.disponible ? d.catalogo?.servidores ?? [] : []) if (s.en_linea) m[s.servidor] = s.herramientas;
+      setHerramientas(m);
+    }).catch(() => vivo && setHerramientas({}));
+    void cargar();
+    const id = window.setInterval(cargar, 15000);
+    return () => { vivo = false; window.clearInterval(id); };
+  }, [verHerramientas]);
 
   useEffect(() => {
     const initial: Record<string, boolean> = {};
@@ -135,9 +215,16 @@ export function AgentPage() {
         for (const tool of reply.tools) {
           const key = agenteDe(tool.name);
           on.add(key);
-          if (tool.name.startsWith('mcp-')) on.add(tool.name.split('.')[0]);
+          if (tool.name.startsWith('mcp-')) {
+            const [srv, herr] = tool.name.split('.');
+            on.add(srv);
+            if (herr) on.add(`${srv}:${herr}`);   // ilumina la herramienta usada
+          }
         }
         setActivos(on);
+        /* modo automático: si el agente analizó UN solo módulo, se muestra su lienzo; si fueron varios, el diagrama */
+        const modulos = [...new Set(reply.tools.map((t) => /^analista-(\w+)/.exec(t.name)?.[1]).filter(Boolean))] as string[];
+        setAutoEquipo(modulos.length === 1 ? EQUIPO_DE[modulos[0]] ?? null : null);
         if (apagar.current) clearTimeout(apagar.current);
         apagar.current = setTimeout(() => setActivos(new Set()), 6000);
       }
@@ -185,6 +272,34 @@ export function AgentPage() {
     setConvId(c.id);
     setMessages(c.mensajes.map((m) => ({ id: nextId.current++, role: m.rol === 'user' ? 'user' : 'agent', text: m.texto, tools: m.herramientas ?? undefined, model: m.modelo ?? null })));
   };
+
+  const casillas = (
+    <MenuCapas
+      servidores={verServidores}
+      herramientas={verServidores && verHerramientas}
+      onServidores={(v) => { setVerServidores(v); guardarVer('mcp.diagrama.servidores', v); }}
+      onHerramientas={(v) => { setVerHerramientas(v); guardarVer('mcp.diagrama.herramientas', v); }}
+    />
+  );
+
+  const selectorVista = (
+    <select className="af-vista" value={vista} aria-label="Vista del panel"
+      onChange={(e) => { setVista(e.target.value); try { localStorage.setItem('mcp.diagrama.vista', e.target.value); } catch { /* sin almacenamiento */ } }}>
+      {VISTAS.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+    </select>
+  );
+  /* contenido del panel (y de la ventana emergente): diagrama de agentes o lienzo del módulo */
+  const contenido = (grande: boolean) => vistaEfectiva === 'agentes' ? (
+    <AgentFlow agentes={AGENTES} estado={dotState} tarea={lastTask} activos={activos} ocupado={busy}
+      llm={{ activo: llm, modelo: ia.modelo ?? status?.model }}
+      verServidores={verServidores} verHerramientas={verServidores && verHerramientas} herramientas={herramientas}
+      ampliado={grande} onAmpliar={() => setAmpliado(!grande)} />
+  ) : (
+    <div className={`af-wrap ag-lienzo${grande ? ' af-modal-lienzo' : ''}`}>
+      <LienzoPage key={`${grande ? 'm-' : ''}${vistaEfectiva}`} equipo={equipoLienzo(vistaEfectiva)!} onNavigate={() => {}} compacto
+        ampliado={grande} onAmpliar={() => setAmpliado(!grande)} />
+    </div>
+  );
 
   if (load === 'loading') return <LoadingBlock label="Preparando los agentes de IA…" />;
   if (load === 'error') return <ErrorBlock message={error ?? undefined} onRetry={reload} />;
@@ -242,11 +357,38 @@ export function AgentPage() {
           <div className="panel-head">
             <div>
               <h2>Sistema multiagente MCP</h2>
-              <span className="panel-sub">{multi ? 'En línea' : 'Fuera de línea (bat 31)'} · rojo = trabajando ahora</span>
+              <span className="panel-sub">
+                {multi ? 'En línea' : 'Fuera de línea (bat 31)'}
+                {vistaEfectiva === 'agentes' ? ' · rojo = trabajando ahora' : ` · viendo ${VISTAS.find((v) => v.id === vistaEfectiva)?.nombre}${vista === 'auto' ? ' (automático)' : ''}`}
+              </span>
+            </div>
+            <div className="af-herr-der">
+              {selectorVista}
+              {vistaEfectiva === 'agentes' ? casillas : null}
             </div>
           </div>
-          <AgentFlow agentes={AGENTES} estado={dotState} tarea={lastTask} activos={activos} ocupado={busy}
-            llm={{ activo: llm, modelo: ia.modelo ?? status?.model }} />
+          {contenido(false)}
+          {ampliado
+            ? createPortal(
+                <div className="af-modal-fondo" onClick={() => setAmpliado(false)}>
+                  <div className="af-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Sistema multiagente MCP ampliado">
+                    <div className="af-modal-cab">
+                      <b>Sistema multiagente MCP</b>
+                      {/* misma barra en TODAS las vistas: selector arriba + controles de la vista + cerrar */}
+                      <div className="af-modal-der">
+                        {selectorVista}
+                        {vistaEfectiva === 'agentes' ? casillas : null}
+                        <button type="button" className="af-modal-cerrar" onClick={() => setAmpliado(false)} title="Cerrar (Esc)" aria-label="Cerrar">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    {contenido(true)}
+                  </div>
+                </div>,
+                document.body,
+              )
+            : null}
         </section>
 
         {/* Chat (atendido por el Agente Orquestador) */}

@@ -1223,9 +1223,9 @@
 @keyframes em-in { from { opacity: 0; } }
 @keyframes em-sube { from { transform: translateY(10px) scale(.98); opacity: 0; } }
 
-/* Botón cerrar [×] de TODOS los emergentes: fondo rojo de la marca, × blanca */
-.em-x, .co-modal-head button, .co-modal-head > button, .cat-cerrar {
-  background: #ee3f3a !important; border: 1px solid #d12f2a !important; color: #fff !important;
+/* Botón cerrar [×] de TODOS los emergentes: SIEMPRE cuadro rojo de la marca, × blanca y SIN borde */
+.em-x, .co-modal-head button, .co-modal-head > button, .cat-cerrar, .af-modal-cerrar, .lz-lados-x {
+  background: #ee3f3a !important; border: none !important; color: #fff !important;
   font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
 }
-.em-x:hover, .co-modal-head button:hover, .cat-cerrar:hover { background: #c92f2a !important; border-color: #b02622 !important; color: #fff !important; }
+.em-x:hover, .co-modal-head button:hover, .cat-cerrar:hover, .af-modal-cerrar:hover, .lz-lados-x:hover { background: #c92f2a !important; border: none !important; color: #fff !important; }

@@ -17,7 +17,14 @@ import type { EquipoLienzo } from './lienzoData';
 interface Props {
   equipo: EquipoLienzo;
   onNavigate: (route: Route) => void;
+  /** solo el canvas (sin barra superior, paneles ni barra de tiempo): para verlo dentro de otra página */
+  compacto?: boolean;
+  /** botón agrandar/contraer en los controles del canvas (vista compacta) */
+  onAmpliar?: () => void;
+  ampliado?: boolean;
 }
+
+const SIN_PANELES: ReturnType<typeof panelesDe> = [];
 
 /** Acciones estables del lienzo (portadas de acciones.ts de la tesis). */
 const ACCIONES: Acciones = {
@@ -42,7 +49,7 @@ function Pill({ ok, txt }: { ok: boolean | undefined; txt: string }) {
  * viven DENTRO del canvas como nodos `panel`, igual que en la tesis; el
  * sidebar y el header de la aplicación son los de MCP-INDUSTRIAL-NET.
  */
-export function LienzoPage({ equipo, onNavigate }: Props) {
+export function LienzoPage({ equipo, onNavigate, compacto = false, onAmpliar, ampliado }: Props) {
   const { byId, load, error, reload, now, link, health, historyFor, senal, caudalSenal, presionSenal, temperaturaSenal } = usePlant();
   const [momento, setMomento] = useState<number | null>(null);
   const [detalle, setDetalle] = useState<LevelDetail | null>(null);
@@ -138,6 +145,21 @@ export function LienzoPage({ equipo, onNavigate }: Props) {
     flujo: { activo: !stale && !historico, intensidad: Math.abs(valor ?? 0) },
     lecturas,
   };
+
+  if (compacto)
+    return (
+      <div className={`lz-vista lz-compacto${ampliado ? ' lz-ampliado' : ''}`}>
+        <div className="lz-zona">
+          <PanelesCtx.Provider value={{ diag, equipo, momento, chip }}>
+            <Ctx.Provider value={estado}>
+              <AccCtx.Provider value={ACCIONES}>
+                <VistaEquipo equipoId={equipo.id} metas={metas} aristas={aristas} paneles={SIN_PANELES} onAmpliar={onAmpliar} ampliado={ampliado} />
+              </AccCtx.Provider>
+            </Ctx.Provider>
+          </PanelesCtx.Provider>
+        </div>
+      </div>
+    );
 
   return (
     <div className="lz-vista">

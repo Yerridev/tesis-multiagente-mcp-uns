@@ -54,4 +54,6 @@ __pycache__/
 bat/.modo-planta
 
 # chats con los agentes (pueden contener datos del laboratorio)
-registros/
+registros/*
+# las posiciones de los lienzos SÍ se respaldan en GitHub
+!registros/lienzos/

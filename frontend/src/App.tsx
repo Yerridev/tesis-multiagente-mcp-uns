@@ -8,7 +8,6 @@ import { useRoute, type Route } from './router';
 import { DashboardPage } from './pages/DashboardPage';
 import { ArquitecturaLogicaPage } from './pages/ArquitecturaLogicaPage';
 import { AgentPage } from './pages/AgentPage';
-import { McpPage } from './pages/McpPage';
 import { ModuleCaudalPage } from './pages/ModuleCaudalPage';
 import { ModulePresionPage } from './pages/ModulePresionPage';
 import { ModuleTempPage } from './pages/ModuleTempPage';
@@ -29,7 +28,7 @@ function View({ route, onNavigate }: { route: Route; onNavigate: (route: Route) 
     case 'agents':
       return <AgentPage />;
     case 'mcp':
-      return <McpPage />;
+      return <AgentPage />;   // los servidores MCP ahora se ven en el diagrama de Agentes de IA
     case 'mod-caudal':
       return <ModuleCaudalPage />;
     case 'mod-nivel':

@@ -54,7 +54,6 @@ export const NAV: NavSection[] = [
     entries: [
       item('dashboard', 'Dashboard', 'grid'),
       item('agents', 'Agentes de IA', 'robot'),
-      item('mcp', 'Servidores MCP', 'server'),
       {
         kind: 'group',
         key: 'lienzos',

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
+  ControlButton,
   Controls,
   MiniMap,
   ReactFlow,
@@ -18,6 +19,7 @@ import PanelNode from './PanelNode';
 import RelacionEdge from './RelacionEdge';
 import type { LienzoEdge, MetaNodo } from './tipos';
 import type { PanelLienzo } from '../pages/lienzo/nodos';
+import { DISPOSICION_POR_DEFECTO } from './disposicionPorDefecto';
 
 const nodeTypes: NodeTypes = { equipo: EquipoNode, panel: PanelNode };
 const edgeTypes: EdgeTypes = { relacion: RelacionEdge };
@@ -34,15 +36,30 @@ function leerPosiciones(equipoId: string): Posiciones {
   if (POSICIONES[equipoId]) return POSICIONES[equipoId];
   try {
     const crudo = localStorage.getItem(clave(equipoId));
-    POSICIONES[equipoId] = crudo ? (JSON.parse(crudo) as Posiciones) : {};
+    /* sin nada guardado en este navegador: la disposición por defecto (la del usuario, en el código) */
+    POSICIONES[equipoId] = crudo ? (JSON.parse(crudo) as Posiciones) : { ...(DISPOSICION_POR_DEFECTO[equipoId]?.posiciones ?? {}) };
   } catch {
     POSICIONES[equipoId] = {};
   }
   return POSICIONES[equipoId];
 }
 
+/* Copia en el servidor (registros/lienzos): la misma disposición en cualquier navegador o PC */
+const subidas: Record<string, number> = {};
+function subirLayout(equipoId: string) {
+  window.clearTimeout(subidas[equipoId]);
+  subidas[equipoId] = window.setTimeout(() => {
+    void fetch(`/api/lienzo/${equipoId}/layout`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posiciones: leerPosiciones(equipoId), lados: leerLados(equipoId), ts: new Date().toISOString() }),
+    }).catch(() => { /* sin backend: queda en este navegador */ });
+  }, 600);
+}
+
 function guardarPosiciones(equipoId: string, pos: Posiciones) {
   POSICIONES[equipoId] = pos;
+  subirLayout(equipoId);
   try {
     if (Object.keys(pos).length === 0) localStorage.removeItem(clave(equipoId));
     else localStorage.setItem(clave(equipoId), JSON.stringify(pos));
@@ -57,12 +74,13 @@ const claveLados = (equipoId: string) => `mcp.lienzo.lados.${equipoId}`;
 function leerLados(equipoId: string): Lados {
   try {
     const crudo = localStorage.getItem(claveLados(equipoId));
-    return crudo ? (JSON.parse(crudo) as Lados) : {};
+    return crudo ? (JSON.parse(crudo) as Lados) : { ...(DISPOSICION_POR_DEFECTO[equipoId]?.lados ?? {}) };
   } catch {
     return {};
   }
 }
 function guardarLados(equipoId: string, l: Lados) {
+  window.setTimeout(() => subirLayout(equipoId), 0);
   try {
     if (Object.keys(l).length === 0) localStorage.removeItem(claveLados(equipoId));
     else localStorage.setItem(claveLados(equipoId), JSON.stringify(l));
@@ -94,6 +112,9 @@ interface Props {
   aristas: LienzoEdge[];
   /** Los 4 paneles (Diagnóstico/Agente/Tendencia/UNS) DENTRO del canvas, como en la tesis. */
   paneles: PanelLienzo[];
+  /** si se pasa, aparece un botón "agrandar/contraer" en los controles de abajo */
+  onAmpliar?: () => void;
+  ampliado?: boolean;
 }
 
 /**
@@ -101,7 +122,7 @@ interface Props {
  * zoom con la rueda alrededor del cursor, desplazamiento con el fondo,
  * nodos arrastrables individualmente, Controls, MiniMap y fitView.
  * Los paneles son nodos `panel` del propio lienzo (se arrastran por su cabecera).
- */export default function VistaEquipo({ equipoId, metas, aristas, paneles }: Props) {
+ */export default function VistaEquipo({ equipoId, metas, aristas, paneles, onAmpliar, ampliado = false }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const instancia = useRef<ReactFlowInstance | null>(null);
 
@@ -115,6 +136,34 @@ interface Props {
   const [editando, setEditando] = useState<{ id: string; x: number; y: number } | null>(null);
   const caja = useRef<HTMLDivElement | null>(null);
   useEffect(() => { setLadosOv(leerLados(equipoId)); setEditando(null); }, [equipoId]);
+
+  /* Sincroniza con el servidor: si este navegador ya tiene una disposición la sube (la "captura");
+     si no tiene, usa la guardada en el servidor. */
+  useEffect(() => {
+    let vigente = true;
+    let propias = false;   // ¿este navegador tiene una disposición propia guardada?
+    try { propias = localStorage.getItem(clave(equipoId)) !== null || localStorage.getItem(claveLados(equipoId)) !== null; } catch { /* sin almacenamiento */ }
+    if (propias) {
+      subirLayout(equipoId);
+      return;
+    }
+    fetch(`/api/lienzo/${equipoId}/layout`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { posiciones?: Posiciones; lados?: Lados } | null) => {
+        if (!vigente || !d) return;
+        if (d.posiciones && Object.keys(d.posiciones).length) {
+          POSICIONES[equipoId] = d.posiciones;
+          try { localStorage.setItem(clave(equipoId), JSON.stringify(d.posiciones)); } catch { /* sin almacenamiento */ }
+          setVersion((v) => v + 1);
+        }
+        if (d.lados && Object.keys(d.lados).length) {
+          try { localStorage.setItem(claveLados(equipoId), JSON.stringify(d.lados)); } catch { /* sin almacenamiento */ }
+          setLadosOv(d.lados);
+        }
+      })
+      .catch(() => { /* sin backend */ });
+    return () => { vigente = false; };
+  }, [equipoId]);
 
   useEffect(() => {
     const guardada = leerPosiciones(equipoId);
@@ -187,6 +236,7 @@ interface Props {
     guardarPosiciones(equipoId, pos);
   };
 
+  /* (sin botón visible: siempre se muestra la última disposición que dejó el usuario) */
   const posicionOriginal = () => {
     guardarPosiciones(equipoId, {});
     guardarLados(equipoId, {});
@@ -195,6 +245,12 @@ interface Props {
     setVersion((v) => v + 1);
     window.setTimeout(() => instancia.current?.fitView({ padding: 0.08, duration: 300 }), 50);
   };
+  /* el botón de la cabecera de la ventana emergente avisa con este evento */
+  useEffect(() => {
+    const oir = (e: Event) => { if ((e as CustomEvent<string>).detail === equipoId) posicionOriginal(); };
+    window.addEventListener('mcp-lienzo-posicion-original', oir);
+    return () => window.removeEventListener('mcp-lienzo-posicion-original', oir);
+  });
 
   return (
     <div className="lz-rf" ref={caja}>
@@ -236,7 +292,17 @@ interface Props {
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false}>
+          {onAmpliar ? (
+            <ControlButton onClick={onAmpliar} title={ampliado ? 'Cerrar vista ampliada (Esc)' : 'Agrandar el lienzo'} aria-label={ampliado ? 'Cerrar vista ampliada' : 'Agrandar el lienzo'}>
+              {ampliado ? (
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2.5" y="8.5" width="14" height="12" /><rect x="13.5" y="3.5" width="8" height="7" /></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7.5" y="3.5" width="14" height="12" /><rect x="2.5" y="12.5" width="8" height="8" /></svg>
+              )}
+            </ControlButton>
+          ) : null}
+        </Controls>
         <MiniMap
           pannable
           zoomable
@@ -270,10 +336,6 @@ interface Props {
           })}
         </div>
       ) : null}
-
-      <button type="button" className="lz-pos-original" onClick={posicionOriginal} title="Vuelve a colocar los nodos y paneles como vienen por defecto">
-        ↺ Posición original
-      </button>
 
       {/* Leyenda fija en el visor (HTML, no escala) */}
       <div className="lz-leyenda-vp">

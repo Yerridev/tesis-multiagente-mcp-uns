@@ -849,3 +849,49 @@
 .md .md-lista { margin: 2px 0 2px 18px; padding: 0; }
 .md .md-lista li { margin: 1px 0; }
 .md .md-code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.06); border-radius: 4px; padding: 0 4px; }
+
+/* Herramientas MCP dentro del diagrama de agentes (casilla "Herramientas") */
+.af-node.af-herramienta { width: 165px; padding: 3px 8px; display: flex; align-items: center; gap: 6px; font-size: 11px; border-style: dashed; }
+.af-node.af-herramienta b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.react-flow__edge.af-edge-tool .react-flow__edge-path { stroke: #c9ced6; stroke-width: 1; }
+.af-ver { display: flex; gap: 14px; align-items: center; font-size: 13px; color: var(--text-2); }
+.af-ver label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+.af-ver label.desactivada { opacity: 0.45; cursor: not-allowed; }
+.af-ver input { accent-color: var(--uss-green-d); width: 15px; height: 15px; }
+
+/* Vista ampliada (emergente) del diagrama del sistema multiagente */
+.af-modal-fondo { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.55); display: grid; place-items: center; padding: 24px; }
+.af-modal { width: min(1600px, 100%); height: min(940px, 100%); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; }
+.af-modal-cab { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 1.05rem; }
+.af-modal-der { display: flex; align-items: center; gap: 18px; }
+.af-modal-cerrar { border: none; background: #ea3a30; color: #fff; border-radius: 8px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; }
+.af-modal-cerrar:hover { background: #c62a21; }
+.af-modal-lienzo { flex: 1; min-height: 0; border-radius: 0; }
+
+/* Lienzo de un módulo dentro del panel del sistema multiagente (selector "Vista") */
+.ag-lienzo { display: flex; flex-direction: column; }
+.lz-compacto { gap: 0; height: 100%; }
+.lz-compacto .lz-zona .lz-rf { border-radius: 10px; border-bottom: 1px solid var(--border); min-height: 0; }
+.af-vista { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.af-herr-der { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.af-btn-ampliar { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; width: 32px; height: 30px; display: grid; place-items: center; cursor: pointer; color: var(--text-2); }
+.af-btn-ampliar:hover { background: var(--bg); }
+
+/* Botón desplegable "Mostrar" (Servidores MCP / Herramientas) */
+.af-capas { position: relative; }
+.af-capas-btn { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.af-capas-btn:hover, .af-capas-btn[aria-expanded="true"] { background: var(--bg); }
+.af-capas-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 190px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-lg); padding: 8px; display: grid; gap: 4px; }
+.af-capas-menu label { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--text-2); }
+.af-capas-menu label:hover { background: var(--bg); }
+.af-capas-menu label.desactivada { opacity: 0.45; cursor: not-allowed; }
+.af-capas-menu input { accent-color: var(--uss-green-d); width: 15px; height: 15px; }
+
+/* Lienzo dentro del panel: sin leyenda ni minimapa (solo aparecen al agrandarlo) */
+.lz-compacto:not(.lz-ampliado) .lz-leyenda-vp,
+.lz-compacto:not(.lz-ampliado) .react-flow__minimap { display: none; }
+
+/* "Posición original" en la cabecera de la ventana emergente (no dentro del lienzo) */
+.af-btn-original { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; }
+.af-btn-original:hover { background: var(--bg); }
+.lz-compacto.lz-ampliado .lz-pos-original { display: none; }

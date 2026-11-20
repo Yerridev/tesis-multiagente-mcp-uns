@@ -481,6 +481,12 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
   }
 
   const { eq, valor, historico, fresco, online, detalle, edad, tsActual } = ctx;
+
+  /* --- niveles de tanque (switches) de presión y temperatura: PLC real o planta simulada --- */
+  if (!historico) {
+    const t = leerTanques(id, ctx);
+    if (t) return t;
+  }
   const unit = eq.unit;
   const alto = valor > eq.setpoint * 1.12;
   const bajo = valor < eq.setpoint * 0.88;
@@ -514,16 +520,23 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
     const sp = ctx.senal;
     const salida = historico ? null : (sNum(sp, 'pid/salida_pct') ?? sNum(sp, 'pid/cv'));
     const kp = sNum(sp, 'pid/kp'), ti = sNum(sp, 'pid/ti'), td = sNum(sp, 'pid/td');
+    /* lazo en marcha según el PLC (null = el módulo no publica esa señal) */
+    const marcha = historico ? null : sBool(sp, 'estado/sistema_funcionando');
     const f = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
     const sintonia = historico || kp == null || ti == null ? 'Sin datos' : `${f(kp)} · ${f(ti)}${td == null ? '' : ` · ${f(td)}`}`;
     return {
+      /* solo se evalúa la banda si el lazo está EN MARCHA y tiene consigna */
       estado: historico
         ? { texto: 'HISTÓRICO', sev: 'inactivo' }
         : !fresco
           ? SIN_DATO
-          : alto || bajo
-            ? { texto: 'FUERA DE BANDA', sev: 'alarma' }
-            : { texto: 'REGULANDO', sev: 'activo' },
+          : marcha === false
+            ? { texto: 'DETENIDO', sev: 'inactivo' }
+            : eq.setpoint <= 0
+              ? { texto: 'SIN CONSIGNA', sev: 'inactivo' }
+              : alto || bajo
+                ? { texto: 'FUERA DE BANDA', sev: 'alarma' }
+                : { texto: 'REGULANDO', sev: 'activo' },
       filas: [
         { k: 'SP', v: num(eq.setpoint, 1), u: unit },
         { k: 'PV', v: num(valor, 1), u: unit },
@@ -649,6 +662,78 @@ function leer(id: string, meta: GrafoNodo, ctx: CtxLienzo): Lectura {
     estado: SIN_DATO,
     filas: meta.variables.slice(0, 3).map((v) => ({ k: v.split('/').pop() ?? v, v: 'Sin datos' })),
   };
+}
+
+/* ------------------------------------- niveles de tanque (presión / temperatura) */
+interface Tanque { pct: number | null; alto: boolean | null; bajo: boolean | null }
+
+/** Niveles de cada tanque: en planta simulada salen de las llaves (sim/*), en real de los switches del PLC. */
+function tanquesDe(ctx: CtxLienzo): Record<'t1' | 't2', Tanque | null> | null {
+  const s = ctx.senal;
+  const n = (k: string) => sNum(s, k);
+  const b = (k: string) => sBool(s, k);
+  const no = (v: boolean | null) => (v === null ? null : !v);
+  const sim = s?.valores?.['sim/planta'] != null || s?.valores?.['sim/t1_pct'] != null;
+  const simT = (k: 't1' | 't2'): Tanque => ({ pct: n(`sim/${k}_pct`), alto: b(`sim/${k}_alto`), bajo: b(`sim/${k}_bajo`) });
+  if (ctx.equipoId === 'presion-mcp09')
+    return { t1: sim ? simT('t1') : { pct: null, alto: b('estado/alarma_nivel_alto'), bajo: b('estado/alarma_nivel_bajo') }, t2: null };
+  if (ctx.equipoId === 'temp-mct09')
+    return sim
+      ? { t1: simT('t1'), t2: simT('t2') }
+      : {
+          t1: { pct: null, alto: b('nivel/enfriador_alto'), bajo: no(b('nivel/enfriador_bajo_ok')) },
+          t2: { pct: null, alto: b('nivel/principal_alto'), bajo: no(b('nivel/principal_bajo_ok')) },
+        };
+  return null;
+}
+
+function estTanque(t: Tanque | null): { texto: string; sev: Sev } {
+  if (!t || (t.alto === null && t.bajo === null)) return SIN_DATO;
+  if (t.bajo) return { texto: 'NIVEL BAJO', sev: 'alarma' };
+  if (t.alto) return { texto: 'NIVEL ALTO', sev: 'alarma' };
+  return { texto: 'NIVEL OK', sev: 'activo' };
+}
+
+function barraTanque(t: Tanque | null): Lectura['barra'] {
+  if (!t || t.pct == null) return undefined;
+  return { pct: clamp(t.pct), sev: t.alto || t.bajo ? 'alarma' : 'normal', etiqueta: `${num(t.pct, 0)} % lleno` };
+}
+
+const filasTanque = (t: Tanque | null): Lectura['filas'] => [
+  { k: 'Nivel bajo', v: sBit(t?.bajo ?? null) },
+  { k: 'Nivel alto', v: sBit(t?.alto ?? null) },
+];
+
+/** Nodos de tanques y de sus interruptores de nivel (null = el nodo no es de niveles). */
+function leerTanques(id: string, ctx: CtxLienzo): Lectura | null {
+  const tq = tanquesDe(ctx);
+  if (!tq) return null;
+  const temp = (k: string) => {
+    const v = sNum(ctx.senal, k);
+    return v == null ? undefined : { valor: num(v, 1), unidad: '°C' };
+  };
+  if (ctx.equipoId === 'presion-mcp09') {
+    if (id === 'tanque_t1') return { estado: estTanque(tq.t1), barra: barraTanque(tq.t1), filas: filasTanque(tq.t1) };
+    if (id === 'interruptores_nivel_t1') return { estado: estTanque(tq.t1), filas: filasTanque(tq.t1) };
+    return null;
+  }
+  /* temperatura: T1 = enfriamiento (arriba) · T2 = principal (abajo, con la resistencia) */
+  if (id === 'sensor_enfriador') {
+    const t = temp('temperatura/enfriador_c');
+    return { estado: t ? { texto: 'MIDIENDO', sev: 'activo' } : SIN_DATO, principal: t, filas: [{ k: 'Crudo %MW1', v: sFmt(sNum(ctx.senal, 'temperatura/enfriador_raw'), 0), u: 'cuentas' }] };
+  }
+  if (id === 'tanque_enfriador')
+    return { estado: estTanque(tq.t1), principal: temp('temperatura/enfriador_c'), barra: barraTanque(tq.t1), filas: filasTanque(tq.t1) };
+  if (id === 'tanque_principal')
+    return { estado: estTanque(tq.t2), principal: temp('temperatura/principal_c'), barra: barraTanque(tq.t2), filas: filasTanque(tq.t2) };
+  if (id === 'interruptores_nivel') {
+    const e1 = estTanque(tq.t1), e2 = estTanque(tq.t2);
+    const mal = [e2.sev === 'alarma' ? `${e2.texto} T2` : null, e1.sev === 'alarma' ? `${e1.texto} T1` : null].filter(Boolean);
+    const estado = mal.length ? { texto: mal.join(' · '), sev: 'alarma' as Sev } : e1 === SIN_DATO && e2 === SIN_DATO ? SIN_DATO : { texto: 'NIVELES OK', sev: 'activo' as Sev };
+    const txt = (e: { texto: string }) => (e === SIN_DATO ? 'Sin datos' : e.texto.replace('NIVEL ', ''));
+    return { estado, filas: [{ k: 'Principal (T2)', v: txt(e2) }, { k: 'Enfriamiento (T1)', v: txt(e1) }] };
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------- diagnóstico */

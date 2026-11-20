@@ -25,12 +25,12 @@ foreach ($p in 44818,1102,6341,502) { Linea ([bool](Get-NetTCPConnection -LocalP
 Linea ([bool](Get-NetTCPConnection -LocalPort 1883 -State Listen -ErrorAction SilentlyContinue)) 'broker Windows 1883'
 
 Write-Host "`n=== 4. Docker ===" -ForegroundColor Cyan
-$envs = docker inspect mcpy-backend --format '{{range .Config.Env}}{{println .}}{{end}}' 2>$null
+$envs = docker inspect mcp-backend --format '{{range .Config.Env}}{{println .}}{{end}}' 2>$null
 Linea ($envs -match 'MODO_PLANTA=simulado') 'backend en MODO_PLANTA=simulado'
 Linea ($envs -match 'PresionControlHost=host.docker.internal') 'backend manda ordenes al broker Windows'
-$mir = docker inspect mcpy-mirror-tesis --format '{{.State.Running}}' 2>$null
+$mir = docker inspect mcp-mirror-tesis --format '{{.State.Running}}' 2>$null
 Linea ($mir -eq 'true') 'mirror-tesis corriendo (devuelve los ACK)'
 
 Write-Host ""
-if ($mal -eq 0) { Write-Host "TODO OK. Si aun da Timeout corre 16-diag-ordenes.bat y manda una orden." -ForegroundColor Green }
-else { Write-Host "Hay $mal cosa(s) caida(s). Solucion: 11-detener-simulacion.bat y luego 10-simular-planta.bat" -ForegroundColor Yellow }
+if ($mal -eq 0) { Write-Host "TODO OK. Si aun da Timeout corre 07.0_DiagnosticoOrdenes.bat y manda una orden." -ForegroundColor Green }
+else { Write-Host "Hay $mal cosa(s) caida(s). Solucion: 04.1_DetenerSimulacion.bat y luego 04.0_SimularPlanta.bat" -ForegroundColor Yellow }

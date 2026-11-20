@@ -1903,3 +1903,24 @@
 .lz-lados-fila button.on { background: #e3f2fd; border-color: #1e88e5; color: #1565c0; }
 .lz-lados-fila button.on.manual { background: #1e88e5; color: #fff; }
 .lz-lados-fila button.auto { padding: 0 6px; font-weight: 600; }
+
+/* ---------- Enlace con el PLC caído: valores congelados en gris, solo el PLC en rojo ---------- */
+.eq.congelado {
+  opacity: 0.6;
+  filter: grayscale(1);
+}
+.eq.congelado .eq-principal .num,
+.eq.congelado .eq-filas dd {
+  color: var(--muted);
+}
+.react-flow__edge-path.rel.rel-congelado {
+  stroke: #b0b0b0;
+  stroke-width: 1.4;
+  stroke-dasharray: 5 4;
+  filter: none;
+}
+.lz-band.lz-band-plc {
+  background: rgba(229, 57, 53, 0.08);
+  border-color: rgba(229, 57, 53, 0.35);
+  color: var(--err);
+}

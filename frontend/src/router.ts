@@ -115,7 +115,7 @@ const TITLES: Record<Route, { title: string; subtitle: string }> = {
   'mod-nivel': { title: 'Scada de Nivel', subtitle: 'Allen-Bradley MicroLogix 1100 · 192.168.114.9 · solo lectura' },
   'mod-presion': { title: 'Scada de Presión', subtitle: 'Línea de presión · sensores' },
   'mod-temp': { title: 'Scada de Temperatura', subtitle: 'Línea de temperatura · sensores' },
-  history: { title: 'Historial de mediciones', subtitle: 'Búfer de telemetría del backend ASP.NET Core' },
+  history: { title: 'Historial de mediciones', subtitle: 'Búfer de telemetría del backend FastAPI' },
   reports: { title: 'Reportes', subtitle: 'Resumen estadístico por módulo' },
   status: { title: 'Estado del sistema', subtitle: 'Verificación en vivo' },
   config: { title: 'Configuración', subtitle: 'Parámetros de la plataforma' },

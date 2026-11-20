@@ -15,7 +15,7 @@ import type {
   TemperaturaSenales,
 } from '../types';
 
-/** Misma origen que el documento: el frontend lo sirve el backend ASP.NET Core. */
+/** Misma origen que el documento: el frontend lo sirve nginx junto al backend FastAPI. */
 const BASE = '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

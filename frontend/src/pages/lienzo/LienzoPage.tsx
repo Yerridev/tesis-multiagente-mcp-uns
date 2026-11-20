@@ -8,9 +8,9 @@ import { IconLock } from '../../components/common/Icons';
 import { TimeBar } from '../../components/lienzo/TimeBar';
 import VistaEquipo from '../../lienzo/VistaEquipo';
 import { PanelesCtx } from '../../lienzo/paneles';
-import { Ctx, resalteDe, type Estado } from '../../lienzo/ctx';
+import { Ctx, resalteDe, vacio, type Estado } from '../../lienzo/ctx';
 import { AccCtx, type Acciones } from '../../lienzo/acciones';
-import { aristasDe, diagnosticoDe, lecturasDe, metasDe, panelesDe, senalModo, type CtxLienzo } from './nodos';
+import { aristasDe, diagnosticoDe, enlaceCaido, lecturasDe, metasDe, panelesDe, senalModo, ultimaSenal, type CtxLienzo } from './nodos';
 import { ageSeconds, formatAge, isStale, timeOnly } from '../../utils/format';
 import type { EquipoLienzo } from './lienzoData';
 
@@ -132,17 +132,20 @@ export function LienzoPage({ equipo, onNavigate, compacto = false, onAmpliar, am
 
   const lecturas = lecturasDe(ctx);
   const diag = diagnosticoDe(ctx);
+  /* Sin enlace con el PLC: todo en gris (valores congelados) y solo el PLC en rojo */
+  const caido = enlaceCaido(ctx);
   /* Modo real del selector (solo existe para el módulo de nivel) */
   const modo = equipo.id === 'nivel-mcn09' || equipo.id === 'caudal-mcc09' ? (senalModo(senalEquipo) ?? '—') : '—';
   const chip = historico ? 'historico' : 'vivo';
 
   /* Estado del lienzo: objeto nuevo en cada render (igual que la tesis) */
   const estado: Estado = {
-    resalte: resalteDe(diag),
+    resalte: caido ? vacio : resalteDe(diag),
     agenteTocando: new Set<string>(),
     editando: false,
     tema: 'claro',
-    flujo: { activo: !stale && !historico, intensidad: Math.abs(valor ?? 0) },
+    flujo: { activo: !caido && !stale && !historico, intensidad: Math.abs(valor ?? 0) },
+    congelado: caido,
     lecturas,
   };
 
@@ -198,6 +201,13 @@ export function LienzoPage({ equipo, onNavigate, compacto = false, onAmpliar, am
           </span>
         </div>
       </header>
+
+      {caido ? (
+        <div className="lz-band lz-band-plc">
+          <b>{equipo.plc}</b> sin conexión · última señal <b>{ultimaSenal(ctx)}</b> · los valores en gris son los
+          últimos recibidos (congelados)
+        </div>
+      ) : null}
 
       {historico ? (
         <div className="lz-band">

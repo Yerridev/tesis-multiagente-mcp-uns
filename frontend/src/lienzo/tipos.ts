@@ -27,6 +27,8 @@ export interface LienzoEdge {
 
 /** Contenido vivo de un nodo (Lectura de la tesis): estado, valor, barra y filas. */
 export interface Lectura {
+  /** Enlace con el PLC caído: valores congelados (se dibujan en gris). */
+  congelado?: boolean;
   estado?: { texto: string; sev: Sev };
   principal?: { valor: string; unidad: string };
   barra?: { pct: number; sev: Sev; etiqueta: string };

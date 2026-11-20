@@ -19,6 +19,8 @@ export interface Estado {
   tema: 'claro';
   /** Flujo de proceso animado (partículas) cuando hay datos en vivo. */
   flujo: { activo: boolean; intensidad: number };
+  /** Enlace con el PLC caído: relaciones en gris, sin resalte ni partículas. */
+  congelado?: boolean;
   /**
    * Lectura viva de cada nodo (adapta `valores` de la tesis): los nodos son
    * estáticos y los datos actualizados llegan por contexto.

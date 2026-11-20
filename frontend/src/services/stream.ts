@@ -3,7 +3,7 @@ import { tokenSesion } from './auth';
 /**
  * Canal de telemetría en vivo.
  *
- * Sustituye al hub SSE del backend ASP.NET por **Server-Sent Events**:
+ * Sustituye al hub SignalR anterior por **Server-Sent Events**:
  * el backend empuja los eventos (`telemetry`, `nivelSenales`, `controlResultado`…)
  * por una conexión HTTP que el navegador mantiene abierta con `EventSource`.
  *

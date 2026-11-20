@@ -96,11 +96,51 @@ export function metasDe(equipoId: string): MetaNodo[] {
 export function lecturasDe(ctx: CtxLienzo): Record<string, Lectura> {
   const grafo = GRAFOS[ctx.equipoId];
   if (!grafo) return {};
+  const caido = enlaceCaido(ctx);
+  const ultima = ultimaSenal(ctx);
   const salida: Record<string, Lectura> = {};
   for (const [id, meta] of Object.entries(grafo.nodos)) {
-    salida[id] = leer(id, meta, ctx);
+    const l = leer(id, meta, ctx);
+    salida[id] = caido ? congelar(id, l, ultima) : l;
   }
   return salida;
+}
+
+/** Nodo del controlador físico de cada módulo (el único que se pinta en rojo si cae el enlace). */
+const NODOS_PLC = new Set(['plc', 'pac']);
+
+/**
+ * ¿Se perdió el enlace con el PLC? (fuera de la red, conector apagado, PLC sin respuesta).
+ * Nivel y caudal lo saben por sus señales MQTT; temperatura y presión por el estado del equipo.
+ */
+export function enlaceCaido(ctx: CtxLienzo): boolean {
+  if (ctx.historico) return false;
+  if (ctx.equipoId === 'nivel-mcn09' || ctx.equipoId === 'caudal-mcc09') return !ctx.senal || ctx.senal.plc !== 'CONECTADO';
+  return !ctx.online;
+}
+
+/** Hora de la última señal recibida del PLC ('—' si nunca llegó). */
+export function ultimaSenal(ctx: CtxLienzo): string {
+  const ts = ctx.senal?.ultimo ?? ctx.eq.timestamp;
+  const t = ts ? Date.parse(ts) : NaN;
+  return Number.isFinite(t) && t > 86400000 ? timeOnly(ts as string) : '—';
+}
+
+/** Rojo solo en el PLC; el resto queda en gris con sus últimos valores (congelados). */
+function congelar(id: string, l: Lectura, ultima: string): Lectura {
+  if (NODOS_PLC.has(id)) {
+    return {
+      ...l,
+      estado: { texto: 'PLC DESCONECTADO', sev: 'alarma' },
+      filas: [...l.filas.filter((f) => f.k !== 'Última señal'), { k: 'Última señal', v: ultima }],
+    };
+  }
+  return {
+    ...l,
+    congelado: true,
+    estado: { texto: 'SIN SEÑAL', sev: 'inactivo' },
+    barra: l.barra ? { ...l.barra, sev: 'inactivo' } : undefined,
+  };
 }
 
 /* ---------------------------------------------------------------- aristas */

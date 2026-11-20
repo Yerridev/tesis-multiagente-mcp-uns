@@ -1,129 +1,63 @@
-# Scripts `.bat` del proyecto MCP Industrial
+# Scripts `.bat` del proyecto tesis-mcp-multiagente-uns
 
-Numerados por **prioridad de uso** (el 01 es lo primero que corres en el laboratorio).
+**Nomenclatura:** `0N.0_Nombre` = acción principal del grupo · `0N.1_Nombre`, `0N.2_Nombre`… = acciones del mismo grupo.
+Cada grupo empieza con un **separador** (`0N.0-----.bat`, vacío, solo para ver los grupos en el Explorador).
 Todos muestran en pantalla lo que van haciendo. Se ejecutan con **doble clic**.
 
-> **Regla de oro:** la PLANTA REAL y la PLANTA SIMULADA nunca a la vez.
-> Para pasar de una a otra usa **10** (simular) o **11** (volver a real).
+Sistema Docker: proyecto **`tesis-mcp-multiagente-uns`**, contenedores **`mcp-*`** (mcp-backend, mcp-frontend, mcp-mosquitto…).
 
----
+> **Regla de oro:** la PLANTA REAL y la PLANTA SIMULADA nunca a la vez
+> (`04.0` simula · `04.1` vuelve a real).
 
-## 🧰 Instalación (una vez por PC)
-
-| Bat | Qué hace | Cuándo usarlo |
+| Grupo | Bat | Qué hace |
 |---|---|---|
-| **00-instalar-python** | Crea el Python propio del proyecto (`.venv`) e instala las librerías de `requirements.txt` | **Primero de todo** en una PC nueva, o si un bat dice "FALTA .venv" |
-| **29-arranque-automatico** | Rehace el arranque de Windows con los lectores reales (caudal, nivel, presión, temperatura) | Una vez, después del 00. Deja respaldo `.bak` |
-| **30-restablecer-admin** | Borra todos los usuarios/sesiones y vuelve a crear el admin del `.env` | Si olvidas la clave del admin o cambias `ADMIN_PASSWORD` |
-| **31-sistema-multiagente** | Levanta 4 servidores MCP + 4 agentes analistas + orquestador (solo lectura) | Para usar/probar los agentes; dejar abierta |
-| **32-preguntar-agentes** | Hace preguntas al orquestador y muestra plan, informes y veredicto | Con el 31 corriendo |
-| **33-evaluar-agentes** | 30 preguntas automaticas, compara con el backend y calcula los indicadores de la tesis; evidencia en la carpeta 05 | Con el 31 corriendo (~15 min) |
-| **34-medir-latencia** | Mide 2 min la latencia PLC → backend de los 4 modulos (VD-03); evidencia en la carpeta 05 | Simulada desde casa; real en el laboratorio |
-| **35-evaluar-fallas** | Evaluacion con falla de comunicacion inyectada en cada PLC virtual, un modulo a la vez; resumen en la carpeta 05 | Solo planta simulada (bat 10 + bat 31) |
-| **36-comparar-arquitecturas** | Experimento: A agente unico vs B orquestador IA + analistas vs C enrutador por reglas; resumen comparativo en la carpeta 05 | Planta simulada (bat 10 + bat 31) |
-| **37-comparar-fallas** | Evaluacion con falla de comunicacion para las configuraciones A y C (la B es el bat 35) | Planta simulada (bat 10 + bat 31) |
+| **01 · Instalación** | `01.0_InstalarPython` | Crea `.venv` e instala librerías (primero en una PC nueva) |
+| | `01.1_ConfigurarRedLaboratorio` | IP fija 192.168.114.x en el adaptador del laboratorio |
+| | `01.2_ArranqueAutomaticoWindows` | Arranque de Windows con los lectores reales |
+| | `01.3_RestablecerAdmin` | Vuelve a crear el admin del `.env` (borra usuarios y sesiones) |
+| **02 · Sistema (Docker)** | `02.0_LevantarSistema` | Levanta el stack `mcp-*` (web en http://127.0.0.1:8080) |
+| | `02.1_DetenerSistema` | Baja el stack `mcp-*` (los datos se conservan) |
+| | `02.2_ReconstruirTodo` | Reconstruye frontend + backend + conector de nivel |
+| | `02.3_ReconstruirFrontend` | Solo la web |
+| | `02.4_ReconstruirBackend` | Solo el backend |
+| | `02.5_RecrearBackend` | Recrea el backend para que lea el `.env` (sin reconstruir) |
+| | `02.6_LimpiarStacksViejos` | Una vez: borra los contenedores viejos (`mcp-industrial` y `mcp-industrial-py`) |
+| **03 · Planta REAL** | `03.0_IniciarLectoresReales` | Arranca los lectores de los 4 PLC |
+| | `03.1_TemperaturaReal` | Revisa el Twido y arranca su lector |
+| | `03.2_ControlTemperaturaReal` | Arranca el conector de órdenes de temperatura |
+| | `03.3_ReconstruirControlTemperatura` | Reconstruye ese conector (bomba al 80 % al Iniciar) |
+| | `03.4_ReconstruirConectorNivel` | Reconstruye el conector de nivel |
+| | `03.5_ReiniciarNivelReal` | Reinicia lector + control del MicroLogix (nivel) |
+| | `03.6_ReiniciarCaudalReal` | Reinicia el conector del S7-200 (caudal) |
+| | `03.7_ReiniciarPresionReal` | Reinicia lector + control del cFP-2200 (presión) |
+| | `03.8_ReiniciarTemperaturaReal` | Reinicia lector + control del Twido (temperatura) |
+| **04 · Planta SIMULADA** | `04.0_SimularPlanta` | 4 PLC virtuales en la PC (sin cable de red) |
+| | `04.1_DetenerSimulacion` | Apaga la simulación y vuelve a REAL |
+| | `04.2_EstadoSimulacion` | Solo revisa el estado |
+| | `04.3_DockerPlantaSimulada` | Repite solo la parte Docker de la simulación |
+| | `04.4_ReiniciarControlPresionSim` | Reinicia el conector de presión simulado |
+| **05 · Agentes IA (MCP)** | `05.0_SistemaMultiagente` | 4 servidores MCP + analistas + orquestador (dejar abierto) |
+| | `05.1_PreguntarAgentes` | Preguntas al orquestador (con el 05.0 corriendo) |
+| | `05.2_ProbarModelosAgentes` | Compara modelos LLM con la misma batería |
+| | `05.3_EjecutorMCP` | Ejecutor de herramientas MCP |
+| **06 · Evaluación (tesis)** | `06.0_EvaluarAgentes` | 30 ejecutados, indicadores VD (con el 05.0) |
+| | `06.1_MedirLatencia` | Latencia PLC → backend (VD-03) |
+| | `06.2_EvaluarFallas` | Fallas inyectadas, configuración B (planta simulada) |
+| | `06.3_CompararArquitecturas` | Configuraciones A / B / C |
+| | `06.4_CompararFallas` | Fallas para A y C |
+| **07 · Diagnóstico y pruebas** | `07.0_DiagnosticoOrdenes` | Ver CMD / ACK de las órdenes en vivo |
+| | `07.1_DiagnosticoRed` | Ping y puertos de los PLC |
+| | `07.2_QueWebEstoyViendo` | Qué contenedor sirve la web y qué versión |
+| | `07.3_VigilarIOCaudal` | E/S del S7-200 en vivo |
+| | `07.4_CapturarHMI` | Captura 60 s del tráfico de la HMI |
+| | `07.5_HMINivel` | Puente PLC → HMI de nivel |
+| | `07.6_VolcarTemperatura` | Volcado PLC vs MQTT vs web |
+| | `07.7_MonitorTemperatura` | Monitor en vivo PLC vs web con log |
+| | `07.8_TestEnfriar` | Prueba de enfriamiento de 2 min |
+| **08 · GitHub** | `08.0_SubirNuestroRepo` | Commit y push a `bvasquezkeysije/tesis-mcp-multiagent-uns` |
+| | `08.1_SubirRepoYerri` | Push a la rama `mcp-industrial` de Yerri |
+| | `08.2_SubirAmbosRepos` | Un commit y lo sube a los dos repos (nuestro + Yerri) |
 
-> Todo queda **dentro del proyecto**: Python en `.venv\`, logs de los lectores en `logs\` (rotan a los 20 MB),
-> chats en `registros\`. Solo presión usa además `C:\Users\KST\NI-DS` (sus DLL de NI) y `C:\Python37-32` (32 bits).
+Auxiliares (no se ejecutan solos): `_docker-listo.bat`, `_modo-planta.bat` y los `.ps1`.
 
-## 🏭 Planta REAL (laboratorio) · uso diario
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **01-red-laboratorio** | Pone IP fija en "Ethernet" (.70, .90, .100), revisa el cable, reinicia Mosquitto de Docker y hace ping a los 4 PLC | **Lo primero** al llegar al laboratorio y conectar el cable. Pide permisos de administrador |
-| **02-iniciar-lectores-reales** | Arranca los lectores de presión, temperatura y caudal (y control de temperatura) si no corren | Si al prender la PC algún módulo sale "sin datos". ⚠️ También arranca el control de temperatura de Windows: si lo usas, **no** uses el 04 (los dos se pisarían) |
-| **03-temperatura-real** | Revisa el Twido (ping, puerto 502, TwidoSuite abierto) y arranca su lector | Si el SCADA de **temperatura** no tiene datos. El lector de temperatura NO arranca solo con Windows |
-| **04-control-temperatura-real** | Arranca el contenedor `mcp-connector-temperatura` y muestra su log | Si las órdenes de **temperatura** dan **Timeout** |
-
-## 🔧 Reconstruir (después de cambios en el código)
-
-Todos **respetan el modo guardado** (real o simulado): no lo pierden.
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **05-reconstruir-todo** | Reconstruye frontend + backend + conector de nivel | Cuando cambió el backend **y** el frontend (lo más común) |
-| **06-reconstruir-frontend** | Reconstruye solo la web | Cambios solo visuales (mímicos, iconos, textos). Luego Ctrl+F5 |
-| **07-reconstruir-backend** | Reconstruye solo el backend | Cambios solo en el backend (agente, API) |
-| **08-recrear-backend** | Reinicia el backend **sin** reconstruir | Para que tome cambios del `.env` (claves, modelos) |
-| **09-reconstruir-conector-nivel** | Reconstruye el conector de control de nivel | Cambios en `conector_control_nivel.py` |
-
-## 🧪 Planta SIMULADA (sin tocar los PLC físicos)
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **10-simular-planta** | Para los lectores reales, abre los 4 PLC virtuales + sus conectores y pone el sistema en modo SIMULADO | Para probar SCADA, lienzos y agentes **fuera del laboratorio** |
-| **11-detener-simulacion** | Cierra simuladores, vuelve a modo REAL (el control lo decide `.env`) y arranca el control de temperatura | Al terminar de simular, **antes** de trabajar con la planta real |
-| **12-estado-simulacion** | Revisa (sin cambiar nada) qué está vivo: simuladores, conectores, puertos, Docker | Si algo de la simulación no responde |
-| **13-docker-planta-simulada** | Repite solo el paso de Docker de la simulación | Si Docker Desktop estaba cerrado al correr el 10 |
-| **14-reiniciar-control-presion-sim** | Reinicia solo el conector de órdenes de presión (simulado) | Órdenes de **presión** con Timeout en simulación |
-
-## 📊 Pruebas y diagnóstico
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **15-probar-agentes** | 9 preguntas a cada modelo gratis + prueba las 6 herramientas MCP; califica contra los datos reales. Guarda `tests\agente\resultado_*.md` | Para evaluar los agentes (tesis). `--todos` incluye los de pago |
-| **16-diag-ordenes** | Muestra en vivo las órdenes (CMD) y sus respuestas (ACK) | Cuando una orden da **Timeout**: CMD sin ACK = conector caído |
-| **17-diag-red** | Diagnóstico de la red del laboratorio | Problemas de conexión con los PLC |
-
-## ♻️ Reinicios de la planta REAL (cuando un módulo se cuelga)
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **18-reiniciar-caudal-real** | Mata y relanza el lector/control de caudal (S7-200) | Caudal congelado o "PLC desconectado" |
-| **38-reiniciar-nivel-real** | Mata y relanza el lector de nivel (MicroLogix 1100) y reinicia su conector de control en Docker (conserva DRY-RUN/REAL); muestra el log | Nivel congelado o "PLC desconectado" (solo en modo REAL) |
-| **19-reiniciar-presion-nids** | Reinicia la pila NI-DS del cFP-2200 | Presión sin datos y el 20 no lo arregla |
-| **20-reiniciar-edge-presion** | Reinicia solo el lector de presión | Presión congelada |
-| **21-reiniciar-control-presion-real** | Reinicia el conector de órdenes de presión real | Órdenes de **presión** con Timeout en planta real |
-
-## ☁️ GitHub
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **22-subir-nuestro-repo** | Commit + push a `bvasquezkeysije/tesis-mcp-multiagent-uns` (main) | Guardar avances (recomendado al cerrar el día) |
-| **23-subir-repo-yerri** | Commit + push al repo de Yerri (rama `mcp-industrial`) | Compartir con Yerri |
-| **24-subir-github** | Commit + push genérico | Respaldo rápido |
-
-## ⚙️ Otros
-
-| Bat | Qué hace | Cuándo usarlo |
-|---|---|---|
-| **26-vigilar-io-caudal** | Muestra en vivo qué entrada/salida del S7-200 cambia (I0.x, Q0.x, Q1.x) | Para identificar en campo el guardamotor, paro de emergencia, pulsadores |
-| **27-capturar-hmi** | Escucha 60 s el tráfico de la HMI TPC-2106T (.72) y prueba sus puertos. Guarda `tests\hmi\hmi.pcapng` | Para descubrir qué variables pide la HMI (no envía nada) |
-| **28-hmi-nivel** | Revive la pantalla HMI de nivel (.92): arranca el motor de variables NI, abre el firewall solo para .92 y corre el puente PLC→HMI en **solo lectura** | Para mostrar la HMI de nivel (p. ej. en la defensa). La 1.ª vez con el módulo en LOCAL y detenido |
-| **25-ejecutor-mcp** | Ejecuta tareas de `tools\trabajos\*.cmd` mientras la ventana esté abierta | Solo para desarrollo asistido |
-
-### Archivos auxiliares (no se ejecutan a mano)
-- `_modo-planta.bat` · lee `.modo-planta` (real/simulado) para que los reconstruir no pierdan el modo
-- `simular-planta.ps1`, `estado-simulacion.ps1`, `temperatura-real.ps1`, `instalar-python.ps1`, `arranque-automatico.ps1` · los usan los bats 10, 12, 13, 03, 00 y 29
-- `.modo-planta` · modo guardado actual (lo escriben el 10 y el 11)
-
----
-
-## Flujos típicos
-
-```
-LLEGO AL LABORATORIO          PROBAR EN CASA (sin PLC)       CAMBIÉ CÓDIGO
- 01 red-laboratorio            10 simular-planta              05 reconstruir-todo
- 02 iniciar-lectores-reales    ...pruebas...                  (o 06 si es solo visual)
- 03 temperatura-real           11 detener-simulacion
- (15 probar-agentes)
-
-UNA ORDEN DA TIMEOUT
- 16 diag-ordenes → ¿llega CMD? ¿vuelve ACK?
-   real:     caudal 18 · presión 21 · temperatura 04
-   simulado: 12 estado-simulacion → presión 14
-```
-
-## Stack paralelo Python (solo lectura, no toca el original)
-
-| Bat | Qué hace |
-|---|---|
-| **39-levantar-py-paralelo** | Construye y levanta `py-backend` + `py-frontend` (proyecto `mcp-py`) en http://127.0.0.1:8181; lee el Mosquitto del original; control y simulación bloqueados |
-| **40-detener-py-paralelo** | Baja solo los contenedores `py-*` |
-
-## Stack completo Python (independiente; solo con el original APAGADO)
-
-| Bat | Qué hace |
-|---|---|
-| **41-levantar-py-completo** | Comprueba que el original (`mcp-*`) y el paralelo (`py-*`) estén apagados y levanta el stack `mcp-industrial-py` (contenedores `mcpy-*`, BD propia) en http://127.0.0.1:8080 |
-| **42-detener-py-completo** | Baja los `mcpy-*` (conserva volúmenes) |
+**Primera vez tras el cambio de nombres:** `02.6` (borra los stacks viejos `mcp-industrial` y `mcp-industrial-py`) → `02.0` → `01.2`.

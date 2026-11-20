@@ -53,6 +53,7 @@ function EquipoNode({ data, selected }: NodeProps) {
     tocado ? 'tocado' : '',
     selected ? 'sel' : '',
     lec.estado ? `sev-${sev}` : '',
+    lec.congelado ? 'congelado' : '',
   ]
     .filter(Boolean)
     .join(' ');

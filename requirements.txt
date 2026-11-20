@@ -1,4 +1,4 @@
-# Python de los conectores, simuladores y pruebas (se instala en .venv con bat\00-instalar-python.bat)
+# Python de los conectores, simuladores y pruebas (se instala en .venv con bat\01.0_InstalarPython.bat)
 # Requiere Python 3.10 o superior (64 bits).
 paho-mqtt==2.1.0
 python-snap7==3.3.1

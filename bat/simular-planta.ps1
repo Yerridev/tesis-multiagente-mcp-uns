@@ -120,14 +120,14 @@ $env:CONTROL_MODO = 'Real'; $env:CONTROL_HABILITADOESCRITURA = 'true'
 $env:MQTT_LAB_IP = if (Get-NetIPAddress -IPAddress 192.168.114.100 -ErrorAction SilentlyContinue | Where-Object { (Get-NetAdapter -InterfaceIndex $_.InterfaceIndex -ErrorAction SilentlyContinue).Status -eq 'Up' }) { '192.168.114.100' } else { '127.0.0.1' }   # broker 1884 sin cable
 $env:PRESION_CONTROL_HOST = 'host.docker.internal'; $env:TEMP_CONTROL_HOST = 'host.docker.internal'   # ordenes al broker Windows
 if (-not (DockerListo)) {
-  Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\13-docker-planta-simulada.bat' -ForegroundColor Red
+  Write-Host '  ERROR: Docker no arranco. Abre Docker Desktop y luego ejecuta bat\04.3_DockerPlantaSimulada.bat' -ForegroundColor Red
   exit 1
 }
 Push-Location $raiz
 Write-Host '  deteniendo el conector de temperatura REAL de Docker (si existe) para que no tome las ordenes'
-docker stop mcpy-connector-temperatura 2>$null | Out-Null
+docker stop mcp-connector-temperatura 2>$null | Out-Null
 Write-Host '  reiniciando el espejo MQTT (ya no copia ordenes /cmd al broker Docker)'
-docker restart mcpy-mirror-tesis 2>$null | Out-Null
+docker restart mcp-mirror-tesis 2>$null | Out-Null
 Write-Host '  docker compose up -d --build backend connector-nivel frontend  (la primera vez tarda)'
 docker compose -f compose.yaml -f compose.override.yaml up -d --build backend connector-nivel frontend
 if ($LASTEXITCODE -eq 0) { Write-Host '  backend en MODO_PLANTA=simulado' -ForegroundColor Green } else { Write-Host '  ERROR al levantar Docker: revisa arriba' -ForegroundColor Red }
@@ -138,4 +138,4 @@ Write-Host ""
 Write-Host "LISTO: planta simulada en marcha." -ForegroundColor Green
 Write-Host "  - Cada PLC virtual y conector tiene su ventana: ahi ves lo que hace o si falla."
 Write-Host "  - Abre el SCADA en modo REAL: dice PLANTA SIMULADA, puedes mover las llaves y todo pasa por MQTT -> backend -> MCP."
-Write-Host "  - Para volver a la planta real: bat\11-detener-simulacion.bat"
+Write-Host "  - Para volver a la planta real: bat\04.1_DetenerSimulacion.bat"

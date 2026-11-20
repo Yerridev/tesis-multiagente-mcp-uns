@@ -14,7 +14,7 @@ export function StatusPage() {
   const rows: Array<{ ico: ReactNode; name: string; sub: string; cls: string; label: string }> = [
     {
       ico: <IconServer />,
-      name: 'API REST · ASP.NET Core 10',
+      name: 'API REST · Python FastAPI',
       sub: 'GET /api/health · /api/equipment · /api/history',
       cls: health === 'ok' ? 'sys-ok' : health === 'error' ? 'sys-err' : 'sys-warn',
       label: health === 'ok' ? 'Operativo' : health === 'error' ? 'Inaccesible' : 'Verificando…',

@@ -97,7 +97,7 @@ export function DashboardPage({ onNavigate }: Props) {
           <div>
             <strong>API REST</strong>
             <small>
-              {health === 'ok' ? 'ASP.NET Core · /api/equipment' : health === 'error' ? 'Sin respuesta del backend' : 'Verificando…'}
+              {health === 'ok' ? 'Python · FastAPI · /api/equipment' : health === 'error' ? 'Sin respuesta del backend' : 'Verificando…'}
             </small>
           </div>
         </div>

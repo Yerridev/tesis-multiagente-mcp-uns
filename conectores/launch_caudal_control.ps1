@@ -6,7 +6,7 @@ $dir  = $PSScriptRoot
 $log  = Join-Path $raiz 'logs\caudal_control.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Rotar { if ((Test-Path $log) -and (Get-Item $log).Length -gt 20MB) { Move-Item -Force $log "$log.1" } }
-if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\00-instalar-python.bat)" | Out-File -Append -FilePath $log; exit 1 }
+if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\01.0_InstalarPython.bat)" | Out-File -Append -FilePath $log; exit 1 }
 # NO usar junto con launch_caudal_edge.ps1: el CP243-1 admite una sola sesion S7
 $env:CONTROL_CAUDAL_REAL = '1'
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] arrancando conector CONTROL caudal (REAL armado, TSAP 1000)" | Out-File -Append -FilePath $log

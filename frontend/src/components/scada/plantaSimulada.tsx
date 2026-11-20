@@ -106,7 +106,7 @@ export function chequeosPlanta(
     const ok = !sinDato.length && !mal.length;
     const partes: string[] = [];
     if (mal.length) partes.push(`${quiere ? 'abre' : 'cierra'} ${mal.join(', ')}`);
-    if (sinDato.length) partes.push(`${sinDato.join(', ')} sin dato del simulador (reinicia 10-simular-planta)`);
+    if (sinDato.length) partes.push(`${sinDato.join(', ')} sin dato del simulador (reinicia 04.0_SimularPlanta)`);
     lista.push({ id, texto: ok ? `${ids.join(', ')} ${nombre}` : partes.join(' · '), ok });
   };
   grupo(reglas.abiertas, true, 'ab', reglas.abiertas.length > 1 ? 'abiertas' : 'abierta');

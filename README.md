@@ -56,7 +56,7 @@ cd backend
 
 ## Despliegue (Docker)
 
-> ⚠️ El `compose.yaml` de este repo está **renombrado a `mcp-industrial-py-NO-USAR`**
+> ⚠️ El `compose.yaml` de este repo está **renombrado a `tesis-mcp-multiagente-uns-NO-USAR`**
 > a propósito: si se levantara, recrearía los contenedores `mcp-backend`,
 > `mcp-frontend`, `mcp-mosquitto`… del stack del repo original y dejaría el
 > laboratorio sin su stack C#.

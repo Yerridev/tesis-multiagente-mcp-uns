@@ -6,7 +6,7 @@ $dir  = $PSScriptRoot
 $log  = Join-Path $raiz 'logs\temperatura_edge.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Rotar { if ((Test-Path $log) -and (Get-Item $log).Length -gt 20MB) { Move-Item -Force $log "$log.1" } }
-if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\00-instalar-python.bat)" | Out-File -Append -FilePath $log; exit 1 }
+if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\01.0_InstalarPython.bat)" | Out-File -Append -FilePath $log; exit 1 }
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] arrancando lector de temperatura (Twido)" | Out-File -Append -FilePath $log
 while ($true) {
     Rotar

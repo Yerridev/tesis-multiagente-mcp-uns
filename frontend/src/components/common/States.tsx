@@ -22,7 +22,7 @@ export function ErrorBlock({
     <div className="state-block state-error" role="alert">
       <div className="state-ico" aria-hidden="true">!</div>
       <h3>{title}</h3>
-      {message ? <p>{message}</p> : <p>Verifica que el backend ASP.NET Core esté ejecutándose.</p>}
+      {message ? <p>{message}</p> : <p>Verifica que el backend FastAPI (Python) esté ejecutándose.</p>}
       {onRetry ? (
         <button type="button" className="btn btn-ghost" onClick={onRetry}>
           Reintentar

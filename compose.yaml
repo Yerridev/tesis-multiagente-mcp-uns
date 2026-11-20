@@ -7,15 +7,15 @@
 #  publica solo en loopback los puertos de depuración).
 # =====================================================================
 #
-#  STACK COMPLETO PYTHON (proyecto "mcp-industrial-py", contenedores mcpy-*).
+#  STACK COMPLETO PYTHON (proyecto "tesis-mcp-multiagente-uns", contenedores mcp-*).
 #  Es INDEPENDIENTE del original: otro proyecto, otros contenedores, otros volumenes
 #  (base de datos propia). Usa los MISMOS puertos y los MISMOS PLC que el original,
 #  por eso SOLO se levanta con el original APAGADO:
-#      bat\41-levantar-py-completo.bat   (comprueba que el original este apagado)
-#      bat\42-detener-py-completo.bat
+#      bat\02.0_LevantarSistema.bat   (comprueba que el original este apagado)
+#      bat\02.1_DetenerSistema.bat
 #  Para mirar el Python con el original encendido: bat 39/40 (solo lectura, :8181).
 # =====================================================================
-name: mcp-industrial-py
+name: tesis-mcp-multiagente-uns
 
 x-logging: &logging
   logging:
@@ -30,7 +30,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: mcpy-frontend
+    container_name: mcp-frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     networks:
@@ -47,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: mcpy-backend
+    container_name: mcp-backend
     environment:
       Mqtt__Host: mosquitto
       Mqtt__Port: "1883"
@@ -123,7 +123,7 @@ services:
   # ---------------------------------------------------------------- mosquitto
   mosquitto:
     image: eclipse-mosquitto:2
-    container_name: mcpy-mosquitto
+    container_name: mcp-mosquitto
     volumes:
       - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto-data:/mosquitto/data
@@ -135,7 +135,7 @@ services:
     # No se publica en la Wi-Fi ni en loopback: el stackDocker sigue siendo interno.
     ports:
       # 192.168.114.100 solo existe con el cable del laboratorio; sin el, se publica en 127.0.0.1
-      # (lo decide bat\_modo-planta.bat; 01-red-laboratorio lo vuelve a poner en .100)
+      # (lo decide bat\_modo-planta.bat; 01.1_ConfigurarRedLaboratorio lo vuelve a poner en .100)
       - "${MQTT_LAB_IP:-192.168.114.100}:1884:1883"
     restart: unless-stopped
     healthcheck:
@@ -149,7 +149,7 @@ services:
   # ---------------------------------------------------------------- timescaledb
   timescaledb:
     image: timescale/timescaledb:2.17.2-pg16
-    container_name: mcpy-timescaledb
+    container_name: mcp-timescaledb
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mcpindustrial}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -175,7 +175,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcpy-ingestor-nivel
+    container_name: mcp-ingestor-nivel
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -201,7 +201,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcpy-ingestor-presion
+    container_name: mcp-ingestor-presion
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -228,7 +228,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ingestor
-    container_name: mcpy-ingestor-caudal
+    container_name: mcp-ingestor-caudal
     environment:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
@@ -256,7 +256,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.connector
-    container_name: mcpy-connector-nivel
+    container_name: mcp-connector-nivel
     environment:
       CONECTOR_MODO: ${CONECTOR_MODO:-dry-run}
       CONTROL_REAL: ${CONTROL_REAL:-0}
@@ -283,7 +283,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mcp
-    container_name: mcpy-mcp-nivel
+    container_name: mcp-mcp-nivel
     environment:
       BACKEND_URL: http://backend:8080
       MCP_NIVEL_PUERTO: "8000"
@@ -304,7 +304,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.agents
-    container_name: mcpy-agents
+    container_name: mcp-agents
     environment:
       Mqtt__Host: mosquitto
       Mqtt__Port: "1883"
@@ -325,7 +325,7 @@ services:
   # ---------------------------------------------------------------- grafana
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: mcpy-grafana
+    container_name: mcp-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-cambiar_esto}
@@ -350,7 +350,7 @@ services:
   # ---------------------------------------------------------------- prometheus
   prometheus:
     image: prom/prometheus:v2.55.1
-    container_name: mcpy-prometheus
+    container_name: mcp-prometheus
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus

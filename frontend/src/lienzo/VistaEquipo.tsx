@@ -296,9 +296,9 @@ interface Props {
           {onAmpliar ? (
             <ControlButton onClick={onAmpliar} title={ampliado ? 'Cerrar vista ampliada (Esc)' : 'Agrandar el lienzo'} aria-label={ampliado ? 'Cerrar vista ampliada' : 'Agrandar el lienzo'}>
               {ampliado ? (
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2.5" y="8.5" width="14" height="12" /><rect x="13.5" y="3.5" width="8" height="7" /></svg>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none', maxWidth: 15, maxHeight: 15 }}><path d="M3 11V4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5v15a1.5 1.5 0 0 1-1.5 1.5H11" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17 7l-6 6M11 8.5V13h4.5" /></svg>
               ) : (
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7.5" y="3.5" width="14" height="12" /><rect x="2.5" y="12.5" width="8" height="8" /></svg>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none', maxWidth: 15, maxHeight: 15 }}><path d="M3 11V4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5v15a1.5 1.5 0 0 1-1.5 1.5H11" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M11 13l6-6M12.5 7H17v4.5" /></svg>
               )}
             </ControlButton>
           ) : null}

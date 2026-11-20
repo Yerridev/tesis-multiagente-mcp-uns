@@ -11,7 +11,7 @@ function RelacionEdge(props: EdgeProps) {
   const dato = (data ?? {}) as { rel: string; nota?: string };
   const rel = dato.rel;
   const nota = dato.nota;
-  const { resalte, flujo } = useEstado();
+  const { resalte, flujo, congelado } = useEstado();
 
   const [path, lx, ly] = getSmoothStepPath({
     sourceX,
@@ -32,7 +32,7 @@ function RelacionEdge(props: EdgeProps) {
   const dur = Math.max(1.1, Math.min(7, 66 / Math.max(intensidad, 1)));
   const n = fluye ? Math.max(2, Math.round(intensidad / 10)) : 0;
 
-  const cls = ['rel', FLUJO.has(rel) ? 'rel-flujo' : '', enCadena ? `en-cadena fuente-${resalte.fuente ?? 'diagnostico'}` : '', selected ? 'sel' : '']
+  const cls = ['rel', FLUJO.has(rel) ? 'rel-flujo' : '', enCadena ? `en-cadena fuente-${resalte.fuente ?? 'diagnostico'}` : '', congelado ? 'rel-congelado' : '', selected ? 'sel' : '']
     .filter(Boolean)
     .join(' ');
 

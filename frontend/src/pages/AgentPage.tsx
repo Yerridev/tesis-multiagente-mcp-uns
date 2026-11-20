@@ -251,7 +251,7 @@ export function AgentPage() {
         {
           id: nextId.current++,
           role: 'agent',
-          text: 'No se pudo contactar con el asistente. Verifica que el backend ASP.NET Core esté ejecutándose.',
+          text: 'No se pudo contactar con el asistente. Verifica que el backend FastAPI (Python) esté ejecutándose.',
         },
       ]);
       setActions((prev) =>

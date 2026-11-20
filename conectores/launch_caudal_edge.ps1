@@ -6,7 +6,7 @@ $dir  = $PSScriptRoot
 $log  = Join-Path $raiz 'logs\caudal_edge.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Rotar { if ((Test-Path $log) -and (Get-Item $log).Length -gt 20MB) { Move-Item -Force $log "$log.1" } }
-if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\00-instalar-python.bat)" | Out-File -Append -FilePath $log; exit 1 }
+if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\01.0_InstalarPython.bat)" | Out-File -Append -FilePath $log; exit 1 }
 # Conector unificado: lee (telemetria) y escribe (control) en la MISMA sesion S7
 # (el CP243-1 del S7-200 admite una sola sesion). Gate real: CONTROL_CAUDAL_REAL=1 + --habilitado-real + M0.3=PC + REMOTO.
 $env:CONTROL_CAUDAL_REAL = '1'

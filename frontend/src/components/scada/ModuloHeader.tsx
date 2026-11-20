@@ -31,8 +31,8 @@ export function ModuloHeader({ id, titulo, meta, estado, modo, onModoChange }: P
         <p className="mod-header__meta">{sim ? 'Entrenamiento en el navegador · sin órdenes al PLC' : simulada ? 'PLANTA SIMULADA · simulador Python (mismo camino que el real: MQTT → backend → MCP)' : meta}</p>
       </div>
       <div className="mod-header__actions">
-        {/* El modo de la planta es GLOBAL: lo fija el backend (MODO_PLANTA) con bat\10-simular-planta.bat /
-            bat\11-detener-simulacion.bat. No hay botón por página: no se pierde al refrescar. */}
+        {/* El modo de la planta es GLOBAL: lo fija el backend (MODO_PLANTA) con bat\04.0_SimularPlanta.bat /
+            bat\04.1_DetenerSimulacion.bat. No hay botón por página: no se pierde al refrescar. */}
         <span className={`mode-btn mode-btn--${simulada ? 'simulador' : 'real'}`} title={simulada ? 'Planta simulada (simuladores Python)' : 'Laboratorio real'}>
           <span className="mode-btn__label">Planta</span>
           <span className="mode-btn__value">{simulada ? 'SIMULADA' : 'REAL'}</span>

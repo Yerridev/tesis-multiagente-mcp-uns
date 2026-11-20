@@ -6,7 +6,7 @@ $dir  = 'C:\Users\KST\NI-DS\conectores'   # conectores de presion junto a las DL
 $log  = Join-Path $raiz 'logs\presion_edge.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Rotar { if ((Test-Path $log) -and (Get-Item $log).Length -gt 20MB) { Move-Item -Force $log "$log.1" } }
-if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\00-instalar-python.bat)" | Out-File -Append -FilePath $log; exit 1 }
+if (-not (Test-Path $py)) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] FALTA $py (corre bat\01.0_InstalarPython.bat)" | Out-File -Append -FilePath $log; exit 1 }
 # Conector EDGE de presion (cFP-2200) via DataSocket/PSP. Publica en el broker Docker 192.168.114.100:1884
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] arrancando EDGE presion en el HOST (DataSocket psp://)" | Out-File -Append -FilePath $log
 while ($true) {

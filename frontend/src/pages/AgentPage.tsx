@@ -30,7 +30,7 @@ interface Action {
   ok: boolean;
 }
 
-/* Sistema multiagente MCP (Python, bat 31): orquestador + un analista por módulo, cada uno con su servidor MCP */
+/* Sistema multiagente MCP (Python, bat 05.0): orquestador + un analista por módulo, cada uno con su servidor MCP */
 const AGENTES = [
   { key: 'orquestador', name: 'Agente Orquestador', desc: 'Intérprete: reparte la pregunta · Veredicto: integra los informes', server: 'Ninguno directo (coordina por MQTT)' },
   { key: 'analista-nivel', name: 'Analista de Nivel', desc: 'Analiza el módulo MCN-09 (MicroLogix)', server: 'Servidor MCP · Nivel :8001' },
@@ -183,7 +183,7 @@ export function AgentPage() {
   const modeText = multi
     ? `Sistema multiagente MCP · 5 agentes · 4 servidores MCP · ${ia.actual?.nombre ?? status?.model}`
     : llm
-      ? `Agente clásico (abre el bat 31 para el multiagente) · ${ia.actual?.nombre ?? status?.model}`
+      ? `Agente clásico (abre el bat 05.0 para el multiagente) · ${ia.actual?.nombre ?? status?.model}`
       : 'Motor de reglas · sin modelo LLM conectado';
 
   const toggleCard = (key: string) => {
@@ -358,7 +358,7 @@ export function AgentPage() {
             <div>
               <h2>Sistema multiagente MCP</h2>
               <span className="panel-sub">
-                {multi ? 'En línea' : 'Fuera de línea (bat 31)'}
+                {multi ? 'En línea' : 'Fuera de línea (bat 05.0)'}
                 {vistaEfectiva === 'agentes' ? ' · rojo = trabajando ahora' : ` · viendo ${VISTAS.find((v) => v.id === vistaEfectiva)?.nombre}${vista === 'auto' ? ' (automático)' : ''}`}
               </span>
             </div>

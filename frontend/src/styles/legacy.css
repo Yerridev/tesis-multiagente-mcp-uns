@@ -895,3 +895,31 @@
 .af-btn-original { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; }
 .af-btn-original:hover { background: var(--bg); }
 .lz-compacto.lz-ampliado .lz-pos-original { display: none; }
+
+/* ---------- Agentes de IA en tablet / móvil ----------
+   En escritorio la grilla ocupa la altura de la ventana y el diagrama/chat se estiran (flex).
+   En pantallas angostas la altura es "auto": sin estas alturas fijas el diagrama y el chat
+   colapsaban a 0 px. */
+@media (max-width: 1100px) {
+  .agents-grid .ag-flow .af-wrap:not(.af-modal-lienzo) { flex: none; height: 62vh; min-height: 340px; }
+  .agents-grid > .ag-chat { height: 78vh; min-height: 460px; }
+}
+@media (max-width: 640px) {
+  .agents-grid { gap: 12px; }
+  .agents-grid > .panel { padding: 14px; }
+  /* cabeceras: título arriba, controles abajo a todo el ancho */
+  .agents-grid .panel-head { flex-direction: column; align-items: stretch; gap: 8px; }
+  .agents-grid .af-herr-der { justify-content: stretch; }
+  .agents-grid .af-vista { width: 100%; font-size: 14px; padding: 8px 10px; }
+  .agents-grid .ag-chat .panel-head { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .agents-grid .ag-chat .panel-head > div:first-child { flex: 1 0 100%; }
+  .agents-grid .hc-acciones { margin: 0; flex: 1; }
+  .agents-grid .hc-btn { flex: 1; padding: 7px 8px; }
+  /* caja de chat: sin la ayuda de teclado (no hay Shift en el celular) */
+  .agents-grid .cc-ayuda { display: none; }
+  .agents-grid .msg-body { max-width: 92%; font-size: 13.5px; }
+  /* historial: tabla compacta con scroll horizontal */
+  .agents-grid .ag-hist .table-wrap { max-height: 260px; overflow: auto; }
+  .agents-grid .ag-hist .table { font-size: 12px; min-width: 460px; }
+  .agents-grid .ag-hist .table th, .agents-grid .ag-hist .table td { padding: 8px 10px; }
+}

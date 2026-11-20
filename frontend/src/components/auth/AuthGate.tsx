@@ -54,7 +54,7 @@ export function AuthGate({ children }: { children: (clave: string) => ReactNode 
   if (estado === 'sin-backend')
     return (
       <Pantalla>
-        <p className="login-err">El backend no responde. ¿Está levantado Docker (bat 05 / 13)?</p>
+        <p className="login-err">El backend no responde. ¿Está levantado Docker (bat 02.0_LevantarSistema)?</p>
         <button type="button" className="btn login-btn" onClick={() => setReintento((n) => n + 1)}>
           Reintentar
         </button>

@@ -52,7 +52,7 @@ export const api = {
 
   agentTools: () => request<AgentTool[]>('/api/agent/tools'),
 
-  /** servidores MCP reales del sistema multiagente (bat 31): herramientas publicadas y últimas llamadas */
+  /** servidores MCP reales del sistema multiagente (bat 05.0): herramientas publicadas y últimas llamadas */
   mcpCatalogo: () => request<CatalogoMcpRespuesta>('/api/mcp/catalogo'),
 
   agentStatus: () => request<AgentStatus>('/api/agent/status'),

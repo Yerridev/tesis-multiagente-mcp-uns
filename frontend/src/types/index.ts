@@ -109,7 +109,7 @@ export interface AgentStatus {
   models?: { id: string; nombre: string; gratis: boolean }[];
   provider: string;
   scope: string;
-  /** el sistema multiagente MCP (bat 31) está en línea */
+  /** el sistema multiagente MCP (bat 05.0) está en línea */
   multiagente?: boolean;
 }
 

@@ -57,6 +57,7 @@ Sistema Docker: proyecto **`tesis-mcp-multiagente-uns`**, contenedores **`mcp-*`
 | **08 · GitHub** | `08.0_SubirNuestroRepo` | Commit y push a `bvasquezkeysije/tesis-mcp-multiagent-uns` |
 | | `08.1_SubirRepoYerri` | Push a la rama `mcp-industrial` de Yerri |
 | | `08.2_SubirAmbosRepos` | Un commit y lo sube a los dos repos (nuestro + Yerri) |
+| | `08.3_RevisarRamasRemotas` | Solo lectura: baja las ramas de GitHub y muestra qué traen respecto a main |
 
 Auxiliares (no se ejecutan solos): `_docker-listo.bat`, `_modo-planta.bat` y los `.ps1`.
 

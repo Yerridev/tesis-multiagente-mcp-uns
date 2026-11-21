@@ -42,7 +42,10 @@ def _perfil(modulo: str) -> str:
         "dar órdenes al PLC. Ya tienes la evidencia determinista (diagnostico). Usa otras herramientas "
         "solo si hacen falta para responder la subtarea. Reglas: no inventes valores; si un dato no "
         "existe dilo; distingue hechos (valores leídos) de hipótesis; respeta las señales marcadas como "
-        "hipotesis. Responde en español, breve (máx. 8 líneas), citando los valores que usaste."
+        "hipotesis. TIEMPO: diagnostico y estado_actual son el estado de AHORA. Si la subtarea pregunta por un momento "
+        "pasado o por algo dicho antes, usa historial_alarmas / historial_senal (hora de Lima) y responde con horas: "
+        "\"a las X estaba …, desde las Y está …\". Un cambio posterior NO invalida lo que era cierto antes: no lo "
+        "presentes como corrección. Responde en español, breve (máx. 8 líneas), citando los valores que usaste."
     )
 
 

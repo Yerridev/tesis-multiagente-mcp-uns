@@ -22,6 +22,16 @@ export function useSesion<T>(clave: string, inicial: T): [T, (v: SetStateAction<
   useEffect(() => {
     try { sessionStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento */ }
   }, [clave, valor]);
-  const set = useCallback((v: SetStateAction<T>) => setValor(v), []);
+  // Escribe en sessionStorage AL INSTANTE (no en un efecto): si la página se desmonta mientras
+  // espera una respuesta (el usuario cambió de módulo), la respuesta igual queda guardada.
+  // Las actualizaciones funcionales parten de lo guardado, que siempre es lo más reciente.
+  const set = useCallback((v: SetStateAction<T>) => {
+    let previo: T = inicial;
+    try { const crudo = sessionStorage.getItem(claveRef.current); previo = crudo ? (JSON.parse(crudo) as T) : inicial; } catch { /* sin almacenamiento */ }
+    const nuevo = typeof v === 'function' ? (v as (p: T) => T)(previo) : v;
+    try { sessionStorage.setItem(claveRef.current, JSON.stringify(nuevo)); } catch { /* sin almacenamiento */ }
+    setValor(nuevo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return [valor, set];
 }

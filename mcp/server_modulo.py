@@ -40,6 +40,17 @@ BACKEND = os.environ.get("BACKEND_URL", "http://backend:8080").rstrip("/")
 _CAB = {"Authorization": f"Bearer {os.environ['SERVICIO_TOKEN']}"} if os.environ.get("SERVICIO_TOKEN") else {}
 
 
+# (clave, valor que indica alarma, texto) · mismo criterio que el SCADA
+_ALARMAS_SCADA = [
+    ("estado/nivel_alto", True, "NIVEL ALTO en el tanque (indicador Q0.0)"),
+    ("estado/nivel_bajo", True, "NIVEL BAJO en el tanque (indicador Q0.1)"),
+    ("nivel/principal_alto", True, "NIVEL ALTO en el tanque principal (bloquea el lazo)"),
+    ("nivel/enfriador_alto", True, "NIVEL ALTO en el tanque del enfriador"),
+    ("nivel/principal_bajo_ok", False, "Tanque principal SIN AGUA sobre el interruptor de nivel bajo"),
+    ("nivel/enfriador_bajo_ok", False, "Tanque del enfriador SIN AGUA sobre el interruptor de nivel bajo"),
+]
+
+
 def crear_servidor(modulo: str, puerto: int | None = None) -> FastMCP:
     cfg = MODULOS[modulo]
     eq_id = cfg["equipo"]
@@ -112,6 +123,62 @@ def crear_servidor(modulo: str, puerto: int | None = None) -> FastMCP:
         datos = _get(f"/api/history?equipmentId={eq_id}&limit={max(1, min(limit, 600))}")
         return datos if isinstance(datos, list) else []
 
+    def _bd(sql: str, args: tuple) -> list:
+        dsn = os.environ.get("MCP_DB_DSN")
+        if not dsn:
+            raise RuntimeError("sin acceso a la base de datos (MCP_DB_DSN)")
+        import psycopg
+        with psycopg.connect(dsn, connect_timeout=5) as c:
+            c.execute("SET TRANSACTION READ ONLY")
+            return c.execute(sql, args).fetchall()
+
+    def _cambios(claves: list[str], minutos: int) -> dict:
+        """Transiciones de señales en TimescaleDB (hora de Lima)."""
+        minutos = max(1, min(int(minutos), 24 * 60))
+        filas = _bd(
+            """WITH x AS (
+                 SELECT s.nombre, m.ts, m.valor,
+                        lag(m.valor) OVER (PARTITION BY s.nombre ORDER BY m.ts) AS previo,
+                        row_number() OVER (PARTITION BY s.nombre ORDER BY m.ts) AS n
+                   FROM mediciones m JOIN senales s ON s.id = m.senal_id JOIN equipos e ON e.id = s.equipo_id
+                  WHERE e.equipo = %s AND s.nombre = ANY(%s) AND m.ts > now() - make_interval(mins => %s))
+               SELECT nombre, to_char(ts AT TIME ZONE 'America/Lima', 'YYYY-MM-DD HH24:MI:SS'), valor
+                 FROM x WHERE n = 1 OR previo IS DISTINCT FROM valor ORDER BY ts""",
+            (eq_id, claves, minutos))
+        por: dict[str, list] = {}
+        for nombre, hora, valor in filas:
+            por.setdefault(nombre, []).append({"hora_lima": hora, "valor": valor})
+        return {"modulo": modulo, "ventana_min": minutos, "zona": "America/Lima",
+                "nota": "el primer registro de cada señal es su valor al inicio de la ventana; los demás son cambios",
+                "origen": "valores leídos del PLC por el conector edge y guardados por el ingestor",
+                "catalogo": {k: {"direccion": catalogo.get(k, {}).get("direccion"),
+                                 "descripcion": catalogo.get(k, {}).get("descripcion"),
+                                 "hipotesis": bool(catalogo.get(k, {}).get("hipotesis", False))} for k in por},
+                "senales": por}
+
+    @mcp.tool()
+    def historial_alarmas(minutos: int = 60) -> dict:
+        """Historial (base de datos) de las ALARMAS del módulo: cuándo se activó y desactivó cada una en los
+        últimos N minutos. Úsala si la pregunta habla del pasado ("estaba", "hace un rato", "a las 17:28")."""
+        claves = [c for c in catalogo if c.startswith(("alarma/", "falla/")) or "/alarma_" in c
+                  or c in {k for k, _, _ in _ALARMAS_SCADA} or c == "nivel/fuera_rango_sensor"]
+        try:
+            r = _cambios(claves, minutos)
+        except Exception as ex:  # noqa: BLE001
+            return {"error": str(ex)[:200]}
+        r["valor_que_es_alarma"] = {k: malo for k, malo, _ in _ALARMAS_SCADA if k in claves}
+        return r
+
+    @mcp.tool()
+    def historial_senal(clave: str, minutos: int = 60) -> dict:
+        """Historial (base de datos) de UNA señal del módulo: su valor al inicio de la ventana y cada cambio."""
+        if clave not in catalogo:
+            return {"error": f"señal desconocida en {modulo}: {clave}"}
+        try:
+            return _cambios([clave], minutos)
+        except Exception as ex:  # noqa: BLE001
+            return {"error": str(ex)[:200]}
+
     @mcp.tool()
     def diagnostico() -> dict:
         """Diagnóstico DETERMINISTA: comunicación, frescura, alarmas activas, selector y marcha. No inventa bandas sin consigna."""
@@ -128,7 +195,18 @@ def crear_servidor(modulo: str, puerto: int | None = None) -> FastMCP:
             es_alarma = clave.startswith(("alarma/", "falla/")) or "/alarma_" in clave
             if es_alarma and v is True:
                 hallazgos.append({"severidad": "alarma", "hallazgo": clave,
-                                  "evidencia": catalogo.get(clave, {}).get("descripcion", "")})
+                                  "evidencia": catalogo.get(clave, {}).get("descripcion", ""),
+                                  "direccion": catalogo.get(clave, {}).get("direccion"),
+                                  "hipotesis": bool(catalogo.get(clave, {}).get("hipotesis", False)),
+                                  "origen": "valor leído del PLC por el conector edge (no es una inferencia)"})
+        # Indicadores de nivel que el SCADA pinta como ALARMA (lienzo/nodos.tsx) aunque su clave no empiece por alarma/
+        for clave, valor_malo, texto in _ALARMAS_SCADA:
+            if clave in valores and valores.get(clave) is valor_malo:
+                hallazgos.append({"severidad": "alarma", "hallazgo": texto,
+                                  "evidencia": f"{clave} = {valores.get(clave)} · {catalogo.get(clave, {}).get('descripcion', '')}".strip(" ·"),
+                                  "senal": clave, "direccion": catalogo.get(clave, {}).get("direccion"),
+                                  "hipotesis": bool(catalogo.get(clave, {}).get("hipotesis", False)),
+                                  "origen": "valor leído del PLC por el conector edge (no es una inferencia)"})
         if valores.get("nivel/fuera_rango_sensor") is True:
             hallazgos.append({"severidad": "alarma", "hallazgo": "Sensor de nivel fuera de rango",
                               "evidencia": "el valor en cm es el tope de la escala, no una medida"})

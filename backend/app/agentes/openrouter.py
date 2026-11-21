@@ -122,8 +122,8 @@ class OpenRouterAgent:
             raiz = respuesta.json()
             modelo_real = raiz.get("model") or elegido
             texto: str | None = None
-            escolhas = raiz.get("choices") or []
-            if escolhas:
+            elecciones = raiz.get("choices") or []
+            if elecciones:
                 mensaje = elecciones[0].get("message") or {}
                 texto = mensaje.get("content")
                 if not (texto or "").strip() and mensaje.get("reasoning"):

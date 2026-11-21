@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import paho.mqtt.client as mqtt
 
@@ -16,6 +17,9 @@ log = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 _clientes: dict[tuple[str, int], mqtt.Client] = {}
+# Hilos propios: los suscriptores MQTT ocupan de forma permanente un hilo cada uno del
+# pool por defecto de asyncio (cpu+4); con 4 nucleos lo llenan y publicar() no corria nunca.
+_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="mqtt-pub")
 
 
 def _crear(host: str, puerto: int) -> mqtt.Client:
@@ -52,7 +56,7 @@ async def publicar(topico: str, cuerpo: str, host: str, puerto: int = 1883,
         return info.is_published()
 
     try:
-        return await asyncio.to_thread(_intento)
+        return await asyncio.get_running_loop().run_in_executor(_pool, _intento)
     except Exception as exc:
         log.warning("No se pudo publicar en %s (%s:%s): %s", topico, host, puerto, exc)
         with _lock:

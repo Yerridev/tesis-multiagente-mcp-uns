@@ -41,17 +41,38 @@ PALABRAS = {
 INTERPRETE = (
     "Eres el agente INTÉRPRETE de un sistema multiagente industrial con 4 módulos: nivel, caudal, presion, "
     "temperatura. Recibes la pregunta de un operador y decides qué módulos deben analizarla y qué subtarea "
-    "concreta darle a cada analista. Si la pregunta es general (estado de la planta) usa los 4. "
-    'Responde SOLO un JSON: {"modulos": {"<modulo>": "<subtarea>"}, "intencion": "<una línea>"}'
+    "concreta darle a cada analista. Códigos de los módulos: MCN-09 = nivel, MCC-09 = caudal, "
+    "MCP-09 = presion, MCT-09 = temperatura (\"MCC\" es el módulo de caudal, no un centro de control de motores). "
+    "Equipos de cada módulo: nivel = PLC Allen-Bradley MicroLogix 1100, sensor ultrasónico, tanque T2; "
+    "caudal = PLC Siemens S7-200 (CP243-1), variador, bomba centrífuga, caudalímetro Kobold, guardamotor; "
+    "presion = National Instruments cFP-2200 (FieldPoint), transmisor en psi; "
+    "temperatura = PLC Schneider Twido, resistencia calefactora, enfriador. "
+    "Si la pregunta nombra uno o varios módulos, usa SOLO esos. Si la pregunta es general (estado de la planta) usa los 4. "
+    "En preguntas de SEGUIMIENTO conserva el módulo del que se venía hablando salvo que nombren otro: "
+    "\"nivel alto/bajo\" también es la alarma del tanque de caudal, presión o temperatura, no solo del módulo de nivel. "
+    "Escribe cada subtarea AUTOCONTENIDA: incluye lo que se dijo antes y, si la pregunta habla del pasado "
+    "(\"estaba\", \"hace un rato\", \"cuando pregunté\"), la hora de referencia, para que el analista revise el historial. "
+    'Responde SOLO un JSON: {"modulos": {"<modulo>": "<subtarea>"}, "intencion": "<una línea>"}. '
+    'La clave <modulo> debe ser EXACTAMENTE una de: nivel, caudal, presion, temperatura (no uses los códigos MCx-09).'
 )
 
 VEREDICTO = (
     "Eres el agente VEREDICTO de un sistema multiagente industrial (solo lectura, no das órdenes al PLC). "
     "Recibes la pregunta del operador y los informes de los agentes analistas de cada módulo. Integra los "
     "informes, señala relaciones o contradicciones entre ellos, y responde al operador en español, claro y "
+    "breve. Códigos: MCN-09 = nivel, MCC-09 = caudal, MCP-09 = presion, MCT-09 = temperatura (\"MCC\" es el "
+    "módulo de caudal). Responde solo sobre los módulos que se preguntaron; no pidas los demás. "
+    "TIEMPO: la planta cambia; tus respuestas anteriores describían el estado de ESE momento. Si ahora el valor es "
+    "otro, NO digas que te equivocaste ni escribas \"corrección\": explica la secuencia con horas (\"a las X estaba "
+    "…, a las Y cambió a …, ahora está …\"). Solo es una corrección si el historial muestra que en ese momento el "
+    "dato ya era distinto. No pongas en duda lo que los informes dan como leído del PLC. Sé "
     "breve (máx. 10 líneas). No inventes datos que no estén en los informes. La severidad global ya está "
     "calculada por reglas: no la cambies. Termina con una recomendación concreta si hay alarma o advertencia."
 )
+
+
+_CODIGOS = {"mcn-09": "nivel", "mcn09": "nivel", "mcn": "nivel", "mcc-09": "caudal", "mcc09": "caudal", "mcc": "caudal",
+            "mcp-09": "presion", "mcp09": "presion", "mcp": "presion", "mct-09": "temperatura", "mct09": "temperatura", "mct": "temperatura"}
 
 
 def _contexto(historial: list | None) -> str:
@@ -59,7 +80,7 @@ def _contexto(historial: list | None) -> str:
     if not historial:
         return ""
     lineas = [f"{(h.get('rol') or '?')}: {(h.get('texto') or '')[:300]}" for h in historial[-6:]]
-    return "Conversación previa:\n" + "\n".join(lineas) + "\n\nPregunta actual: "
+    return "Conversación previa:\n" + "\n".join(lineas) + f"\n\nHora actual (Lima): {ahora()[11:19]}\nPregunta actual: "
 
 
 def interpretar(pregunta: str, llm: LLM, corr: str, historial: list | None = None, solo_reglas: bool = False) -> tuple[dict, str]:
@@ -70,7 +91,11 @@ def interpretar(pregunta: str, llm: LLM, corr: str, historial: list | None = Non
         try:
             msg = llm.chat([{"role": "system", "content": INTERPRETE}, {"role": "user", "content": _contexto(historial) + pregunta}])
             j = extraer_json(msg.get("content") or "") or {}
-            mods = {m: str(s) for m, s in (j.get("modulos") or {}).items() if m in MODULOS}
+            mods = {}
+            for m, s in (j.get("modulos") or {}).items():   # acepta "caudal", "MCC-09", "Presión"...
+                m = _CODIGOS.get(str(m).strip().lower().replace("ó", "o"), str(m).strip().lower().replace("ó", "o"))
+                if m in MODULOS:
+                    mods[m] = str(s)
             if mods:
                 plan, modo = mods, "llm"
         except Exception as ex:  # noqa: BLE001

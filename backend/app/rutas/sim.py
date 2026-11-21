@@ -12,11 +12,16 @@ from datetime import datetime
 
 from fastapi import APIRouter, Request
 
+from ..modelos import SolicitudLlave
 from ..modulos import MODULOS
 
 router = APIRouter(prefix="/api", tags=["simulacion"])
 
 LLAVE_VALIDA = re.compile(r"^(V[1-7]|VF)$")
+
+
+def _ctx(request: Request):
+    return request.app.state.ctx
 
 
 def _bases() -> dict[str, str]:

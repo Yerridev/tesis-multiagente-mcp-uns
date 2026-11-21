@@ -25,7 +25,7 @@ ID_VALIDO = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 class ConversacionesStore:
     def __init__(self, ruta: str | None = None) -> None:
         self.dir = Path(ruta) if ruta else (Path.cwd() / "registros" / "conversaciones")
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()   # reentrante: registrar() llama a leer() con el lock tomado
         try:
             self.dir.mkdir(parents=True, exist_ok=True)
         except OSError as exc:                 # pragma: no cover

@@ -923,3 +923,18 @@
   .agents-grid .ag-hist .table { font-size: 12px; min-width: 460px; }
   .agents-grid .ag-hist .table th, .agents-grid .ag-hist .table td { padding: 8px 10px; }
 }
+
+/* ---------- Agentes de IA: que nada se salga del ancho del celular ----------
+   "1fr" no baja del ancho mínimo de su contenido (lienzo, cabecera del chat):
+   la columna quedaba más ancha que la pantalla y se cortaba a la derecha. */
+@media (max-width: 1100px) {
+  .agents-grid { grid-template-columns: minmax(0, 1fr); }
+  .agents-grid > * { min-width: 0; max-width: 100%; }
+  .agents-grid .af-wrap { max-width: 100%; overflow: hidden; }
+}
+@media (max-width: 640px) {
+  .agents-grid .ag-chat .panel-head { row-gap: 8px; }
+  .agents-grid .hc-acciones { min-width: 0; }
+  .agents-grid .ag-chat .panel-head .pill { flex: 0 0 100%; justify-content: center; text-align: center; }
+  .agents-grid .msg-body { overflow-wrap: anywhere; }
+}

@@ -61,6 +61,7 @@ class TwidoTemperatura:
         self._enf_habilitado = False
         r = self.mem.regs
         r[101], r[102], r[103] = 5000, 10, 10   # parametros PID de fabrica
+        r[10] = VARIADOR_MARCHA                 # velocidad del variador por defecto hasta que el PC escriba otra
         r[100] = 0                              # el SP se pierde al apagar el PLC real
         self.mem.coils[3] = True                # pulsador DESHABILITAR ENFRIADOR es NC
 
@@ -90,7 +91,8 @@ class TwidoTemperatura:
         c[33] = c[1] and not c[0] and c[32] and not falla
         c[12] = c[31] or c[33]
         c[13] = c[12]
-        r[10] = VARIADOR_MARCHA if c[13] else 0
+        # %MW10 = consigna del variador que escribe el PC/HMI (el conector la escribe y la relee antes de Iniciar):
+        # el programa NO la sobrescribe; la bomba gira a esa velocidad solo con %M13 activo.
 
         # Medicion (transmisores 4-20 mA -> 0..4095)
         r[0] = a_cuentas(self.planta.lectura_principal())
@@ -141,7 +143,7 @@ class TwidoTemperatura:
         c[19] = c[12] and c[44] and (self._enf_habilitado or c[43])
 
         # Fisica
-        bomba_pct = r[10] * 100.0 / CUENTAS
+        bomba_pct = (r[10] * 100.0 / CUENTAS) if c[13] else 0.0
         self.planta.paso(dt, resistencia_on=c[14], bomba_pct=bomba_pct, enfriador_on=c[19])
 
     def resumen(self) -> str:

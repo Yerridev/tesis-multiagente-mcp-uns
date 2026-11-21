@@ -9,6 +9,7 @@ import { SelectorModelo, useModeloElegido } from '../components/agents/SelectorM
 import { CajaChat } from '../components/agents/CajaChat';
 import { HistorialChats } from '../components/agents/HistorialChats';
 import { useSesion } from '../components/agents/useSesion';
+import { pendiente } from '../components/agents/pendiente';
 import type { ConversacionCompleta } from '../types';
 import { TextoMd } from '../components/agents/TextoMd';
 import { createPortal } from 'react-dom';
@@ -110,6 +111,16 @@ export function AgentPage() {
   const logRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(messages.reduce((m, x) => Math.max(m, x.id), 0) + 1);
   const [convId, setConvId] = useSesion<string | null>('mcp.chat.agentes.conversacion', null);   // conversación guardada en curso
+  /* Si al volver a esta página todavía hay una pregunta en curso, se muestra "trabajando";
+     cuando llega la respuesta (guardada en sessionStorage aunque la página no estuviera), se recarga. */
+  useEffect(() => {
+    if (pendiente.activo) setBusy(true);
+    return pendiente.suscribir(() => {
+      setMessages((m) => m); setActions((a) => a); setConvId((c) => c);   // relee lo guardado
+      setBusy(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [historialAbierto, setHistorialAbierto] = useState(false);
   /* casillas del diagrama: ver servidores MCP y sus herramientas (se recuerdan en este navegador) */
   const leerVer = (k: string, def: boolean) => { try { const v = localStorage.getItem(k); return v === null ? def : v === '1'; } catch { return def; } };
@@ -205,6 +216,7 @@ export function AgentPage() {
     setFailure(null);
     setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: message }]);
     setBusy(true);
+    pendiente.inicio();
     try {
       const historial = messages.map((m) => ({ rol: m.role === 'user' ? ('user' as const) : ('agente' as const), texto: m.text }));
       const reply = await api.agentAsk(message, ia.modelo, historial, { id: convId, origen: 'agentes' });
@@ -262,6 +274,7 @@ export function AgentPage() {
       );
     } finally {
       setBusy(false);
+      pendiente.fin();
     }
   };
 

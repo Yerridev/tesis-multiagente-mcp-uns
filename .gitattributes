@@ -1,0 +1,7 @@
+# Scripts de Windows: siempre CRLF al hacer checkout (cmd.exe falla con etiquetas/goto en LF)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Scripts que corren en contenedores Linux: siempre LF
+*.sh  text eol=lf
+*.sql text eol=lf

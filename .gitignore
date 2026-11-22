@@ -1,8 +1,10 @@
 # ===== Secretos (NUNCA subir) =====
 .env
+.env.*
+!.env.example
+deploy/secrets/*
+!deploy/secrets/README.md
 **/.env
-!**/.env.example
-**/claude_desktop_config.json
 
 # ===== Entornos y caches =====
 .venv/
@@ -12,25 +14,66 @@ venv/
 *.pyc
 **/node_modules/
 **/dist/
+bin/
+obj/
+.vs/
 .idea/
 **/.idea/
-.vscode/
 
 # ===== Logs y datos generados =====
 **/logs/
 *.log
+backend/auditoria/*.jsonl
 
-# ===== Transcripciones de sesiones con IA (personales) =====
+backend/wwwroot/
+
+# Cache incremental de TypeScript
+*.tsbuildinfo
+
+# ===== Copias locales de respaldo (pueden contener secretos) =====
+_antes_restauracion_*/
+.commitmsg.txt
+24-subir-github.bat
+08-recrear-backend.bat
+23-subir-repo-yerri.bat
+07-reconstruir-backend.bat
+tools/*.out
+tools/trabajos/
+25-ejecutor-mcp.bat
+
+# ===== .bat locales movidos a bat/ (siguen sin subirse) =====
+bat/24-subir-github.bat
+bat/23-subir-repo-yerri.bat
+bat/22-subir-nuestro-repo.bat
+bat/08-recrear-backend.bat
+bat/07-reconstruir-backend.bat
+bat/25-ejecutor-mcp.bat
+tools/ejecutor.ps1
+# respaldos de estilo y paquete temporal del simulador
+frontend/_respaldo_estilo_*/
+simulador/.paquete.tgz
+__pycache__/
+bat/.modo-planta
+
+# chats con los agentes (pueden contener datos del laboratorio)
+registros/*
+# las posiciones de los lienzos SÍ se respaldan en GitHub
+!registros/lienzos/
+
+# =====================================================================
+#  Stack v1 (historiador/, nivel/, presion/, temperatura/) — venía de main
+# =====================================================================
+!**/.env.example
+**/claude_desktop_config.json
+.vscode/
 session-*.md
-
-# ===== Respaldos locales (el historial de git ya cumple esa funcion) =====
 historiador/respaldo_*/
 historiador/mcp_servidor/conocimiento/respaldos/
-
-# ===== Programas originales de los PLC (propiedad del laboratorio / Inducontrol) =====
-# Se documentan en el repo pero no se publican los binarios. Quita estas lineas si el repo es privado
-# y quieres versionarlos.
+# Programas originales de los PLC (propiedad del laboratorio / Inducontrol)
 *.mwp
 *.RSS
 *.rss
 nivel/rss_streams/
+
+# Build local de la SPA para `dotnet run` (Docker la construye solo)
+backend/wwwroot/

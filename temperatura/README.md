@@ -81,7 +81,7 @@ Mapa completo con estado *confirmado/hipótesis*: [`tags_temperatura.yaml`](tags
 | 4 | Escala del SP mal supuesta (3000 = 73 °C) | Corregida en `diag_twido.py` con el diagrama del SCADA |
 | 5 | **Calentamiento con el lazo detenido y olor a quemado**: relé de estado sólido FOTEK sin disipador | ⚠️ Pendiente: revisar/reemplazar con disipador. El MCP lo detecta como `CALENTAMIENTO_SIN_ORDEN` |
 | 6 | El respaldo `Twido1.xtwd` (2009) no tiene `%M41/%M42`, que sí usa el SCADA | No descargar el respaldo; subir el programa real con TwidoSuite |
-| 7 | El Twido usa `.10`, la IP que tenía la laptop (y que exige el enlace 1 del S7-200) | Laptop a `.12`; caudal pendiente (ver `red_laboratorio_plc.md`) |
+| 7 | El Twido usa `.10`, la IP que tenía la laptop (y que exige el enlace 1 del S7-200) | Laptop a `.12`; caudal pendiente (ver `docs/tesis/02-red-laboratorio-plc.md`) |
 
 ## 7. Archivos
 

@@ -1,0 +1,32 @@
+# =====================================================================
+#  Agents: el backend en modo AGENTS_ONLY=1.
+#  Misma base de código con extracción mínima: esta instancia NO registra
+#  el servicio de control ni sus endpoints (sin MQTT de control, sin órdenes).
+#  El LLM conserva únicamente herramientas de lectura.
+# =====================================================================
+FROM python:3.12-slim AS build
+WORKDIR /src
+COPY backend/requirements.txt backend/requirements.txt
+RUN python -m venv /opt/venv \
+ && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt
+
+FROM python:3.12-slim
+LABEL org.opencontainers.image.title="mcp-industrial-agents"
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    AGENTS_ONLY=1
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd -m -u 10001 -s /usr/sbin/nologin appuser
+WORKDIR /app
+COPY --from=build /opt/venv /opt/venv
+COPY backend/ /app/
+USER appuser
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=4s --start-period=20s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:8080/health/live >/dev/null || exit 1
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

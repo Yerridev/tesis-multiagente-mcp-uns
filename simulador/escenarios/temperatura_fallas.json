@@ -1,0 +1,15 @@
+{
+  "nombre": "Fallas inyectadas",
+  "descripcion": "Arranque automático a 35 °C; luego falla de nivel, sensor congelado y caída del PLC. Sirve para evaluar diagnósticos de los agentes MCP.",
+  "eventos": [
+    {"t": 0,   "accion": "escribir_mw", "direccion": 100, "valor": 1433, "nota": "SP = 35 C"},
+    {"t": 1,   "accion": "escribir_m",  "direccion": 30,  "valor": true, "nota": "Iniciar desde PC"},
+    {"t": 600, "accion": "nivel_bajo_principal_ok", "valor": false, "nota": "Tanque principal sin agua: falla de nivel, el lazo se detiene"},
+    {"t": 660, "accion": "nivel_bajo_principal_ok", "valor": true},
+    {"t": 720, "accion": "escribir_m",  "direccion": 30,  "valor": true, "nota": "Reinicio"},
+    {"t": 900, "accion": "sensor_congelado", "valor": true, "nota": "El transmisor deja de cambiar"},
+    {"t": 1080,"accion": "sensor_congelado", "valor": false},
+    {"t": 1200,"accion": "plc_desconectado", "valor": true, "nota": "PLC sin respuesta (cable)"},
+    {"t": 1260,"accion": "plc_desconectado", "valor": false}
+  ]
+}

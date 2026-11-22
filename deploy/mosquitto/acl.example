@@ -1,0 +1,28 @@
+# ACL de Mosquitto — mínimo necesario por usuario (producción).
+# Copiar a /mosquitto/config/acl junto a passwd (generado con mosquitto_passwd).
+# Base UNS: uss/campus/lab-automatizacion/sl01la07
+
+# --- backend: suscriptor de telemetría y de acks/state de control; publica cmd ---
+user backend_reader
+topic readwrite uss/campus/lab-automatizacion/sl01la07/#
+# el backend publica órdenes SOLO en el tópico de control
+topic write uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/control/cmd
+
+# --- ingestor: SOLO lectura de telemetría; jamás comandos ---
+user ingestor
+topic read uss/campus/lab-automatizacion/sl01la07/+/#
+topic read uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/#
+
+# --- connector_level (conector edge de telemyría): publica su módulo y lee cmd ---
+user connector_level
+topic readwrite uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/#
+topic read uss/campus/lab-automatizacion/sl01la07/+/#
+
+# --- control_level (conector de CONTROL MCN-09): mínimo absoluto ---
+# Lee la telemetría funcional que necesita para revalidar y las órdenes;
+# publica SOLO sus confirmaciones y su estado. Sin '#' global.
+user control_level
+topic read uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/funcional/#
+topic read uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/control/cmd
+topic write uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/control/ack
+topic write uss/campus/lab-automatizacion/sl01la07/nivel-mcn09/control/state

@@ -59,3 +59,11 @@ Se aplican a todas las configuraciones y se reportan como parte del método (no 
 3. **Contexto común:** las consultas de historial usan una ventana de al menos ±30 s (en el piloto, D/L04 consultó 1 s, obtuvo 0 muestras y el coordinador dio "sin datos" pese a que el especialista de diagnóstico sí tenía la evidencia).
 
 Hallazgo que se mantiene como resultado de D: el coordinador sin herramientas no puede resolver evidencia contradictoria entre especialistas.
+
+## Ajustes tras la corrida interrumpida del 29-oct (20261029_1325, sin saldo en OpenRouter desde D09)
+
+4. **Tipo 1 por valor, no por nombre de clave:** se puntúan los números del bloque json del equipo preguntado (el modelo nombra la variable a su manera: `caudal/setpoint`, `setpoint_c`...). Limitación: un número cercano de otra variable del mismo equipo también contaría.
+5. **Fecha actual en el contexto común:** en 2 corridas el modelo respondió que "no tiene datos de 2026" (fecha de corte del modelo) sin consultar las herramientas.
+6. **Saldo agotado (HTTP 402):** la corrida se detiene sin registrar error; `--continuar <carpeta>` repite las corridas que fallaron.
+
+Las corridas 20261029_1325 y 20261029_1421 se descartan (prompt anterior y ~60 % de errores 402).

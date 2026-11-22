@@ -1,0 +1,124 @@
+.keys-module { min-height: 100%; padding: 28px; color: #e6edf3; background: radial-gradient(circle at 50% 0, #14293a, #0e1822 52%); }
+.keys-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; max-width: 1250px; margin: 0 auto 26px; }
+.keys-heading span { color: #68c9f3; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.keys-heading h2 { margin: 5px 0 0; font-size: 30px; }
+.keys-heading p { max-width: 460px; margin: 0; color: #8fa7bb; text-align: right; }
+.keys-module > h3 { max-width: 1250px; margin: 24px auto 12px; color: #c9d7e3; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; }
+.keys-grid { display: grid; gap: 14px; max-width: 1250px; margin: auto; }
+.keys-grid--places { grid-template-columns: repeat(4, 1fr); }
+.keys-grid--rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.keys-place-card, .keys-rule-card { overflow: hidden; border: 1px solid #2b4356; border-radius: 14px; background: #101d29; box-shadow: 0 12px 28px #0005; }
+.keys-place-card > b { display: block; padding: 12px; border-top: 1px solid #26394a; color: #d9e4ec; text-align: center; }
+.keys-scene { position: relative; display: grid; place-items: center; height: 210px; overflow: hidden; background-color: #0e1822; background-image: radial-gradient(#243e52 1.2px, transparent 1.2px); background-size: 24px 24px; }
+.keys-scene::before, .keys-scene::after { content: ''; position: absolute; border: 4px solid #263949; background-color: #718497; box-shadow: inset 0 0 0 3px #53687a, 0 2px 3px #0007; }
+.keys-scene::before { display: none; }
+.keys-scene::after { display: none; }
+.keys-valve { position: relative; z-index: 2; }
+.keys-valve .valve__hit { position: absolute; }
+.keys-rule-card header { display: flex; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid #26394a; }
+.keys-rule-card header span { color: #4cc3f2; font-size: 11px; font-weight: 800; }
+.keys-rule-card p { min-height: 22px; margin: 12px 16px; color: #9db0c0; text-align: center; }
+.keys-rule-card button { display: block; margin: 0 auto 16px; padding: 9px 18px; border: 1px solid #3c8fb1; border-radius: 8px; background: #123248; color: #fff; font-weight: 800; cursor: pointer; }
+.keys-rule-card button:hover { background: #17445f; }
+.keys-notes { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 8px 12px; max-width: 1250px; margin: 18px auto 0; padding: 14px 18px; border: 1px solid #294356; border-radius: 12px; background: #0b1620; color: #9db0c0; font-size: 13px; }
+.keys-notes b { color: #e6edf3; }
+@media (max-width: 900px) { .keys-grid--places { grid-template-columns: repeat(2, 1fr); } .keys-heading { align-items: start; flex-direction: column; } .keys-heading p { text-align: left; } }
+@media (max-width: 700px) { .keys-module { padding: 16px; } .keys-grid--places, .keys-grid--rules { grid-template-columns: 1fr; } .keys-notes { grid-template-columns: 1fr; } }
+.keys-motion { position: relative; }
+.keys-motion-card { border-color: #3c8fb1; }
+.keys-motion__btn { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; padding: 6px 16px; border: 1px solid #3c8fb1; border-radius: 8px; background: #123248; color: #fff; font-weight: 800; cursor: pointer; }
+.keys-motion__btn:hover { background: #17445f; }
+.keys-motion__state { position: absolute; top: 10px; right: 12px; z-index: 3; color: #ff5d5d; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.keys-motion__state--open { color: #3ddc97; }
+
+/* ── Componentes: layout con índice a la derecha ── */
+.cmp-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 28px; align-items: start; }
+.cmp-main { min-width: 0; }
+.cmp-index { position: sticky; top: 0; padding: 16px; border: 1px solid #2b4356; border-radius: 12px; background: #0b1620; }
+.cmp-index > span { color: #68c9f3; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.cmp-index ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.cmp-index ul ul { margin: 2px 0 8px 10px; padding-left: 10px; border-left: 1px solid #26394a; }
+.cmp-index button { display: block; width: 100%; padding: 5px 6px; border: 0; border-radius: 6px; background: none; color: #e6edf3; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.cmp-index ul ul button { color: #9db0c0; font-weight: 500; font-size: 13px; }
+.cmp-index button:hover { background: #17445f; color: #fff; }
+.cmp-group { max-width: 1250px; margin: 34px auto 6px; padding-bottom: 8px; border-bottom: 1px solid #26394a; font-size: 22px; scroll-margin-top: 12px; }
+.cmp-note { max-width: 1250px; margin: 0 auto; color: #8fa7bb; }
+.keys-module h3 { scroll-margin-top: 12px; }
+.cmp-scene { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding-bottom: 44px; height: 230px; }
+.cmp-reading { display: flex; align-items: baseline; gap: 4px; color: #4cc3f2; }
+.cmp-reading strong { font-size: 20px; color: #fff; }
+.cmp-reading span { font-size: 11px; font-weight: 800; }
+.cmp-beam path { animation: cmp-pulse 1.4s infinite; }
+.cmp-beam path:nth-child(2) { animation-delay: .2s; } .cmp-beam path:nth-child(3) { animation-delay: .4s; }
+@keyframes cmp-pulse { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+.cmp-impeller { transform-origin: 156px 50px; transform-box: view-box; }
+.cmp-impeller.on { animation: cmp-spin .8s linear infinite; }
+@keyframes cmp-spin { to { transform: rotate(360deg); } }
+@media (max-width: 1100px) { .cmp-layout { grid-template-columns: 1fr; } .cmp-index { position: static; order: -1; } }
+@media (prefers-reduced-motion: reduce) { .cmp-beam path, .cmp-impeller.on { animation: none; } }
+
+/* círculo de la válvula clicable (abre/cierra) */
+.keys-body-hit { position: absolute; z-index: 3; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.keys-body-hit:hover { box-shadow: 0 0 0 3px #4cc3f288, 0 0 12px #4cc3f2; }
+.keys-body-hit:focus-visible { outline: 2px solid #4cc3f2; outline-offset: 2px; }
+
+/* acciones y rotación de la tarjeta 1.1.1 */
+.keys-motion__actions { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
+.keys-motion__actions button { padding: 6px 14px; border: 1px solid #3c8fb1; border-radius: 8px; background: #123248; color: #fff; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.keys-motion__actions button:hover { background: #17445f; }
+.keys-motion__rot { position: absolute; top: 10px; left: 12px; z-index: 3; color: #8fa7bb; font-size: 11px; font-weight: 700; }
+
+/* rótulo BOMBA centrado sobre el motor: motor = x 0..102 de 220 → centro 46px; techo = 22/100·92 ≈ 20px */
+.cmp-pump { position: relative; width: 200px; height: 92px; }
+.cmp-pump__tag { position: absolute; left: 46px; top: 14px; transform: translate(-50%, -100%); z-index: 2; }
+
+/* ── Emergente del catálogo ── */
+.cat-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(5, 10, 16, .72); backdrop-filter: blur(3px); }
+.cat-modal-caja { position: relative; width: min(1280px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #2b4356; border-radius: 16px; box-shadow: 0 24px 60px #000a; }
+.cat-modal-caja .keys-module { min-height: auto; border-radius: 16px; }
+.cat-cerrar { position: sticky; float: right; top: 12px; margin: 12px 12px -48px 0; z-index: 5; width: 36px; height: 36px; border: 1px solid #3c8fb1; border-radius: 10px; background: #123248; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+.cat-cerrar:hover { background: #ee3f3a; border-color: #ee3f3a; }
+
+/* ═══════════ Estilo MCP-INDUSTRIAL (claro + rojo de marca) ═══════════ */
+.cat-modal { background: rgba(17, 24, 39, .55); }
+.cat-modal-caja { border: 1px solid #e5e7eb; background: #f4f4f5; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+.cat-modal-caja .keys-module { background: #f4f4f5; color: #111827; padding: 24px; }
+.cat-modal-caja .keys-heading { padding: 18px 22px; border-radius: 14px; background: #2b2b2b; color: #fff; margin-bottom: 22px; }
+.cat-modal-caja .keys-heading span { color: #ee3f3a; }
+.cat-modal-caja .keys-heading h2 { color: #fff; }
+.cat-modal-caja .keys-heading p { color: rgba(255,255,255,.75); }
+.cat-modal-caja .cmp-group { color: #111827; border-bottom: 2px solid #ee3f3a; font-size: 18px; }
+.cat-modal-caja .keys-place-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: 0 1px 4px rgba(15,23,42,.06); }
+.cat-modal-caja .keys-place-card > b { color: #111827; border-top: 1px solid #eef0f3; background: #fff; }
+.cat-modal-caja .keys-motion-card { border-color: #ee3f3a; }
+.cat-modal-caja .keys-scene { background-color: #fafafa; background-image: radial-gradient(#d5d5d5 1.1px, transparent 1.1px); }
+.cat-modal-caja .cmp-reading { color: #ee3f3a; }
+.cat-modal-caja .cmp-reading strong { color: #111827; }
+.cat-modal-caja .keys-motion__rot { color: #6b7280; }
+.cat-modal-caja .keys-motion__state { color: #dc2626; }
+.cat-modal-caja .keys-motion__state--open { color: #16a34a; }
+.cat-modal-caja .keys-motion__btn,
+.cat-modal-caja .keys-motion__actions button { border: 0; border-radius: 999px; background: #ee3f3a; color: #fff; padding: 7px 16px; }
+.cat-modal-caja .keys-motion__btn:hover,
+.cat-modal-caja .keys-motion__actions button:hover { background: #c62f2b; }
+.cat-modal-caja .keys-notes { background: #fff; border: 1px solid #e5e7eb; color: #4b5563; }
+.cat-modal-caja .keys-notes b { color: #111827; }
+.cat-modal-caja .cmp-index { background: #fff; border: 1px solid #e5e7eb; top: 8px; }
+.cat-modal-caja .cmp-index > span { color: #ee3f3a; }
+.cat-modal-caja .cmp-index button { color: #111827; }
+.cat-modal-caja .cmp-index button:hover { background: #ee3f3a; color: #fff; }
+.cat-modal-caja .keys-body-hit:hover { box-shadow: 0 0 0 3px rgba(238,63,58,.35), 0 0 12px rgba(238,63,58,.5); }
+.cat-cerrar { border: 0; background: #ee3f3a; color: #fff; }
+.cat-cerrar:hover { background: #c62f2b; }
+.cat-modal-caja .keys-motion__state { top: 28px; left: 12px; right: auto; }  /* no se monta sobre el texto de rotacion */
+
+/* Fuentes de abastecimiento de agua */
+.cat-supply { display: grid; justify-items: center; gap: 8px; }
+.cat-supply__body { fill: #51606e; stroke: #263746; stroke-width: 4; }
+.cat-supply__water { fill: #4cc3f2; opacity: .45; transition: opacity .3s; }
+.cat-supply__water.on { opacity: .95; filter: drop-shadow(0 0 5px #4cc3f2); animation: cat-supply-wave 1.8s ease-in-out infinite alternate; }
+.cat-supply__neck { fill: #8795a3; stroke: #263746; stroke-width: 3; }
+.cat-supply__line { fill: none; stroke: #a7bac9; stroke-width: 7; stroke-linecap: round; }
+.cat-supply__tag { padding: 3px 8px; border-radius: 4px; background: #111827; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+@keyframes cat-supply-wave { to { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .cat-supply__water.on { animation: none; } }

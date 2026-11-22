@@ -7,7 +7,7 @@
 | Equipo | Dirección IP | Función |
 |---|---|---|
 | PLC Siemens S7-200 CPU 226 + CP243-1 Ethernet | `192.168.114.7` | Módulo de caudal MCC-09. Comunicación Ethernet por el CP243-1 (puerto TCP 102), lectura con `python-snap7`. |
-| NI Compact FieldPoint **cFP-2200** (nombre de red `presion`) | `192.168.114.8` | Módulo de presión MCP-09/001. Variables compartidas NI-PSP (UDP); FTP 21 abierto; Modbus 502 cerrado. Lectura con DataSocket desde la VM. Gateway `192.168.114.1`, time server `192.168.114.80`. Ver [`presion/README.md`](presion/README.md). |
+| NI Compact FieldPoint **cFP-2200** (nombre de red `presion`) | `192.168.114.8` | Módulo de presión MCP-09/001. Variables compartidas NI-PSP (UDP); FTP 21 abierto; Modbus 502 cerrado. Lectura con DataSocket desde la VM. Gateway `192.168.114.1`, time server `192.168.114.80`. Ver [`presion/README.md`](../../presion/README.md). |
 | PLC Allen-Bradley MicroLogix 1100 (1763-LEC) + 1762-IF2OF2 | `192.168.114.9` | Módulo de nivel MCN-09; EtherNet/IP (PCCC) puerto TCP 44818, lectura con `pycomm3`. |
 | PLC Schneider Twido TWDLCAE40DRF + 2× TWDAMM3HT | `192.168.114.10` | Módulo de temperatura MCT-09/001. **IP fija en la configuración del PLC (no se cambia).** Modbus TCP puerto 502 (%MW = holding registers, %M = coils, base 0). |
 | Laptop de tesis (Windows 11) | `192.168.114.12` (IP adicional en el mismo adaptador; fue `.10` hasta el 23-oct-2026) | Conectores de caudal y nivel, Mosquitto, Docker (TimescaleDB, ingestores, Grafana, lienzo), servidores MCP. Mantiene otra IP para internet. |

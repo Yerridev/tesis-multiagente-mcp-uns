@@ -1,0 +1,61 @@
+{
+  "modelo": "Modulo de control de nivel MCN-09/001 (laboratorio USS SL01LA07)",
+  "version": "1.0",
+  "fuente": "Programa del PLC (upload final.RSS), manual Inducontrol MCN-09/001, pruebas en vivo y calibracion del 19 y 20-oct-2026",
+  "nodos": {
+    "tanque_t1": { "tipo": "equipo", "nombre": "Tanque T1 de reserva (acero, 78 L)", "variables": ["estado/tanque1_con_agua", "estado/mando_i03"] },
+    "interruptor_nivel_t1": { "tipo": "sensor", "nombre": "Interruptores de nivel de T1 (Kobold NKP)", "variables": ["estado/tanque1_con_agua", "estado/alarma_nivel_bajo_tanque1", "estado/mando_i03"] },
+    "bomba": { "tipo": "equipo", "nombre": "Bomba Pentax Ultra U5 120/3T", "variables": ["estado/bomba_marcha", "estado/piloto_marcha"] },
+    "variador": { "tipo": "actuador", "nombre": "Variador Schneider Altivar 11", "variables": ["bomba/frecuencia_estimada_hz", "bomba/salida_plc_raw"] },
+    "potenciometro": { "tipo": "mando", "nombre": "Potenciometro CONTROL MANUAL (I:1.5)", "variables": ["bomba/potenciometro_raw", "bomba/frecuencia_estimada_hz"] },
+    "tanque_t2": { "tipo": "proceso", "nombre": "Tanque T2 de acrilico (43 L, 60 cm)", "variables": ["nivel/cm", "nivel/pct"] },
+    "sensor_ultrasonico": { "tipo": "sensor", "nombre": "Sensor ultrasonico Senix TS-30S1 (N7:4)", "variables": ["nivel/cm", "nivel/raw", "nivel/fuera_rango_sensor"] },
+    "valvula": { "tipo": "actuador", "nombre": "Valvula Belimo LRB24-3 (salida de T2)", "variables": ["valvula/abriendo", "valvula/cerrando", "valvula/t_apertura"] },
+    "pid": { "tipo": "control", "nombre": "PID PD12:0 del MicroLogix", "variables": ["pid/setpoint_a_raw", "pid/setpoint_b_raw", "pid/cv_raw", "pid/kc_a", "pid/ti_a", "pid/td_a"] },
+    "plc": { "tipo": "control", "nombre": "PLC MicroLogix 1100 + 1762-IF2OF2", "variables": [] },
+    "selector": { "tipo": "mando", "nombre": "Selector LOCAL - 0 - REMOTO", "variables": ["estado/selector_remoto", "estado/selector_local"] },
+    "pulsadores": { "tipo": "mando", "nombre": "Pulsadores ARRANQUE / PARADA MANUAL", "variables": ["estado/pulsador_arranque"] },
+    "hmi": { "tipo": "mando", "nombre": "HMI TPC-2106T (sin comunicacion)", "variables": [] }
+  },
+  "relaciones": [
+    { "de": "tanque_t1", "rel": "alimenta", "a": "bomba", "nota": "La bomba aspira de T1" },
+    { "de": "interruptor_nivel_t1", "rel": "protege", "a": "bomba", "nota": "Nivel bajo de T1 (I:0/2 = 0) detiene la bomba y enciende O:0/1" },
+    { "de": "variador", "rel": "acciona", "a": "bomba" },
+    { "de": "potenciometro", "rel": "controla_en_local", "a": "variador", "nota": "En LOCAL la referencia AI1 (0-5 V) del ATV11 viene del potenciometro" },
+    { "de": "pid", "rel": "controla", "a": "variador", "nota": "Solo en REMOTO (O:1.0); hoy sin HMI no recibe setpoint" },
+    { "de": "bomba", "rel": "impulsa", "a": "tanque_t2" },
+    { "de": "valvula", "rel": "restringe", "a": "tanque_t2", "nota": "Salida de T2; el PLC la abre 35 s al entrar en modo" },
+    { "de": "tanque_t2", "rel": "descarga_en", "a": "tanque_t1", "nota": "Por la valvula Belimo y la valvula manual de salida" },
+    { "de": "sensor_ultrasonico", "rel": "mide", "a": "tanque_t2", "nota": "cm = (16348 - N7:4)/400; satura cerca de 40 cm" },
+    { "de": "pid", "rel": "lee", "a": "sensor_ultrasonico", "nota": "N7:4 es la PV del PD12:0" },
+    { "de": "selector", "rel": "habilita", "a": "pid", "nota": "REMOTO (I:0/0) habilita el PID; LOCAL (I:0/1) manda el potenciometro" },
+    { "de": "pulsadores", "rel": "arranca", "a": "bomba", "nota": "ARRANQUE MANUAL (I:0/4) en LOCAL" },
+    { "de": "plc", "rel": "ejecuta", "a": "pid" },
+    { "de": "hmi", "rel": "fija_setpoint", "a": "pid", "nota": "Comunicacion directa con el PLC por Ethernet; hoy en otra subred (192.168.1.110)" }
+  ],
+  "capacidad_observada": {
+    "caudal_neto_l_min": 16.1,
+    "condicion": "Modo LOCAL, potenciometro ~31 Hz, valvula de salida en su posicion habitual",
+    "evidencia": "20-oct-2026 12:57: T2 subio 22,4 cm/min (24,1 cm)",
+    "validado_por": "PENDIENTE"
+  },
+  "layout": {
+    "potenciometro": [0, -80],
+    "selector": [320, -80],
+    "pulsadores": [640, -80],
+    "hmi": [960, -80],
+    "variador": [0, 150],
+    "pid": [640, 150],
+    "plc": [960, 150],
+    "tanque_t1": [0, 380],
+    "bomba": [320, 380],
+    "tanque_t2": [640, 380],
+    "sensor_ultrasonico": [960, 380],
+    "interruptor_nivel_t1": [0, 610],
+    "valvula": [640, 610],
+    "panel:diagnostico": [1300, -80],
+    "panel:agente": [1300, 420],
+    "panel:tendencia": [0, 840],
+    "panel:uns": [860, 840]
+  }
+}

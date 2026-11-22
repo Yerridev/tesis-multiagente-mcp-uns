@@ -1,0 +1,1231 @@
+/* ============================================================
+   SCADA · módulo de nivel (recicla scada.css de MCP-INDUSTRIAL)
+   ============================================================ */
+
+.scada-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Mimético React Flow portado de BOSETOS/scada-tank (encapsulado). */
+.process-mimic{--pm-bg:#0e1822;--pm-line:#243747;--pm-text:#e6eef5;--pm-muted:#8da2b3;--pm-steel:#6f8193;--pm-dark:#1a2733;--pm-water:#4cc3f2;--pm-ok:#3ddc97}
+.process-mimic .pm-canvas{height:clamp(500px,62vw,760px);min-height:500px;overflow:hidden;border:1px solid #243747;border-radius:12px;background:var(--pm-bg)}
+.process-mimic .react-flow{--xy-background-color:var(--pm-bg);--xy-background-pattern-color:#294052}.process-mimic .react-flow__handle{opacity:0;pointer-events:none;width:2px;height:2px;min-width:2px;min-height:2px}.process-mimic .react-flow__controls{overflow:hidden;border:1px solid #344b5e;border-radius:8px}.process-mimic .react-flow__controls-button{background:#172837;color:#d8e8f4;border-color:#344b5e}.process-mimic .react-flow__attribution{display:none}
+.process-mimic .pm-pipe-wall{fill:none;stroke:var(--pm-dark);stroke-width:14;stroke-linecap:round}.process-mimic .pm-pipe-bore{fill:none;stroke:var(--pm-steel);stroke-width:10;stroke-linecap:round}.process-mimic .pm-pipe-water{fill:none;stroke:var(--pm-water);stroke-width:6;stroke-linecap:round;opacity:.5}.process-mimic .pm-pipe-flow{fill:none;stroke:#d0f3ff;stroke-width:3;stroke-linecap:round;stroke-dasharray:6 14;animation:pm-flow .7s linear infinite}@keyframes pm-flow{to{stroke-dashoffset:-20}}
+.process-mimic .pm-junction{width:2px;height:2px}.process-mimic .pm-valve{position:relative;color:var(--pm-muted)}.process-mimic .pm-valve>span{position:absolute;top:-17px;left:0;text-align:center;font:700 12px system-ui}.process-mimic .pm-v-pipe{fill:var(--pm-steel)}.process-mimic .pm-v-flange{fill:#3d4c5b;stroke:var(--pm-dark);stroke-width:1.5}.process-mimic .pm-v-unknown{fill:#778795;stroke:#263746;stroke-width:2}.process-mimic .pm-v-open{fill:#3ddc97;stroke:#1a2733;stroke-width:2}.process-mimic .pm-v-closed{fill:#ff5d5d;stroke:#1a2733;stroke-width:2}.process-mimic .pm-v-stem{stroke:#c3cdd6;stroke-width:3}.process-mimic .pm-v-lever{fill:#3b6bff}
+.process-mimic .pm-pump{position:relative;width:220px;height:100px}.process-mimic .pm-motor{fill:#2f55ff}.process-mimic .pm-casing{fill:#dce3e9;stroke:#768696}.process-mimic .pm-impeller{transform-origin:156px 50px}.process-mimic .pm-impeller.on{animation:pm-spin .6s linear infinite}@keyframes pm-spin{to{transform:rotate(360deg)}}.process-mimic .pm-pump-label{font:700 10px system-ui;fill:#cfe0ee}.process-mimic .pm-led{fill:#1e2b36;display:inline-block;width:14px;height:14px;border-radius:50%;background:#1e2b36;border:2px solid #3a4b5a}.process-mimic .pm-led.on{fill:var(--pm-ok);background:var(--pm-water);border-color:#bfeaff;box-shadow:0 0 10px var(--pm-water)}
+.process-mimic .pm-tank{position:relative;width:225px;height:360px}.process-mimic .pm-tank-glass{fill:rgba(150,190,220,.1)}.process-mimic .pm-tank-frame{fill:none;stroke:#9fb6c9;stroke-width:2.5}.process-mimic .pm-tank-base{fill:#8a96a8;stroke:var(--pm-dark)}.process-mimic .pm-tick{stroke:#cfe0ee;stroke-width:2}.process-mimic .pm-tick-label{fill:#e6eef5;font:600 12px monospace}.process-mimic .pm-wave{transition:d .5s ease}.process-mimic .pm-readout{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);display:flex;align-items:baseline;gap:6px;padding:8px 14px;color:var(--pm-text);background:rgba(8,16,24,.75);border-radius:8px}.process-mimic .pm-readout strong{font:700 34px monospace}.process-mimic .pm-readout span{color:var(--pm-muted)}
+.process-mimic .pm-sensor{width:150px;height:120px;text-align:center;color:var(--pm-muted);font-size:13px}.process-mimic .pm-sensor svg{display:block}.process-mimic .pm-sensor>span{display:inline-block;padding:3px 10px;color:var(--pm-water);background:#0b141c;border:1px solid var(--pm-line);border-radius:4px;font:700 15px monospace}.process-mimic .pm-thread{fill:#8a96a8;stroke:var(--pm-dark)}.process-mimic .pm-head{fill:#232f3b;stroke:#8a96a8;stroke-width:2}.process-mimic .pm-beam path{fill:none;stroke:var(--pm-water);stroke-width:2;opacity:.65}
+.process-mimic .pm-reservoir{position:relative;width:545px;height:145px;overflow:hidden;border:2px solid #aab6c6;border-radius:10px;background:linear-gradient(#97a1b3,#7e889a)}.process-mimic .pm-res-water{position:absolute;inset:auto 0 0;background:linear-gradient(rgba(76,195,242,.55),rgba(19,110,163,.8));transition:height .6s}.process-mimic .pm-res-label{position:absolute;top:20px;left:18px;display:grid;gap:18px;color:#0e1822}.process-mimic .pm-res-label span{display:flex;align-items:center;gap:9px;font-size:13px}
+.process-mimic .pm-prop{position:relative;width:180px;height:70px;display:flex;gap:12px;color:var(--pm-text)}.process-mimic .pm-prop__info{align-self:center;display:grid;grid-template-columns:auto 1fr;gap:0 7px;padding:6px 10px;background:#0b141c;border:1px solid var(--pm-line);border-radius:6px}.process-mimic .pm-prop strong{grid-row:1/3;color:var(--pm-water);font:700 23px monospace}.process-mimic .pm-prop span,.process-mimic .pm-prop small{color:var(--pm-muted);font-size:11px}.process-mimic .pm-actuator{fill:#2f55ff;stroke:var(--pm-dark);stroke-width:2}.process-mimic .pm-note{margin-top:10px;color:#687b8c;font-size:12px}
+@media(max-width:760px){.process-mimic .pm-canvas{height:520px;min-height:520px}}@media(prefers-reduced-motion:reduce){.process-mimic .pm-pipe-flow,.process-mimic .pm-impeller.on{animation:none}}
+.scada-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.scada-row2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sc-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--dark);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.sc-chip .sc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--idle);
+}
+.sc-chip .sc-dot.on {
+  background: var(--ok-bright);
+  box-shadow: 0 0 7px var(--ok-bright);
+}
+.sc-chip .sc-dot.off {
+  background: var(--err-bright);
+}
+.sc-chip.chip-readonly {
+  background: rgba(251, 140, 0, 0.16);
+  border: 1px solid rgba(251, 140, 0, 0.4);
+  color: #e65100;
+}
+
+/* ---------- Tanque ---------- */
+.tank-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 4px;
+}
+.tank-svg {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+}
+.tank-shell {
+  fill: #fff;
+  stroke: var(--dark);
+  stroke-width: 2.5;
+}
+.tank-fill {
+  fill: url(#tankGrad);
+  transition: y 0.7s ease, height 0.7s ease;
+}
+.tank-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.tank-tick-label {
+  fill: var(--muted-2);
+  font-size: 9px;
+  font-family: var(--mono);
+}
+.tank-setpoint {
+  stroke: var(--uss-green-d);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+.tank-limit {
+  stroke: var(--err-bright);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 4;
+  opacity: 0.85;
+}
+.tank-limit.low {
+  stroke: var(--warn);
+}
+.tank-value {
+  fill: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+.tank-unit {
+  fill: var(--muted);
+  font-size: 10px;
+  text-anchor: middle;
+}
+.tank-cap {
+  fill: var(--dark);
+}
+.tank-alarm-ring {
+  fill: none;
+  stroke: var(--err-bright);
+  stroke-width: 3;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.tank-alarm-ring.on {
+  opacity: 1;
+}
+
+.tank-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+}
+.tank-legend div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.tank-legend b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tank-legend i {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--uss-green-d);
+  margin-right: 7px;
+  display: inline-block;
+}
+.tank-legend i.lim {
+  border-top-color: var(--err-bright);
+}
+.tank-legend i.lim-low {
+  border-top-color: var(--warn);
+}
+
+/* ---------- Indicadores (KPI SCADA) ---------- */
+.sc-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.sc-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.sc-kpi.k-blue {
+  border-left-color: var(--caudal);
+}
+.sc-kpi.k-green {
+  border-left-color: var(--nivel);
+}
+.sc-kpi.k-orange {
+  border-left-color: var(--temp);
+}
+.sc-kpi small {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sc-kpi b {
+  font-size: 21px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.sc-kpi b.nodata {
+  font-size: 14px;
+  color: var(--muted-2);
+  font-weight: 700;
+}
+.sc-kpi i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---------- Tablero de lámparas ---------- */
+.lamp-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.lamp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.lamp-bulb {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: #e0e0e0;
+  border: 2px solid #bdbdbd;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.16);
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.lamp.on[data-color="green"] .lamp-bulb {
+  background: var(--uss-green);
+  border-color: var(--uss-green-d);
+  box-shadow: 0 0 10px rgba(89, 233, 0, 0.6);
+}
+.lamp.on[data-color="red"] .lamp-bulb {
+  background: var(--err-bright);
+  border-color: var(--err);
+  box-shadow: 0 0 10px rgba(239, 83, 80, 0.55);
+}
+.lamp.on[data-color="blue"] .lamp-bulb {
+  background: #42a5f5;
+  border-color: #1565c0;
+  box-shadow: 0 0 10px rgba(66, 165, 245, 0.55);
+}
+.lamp.on[data-color="yellow"] .lamp-bulb {
+  background: #ffca28;
+  border-color: #f9a825;
+  box-shadow: 0 0 10px rgba(255, 202, 40, 0.55);
+}
+.lamp-text {
+  min-width: 0;
+}
+.lamp-text b {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+.lamp-text small {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-2);
+  letter-spacing: 0.04em;
+}
+.lamp.on .lamp-text small {
+  color: var(--ok);
+}
+
+/* ---------- Bomba / variador / válvula ---------- */
+.dev-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dev-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dev-head h3 {
+  font-size: 13.5px;
+  font-weight: 750;
+}
+.dev-figure {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dev-figure svg {
+  flex: none;
+}
+.dev-rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dev-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12.5px;
+}
+.dev-row:last-child {
+  border-bottom: 0;
+}
+.dev-row span {
+  color: var(--muted);
+}
+.dev-row b {
+  font-variant-numeric: tabular-nums;
+}
+.dev-row b.nodata {
+  color: var(--muted-2);
+  font-weight: 600;
+}
+
+.gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gauge-num {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.gauge-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+.gauge-bg {
+  fill: none;
+  stroke: var(--border-soft);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+.gauge-val {
+  fill: none;
+  stroke: var(--temp);
+  stroke-width: 14;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+/* ---------- Controles solo lectura ---------- */
+.ro-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.ro-field label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ro-field .ro-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ro-field input,
+.ro-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: not-allowed;
+}
+.ro-field .btn {
+  width: 100%;
+  justify-content: center;
+}
+.ro-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ---------- PLC ---------- */
+.plc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plc-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plc-ico {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.plc-ico svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--text-2);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.plc-top h3 {
+  font-size: 14px;
+  font-weight: 750;
+}
+.plc-top small {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 1200px) {
+  .scada-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .scada-row2,
+  .sc-kpis,
+  .ro-controls {
+    grid-template-columns: 1fr;
+  }
+  .lamp-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- SCADA Nivel · distribución reconocible del LabVIEW original ---------- */
+.lv-scada{display:flex;flex-direction:column;gap:12px;flex:1}.lv-title{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:linear-gradient(120deg,#111,#292929);color:#fff;border-radius:14px;border-left:5px solid var(--uss-green);box-shadow:var(--shadow-lg)}.lv-title span{font:700 10px var(--mono);letter-spacing:.14em;color:var(--uss-green)}.lv-title h2{margin-top:4px;font-size:22px;text-transform:uppercase}.lv-live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;padding:8px 13px;background:#3a2020;border-radius:99px}.lv-live i{width:9px;height:9px;border-radius:50%;background:#ef5350}.lv-live.on{background:#16351e}.lv-live.on i{background:var(--uss-green);box-shadow:0 0 9px var(--uss-green)}
+.lv-main{display:grid;grid-template-columns:minmax(0,0.82fr) minmax(0,1.45fr);gap:14px;flex:1 1 auto;min-height:340px}.lv-trend,.lv-control-card{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-soft)}.lv-main .process-mimic .pm-canvas{flex:1 1 auto;height:auto;min-height:240px;max-height:none}
+.lv-main.lv-main--process-wide{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);min-height:600px}
+.lv-main--process-wide .ca-canvas{min-height:520px}
+.lv-trend{padding:16px;min-width:0;display:flex;flex-direction:column}.lv-trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.lv-trend-head b{display:block;font-size:15px}.lv-trend-head small{display:block;color:var(--muted);margin-top:2px}.lv-trend-head>span{font:700 10px var(--mono);color:var(--muted)}.lv-chart{flex:1;min-height:360px;background:#071007;border-radius:10px;border:1px solid #233923;padding:14px}.lv-chart .chart{height:330px}.lv-chart .chart-plot{background-color:#020702}.lv-chart .chart-plot .chart-grid{stroke:rgba(89,233,0,.22)}.lv-chart .chart-y,.lv-chart .chart-x{color:#b8c6b5}.lv-chart .chart-legend span span{color:#d8e4d5!important}.lv-chart-foot{display:flex;justify-content:space-between;padding:10px 4px 0;text-transform:uppercase;font-size:10px;color:var(--muted)}
+.lv-controls{display:grid;grid-template-columns:.8fr 1fr 1.15fr .9fr 1.05fr;gap:12px}.lv-control-card{padding:14px;min-height:172px}.lv-control-card h3{text-transform:uppercase;font-size:12px;letter-spacing:.08em;color:var(--muted);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:11px}.lv-signals>div,.lv-record>div:not(.lv-rec-icon){display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:12px}.lv-signals span,.lv-record span{color:var(--muted)}.lv-signals strong{background:#101610;color:var(--uss-green);padding:4px 7px;border-radius:4px;font:700 13px var(--mono)}.lv-pid-body{display:flex;justify-content:space-around;gap:18px}.lv-pid dl{min-width:90px}.lv-pid dl div{display:flex;justify-content:space-between;gap:15px;padding:8px 0;border-bottom:1px dashed var(--border)}.lv-pid dt{font-weight:800;color:var(--muted)}.lv-pid dd{font:700 13px var(--mono)}.lv-dial-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}.lv-dial{width:92px;height:92px;border-radius:50%;position:relative;background:conic-gradient(from 225deg,var(--uss-green) 0deg 270deg,#e3e7e1 270deg);box-shadow:inset 0 0 0 13px #f6f8f5,0 4px 12px #0002}.lv-dial:after{content:"";position:absolute;inset:31px;border-radius:50%;background:#fff;border:1px solid #d5dcd2}.lv-dial i{position:absolute;left:44px;top:12px;width:4px;height:36px;background:#202820;border-radius:3px;transform-origin:2px 34px;z-index:2;transition:.5s}.lv-dial-wrap>b{font:800 14px var(--mono)}.lv-dial-wrap>small{text-transform:uppercase;color:var(--muted);font-size:9px}.lv-rec-icon{width:48px;height:48px;display:grid;place-items:center;margin:4px auto 8px;border-radius:11px;background:#202020;color:#ef5350;font-size:25px;box-shadow:inset 0 0 0 2px #444}.lv-valve>.lv-dial-wrap{margin:auto}.lv-valve-state{display:flex;justify-content:space-between;margin-top:8px}.lv-valve-state span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;text-transform:uppercase}.lv-valve-state i{width:10px;height:10px;border-radius:50%;background:#adb5ad}.lv-valve-state i.on{background:var(--uss-green);box-shadow:0 0 7px var(--uss-green)}.lv-valve-state i.on.red{background:#ef5350;box-shadow:0 0 7px #ef5350}
+@media(max-width:1100px){.lv-main{grid-template-columns:1fr}.lv-main .process-mimic .pm-canvas{height:auto;min-height:300px}.lv-controls{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.lv-controls{grid-template-columns:1fr}.lv-chart{min-height:300px}.lv-chart .chart{height:270px}}
+
+/* ============================================================
+   Diagrama mimico (estilo SCADA clasico) - solo lectura
+   ============================================================ */
+.mimic-panel {
+  padding-bottom: 16px;
+}
+.mimic-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mimic-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  gap: 14px;
+  align-items: stretch;
+}
+.mimic-canvas {
+  min-width: 0;
+}
+.mimic-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+.mimic-lampas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.mimic-lampas h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mimic-lampa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 6px;
+  background: #f7fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.mimic-lampa b {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+.mimic-bulb {
+  width: 58px;
+  height: 26px;
+  border-radius: 5px;
+  background: #e0e0e0;
+  border: 2px solid #bdbdbd;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.mimic-bulb.on {
+  background: var(--uss-green);
+  border-color: var(--uss-green-d);
+  box-shadow: 0 0 10px rgba(89, 233, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+.mimic-bulb.nd {
+  background: #eceff1;
+  border-style: dashed;
+}
+.mimic-lampa small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.mimic-nota {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+@media (max-width: 1100px) {
+  .mimic-wrap {
+    grid-template-columns: 1fr;
+  }
+  .mimic-lampas {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .mimic-lampa {
+    flex: 1 1 150px;
+  }
+}
+.process-mimic .pm-end{position:relative;width:12px;height:24px}.process-mimic .pm-end__flange{position:absolute;inset:0;background:var(--pm-steel);border:2px solid var(--pm-dark);border-radius:3px}
+.process-mimic .pm-fitting{position:absolute;left:-21px;top:-21px;overflow:visible;pointer-events:none}.process-mimic .pm-fit-outline{fill:var(--pm-dark);stroke:var(--pm-dark);stroke-width:4;stroke-linejoin:round}.process-mimic .pm-fit-body{fill:var(--pm-steel);stroke:#8495a6;stroke-width:1;stroke-linejoin:round}.process-mimic .pm-level-switch{position:absolute;left:-9px;width:15px;height:18px;border-radius:3px;background:#d98a2b;border:2px solid #6c3b0c;z-index:2}.process-mimic .pm-level-switch.high{top:30px}.process-mimic .pm-level-switch.low{bottom:24px}.process-mimic .pm-level-switch.on{background:#ff9f1c;border-color:#ffd08a;box-shadow:0 0 8px #ff9f1c}
+.process-mimic .pm-res-wrap{position:relative;width:545px;height:145px}
+.process-mimic .pm-tag{position:absolute;background:#05090d;color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em;padding:3px 7px;border-radius:3px;border:1px solid var(--pm-line);line-height:1.35;pointer-events:none;white-space:nowrap;z-index:3}
+.process-mimic .pm-level-tag{display:flex;align-items:center;gap:8px;transform:translateY(-50%);min-height:30px}
+.process-mimic .pm-level-tag--left{justify-content:flex-end;min-width:128px;text-align:right}
+.process-mimic .pm-level-tag .pm-led{width:10px;height:10px}
+.process-mimic .pm-led.alarm{background:#ff5d5d;border-color:#ffb0b0;box-shadow:0 0 10px #ff5d5d}
+.process-mimic .pm-tank-switch{fill:#d98a2b;stroke:#6c3b0c;stroke-width:2}
+.process-mimic .pm-tank-switch.on{fill:#ff9f1c;stroke:#ffd08a;filter:drop-shadow(0 0 6px #ff9f1c)}
+.process-mimic .pm-valve-hit{position:absolute}.process-mimic .pm-valve-tag{position:absolute;color:var(--pm-muted);font:700 12px system-ui;text-align:center;white-space:nowrap}.process-mimic .pm-supply{position:relative;width:200px;height:150px;display:grid;justify-items:center;color:var(--pm-text);text-align:center}.process-mimic .pm-supply svg{display:block}.process-mimic .pm-supply b{font-size:12px;letter-spacing:.06em}.process-mimic .pm-supply span{margin-top:3px;color:var(--pm-muted);font:600 10px monospace}.process-mimic .pm-supply-body{fill:#51606e;stroke:var(--pm-dark);stroke-width:4}.process-mimic .pm-supply-water{fill:var(--pm-water);opacity:.85}.process-mimic .pm-supply-neck{fill:var(--pm-steel);stroke:var(--pm-dark);stroke-width:3}.process-mimic .pm-supply-line{fill:none;stroke:#a7bac9;stroke-width:7;stroke-linecap:round}
+
+/* ============================================================
+   Tarjeta Opciones (Iniciar / Reiniciar / Historico)
+   ============================================================ */
+/* Las vistas de módulo ocupan todo el alto disponible (sin franja blanca al pie) */
+.nv-wrap { flex: 1; }
+.lv-options { display: flex; flex-direction: column; }
+.lv-options .lv-opt-btns { display: grid; gap: 7px; flex: 1; align-content: start; }
+.lv-options button,
+.lv-options a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 33px;
+  border: 1px solid #dce4d8;
+  border-radius: 10px;
+  background: #f7faf6;
+  color: #202520;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: 0.18s;
+}
+.lv-options a { background: var(--uss-green); border-color: var(--uss-green-d); color: #102500; }
+.lv-options a:hover { filter: brightness(1.06); }
+.lv-options button:disabled { color: #a7afa4; background: #f1f2f1; cursor: not-allowed; }
+.lv-options small { margin-top: 7px; text-align: center; color: var(--muted); font-size: 10px; }
+.lv-main .lv-chart { display: flex; flex-direction: column; }
+.lv-main .lv-chart > div { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.lv-main .lv-chart .chart { flex: 1; height: auto; min-height: 200px; }
+
+.mimic-panel .panel-head { flex-wrap: wrap; margin-bottom: 10px; }
+.mimic-panel .panel-head > div:first-child { min-width: 0; flex: 1 0 auto; }
+.mimic-panel .panel-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mimic-panel .pill { flex: none; white-space: nowrap; }
+.mimic-panel { display: flex; flex-direction: column; padding-bottom: 12px; }
+@media (max-width: 760px) { .lv-options .lv-opt-btns { grid-template-columns: repeat(3, 1fr); } }
+
+/* Pantallas bajas (<=830px de alto): todo visible sin desplazar */
+
+
+/* ============================================================
+   Diagrama mimico de CAUDAL (puerto de BOSETOS/scada-flow) - solo lectura
+   ============================================================ */
+.ca-flow {
+  --ca-bg: #0e1822;
+  --ca-line: #243747;
+  --ca-text: #e6eef5;
+  --ca-muted: #8da2b3;
+  --ca-steel: #6f8193;
+  --ca-dark: #1a2733;
+  --ca-water: #4cc3f2;
+  --ca-ok: #3ddc97;
+  --ca-alarm: #ff5d5d;
+}
+.ca-flow .ca-canvas {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--ca-line);
+  border-radius: 10px;
+  background: var(--ca-bg);
+}
+.ca-flow .react-flow { --xy-background-color: var(--ca-bg); --xy-background-pattern-color: #1d2e3c; }
+.ca-flow .react-flow__handle { opacity: 0; pointer-events: none; min-width: 2px; min-height: 2px; width: 2px; height: 2px; }
+.ca-flow .react-flow__controls { overflow: hidden; border: 1px solid #344b5e; border-radius: 8px; }
+.ca-flow .react-flow__controls-button { background: #172837; color: #d8e8f4; border-color: #344b5e; }
+.ca-flow .react-flow__attribution { display: none; }
+
+/* tuberias */
+.ca-flow .pipe-wall { fill: none; stroke: var(--ca-dark); stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
+.ca-flow .pipe-bore { fill: none; stroke: var(--ca-steel); stroke-width: 10; stroke-linecap: round; }
+.ca-flow .pipe-water { fill: none; stroke: var(--ca-water); stroke-width: 6; stroke-linecap: round; opacity: 0.45; }
+.ca-flow .pipe-flow { fill: none; stroke: #bfeaff; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 6 14; animation: caflow-run 0.7s linear infinite; }
+@keyframes caflow-run { to { stroke-dashoffset: -20; } }
+.ca-flow .junction { width: 2px; height: 2px; }
+.ca-flow .ca-fitting{position:absolute;left:-21px;top:-21px;overflow:visible;pointer-events:none}.ca-flow .ca-fit-outline{fill:var(--ca-dark);stroke:var(--ca-dark);stroke-width:4;stroke-linejoin:round}.ca-flow .ca-fit-body{fill:var(--ca-steel);stroke:#8495a6;stroke-width:1;stroke-linejoin:round}
+.ca-flow .level-switch-orange{fill:#d98a2b;stroke:#6c3b0c;stroke-width:2;transition:fill .2s,filter .2s}.ca-flow .level-switch-orange.on{fill:#ff9f1c;stroke:#ffd08a;filter:drop-shadow(0 0 7px #ff9f1c)}
+.ca-flow .pipe-end { position: relative; width: 12px; height: 24px; }
+.ca-flow .pipe-end__flange { position: absolute; inset: 0; background: var(--ca-steel); border: 2px solid var(--ca-dark); border-radius: 3px; }
+.ca-flow .drip { position: absolute; left: 50%; top: 26px; width: 6px; height: 9px; margin-left: -3px; border-radius: 50%; background: var(--ca-water); animation: caflow-drip 1s ease-in infinite; }
+@keyframes caflow-drip { 0% { transform: translateY(-4px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(26px); opacity: 0; } }
+
+/* valvulas (sin interaccion) */
+.ca-flow .valve { position: relative; }
+.ca-flow .valve__hit { position: absolute; padding: 0; border: 0; background: none; pointer-events: none; border-radius: 6px; }
+.ca-flow .valve__tag { position: absolute; font-size: 12px; font-weight: 600; color: #fff; text-align: center; pointer-events: none; background: #05090d; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--ca-line); white-space: nowrap; width: auto !important; }
+/* Sensor de temperatura (BOSETOS/scada-sensor4) */
+.ca-flow .ts-stem { fill: #8a96a8; stroke: var(--ca-dark); stroke-width: 1; }
+.ca-flow .ts-nut { fill: #6f8193; stroke: var(--ca-dark); stroke-width: 1; }
+.ca-flow .ts-head { fill: #2b3440; stroke: #8a96a8; stroke-width: 1.5; }
+.ca-flow .ts-screen { fill: #0b141c; }
+.ca-flow .ts-text { font: 600 9px var(--mono); }
+.ca-flow .ts-led { fill: var(--ca-ok); }
+.ca-flow .v-pipe { fill: var(--ca-steel); }
+.ca-flow .coolant-wall, .ca-flow .coil-wall { fill: none; stroke: #0b2540; stroke-width: 8; stroke-linecap: butt; stroke-linejoin: round; }
+.ca-flow .coolant-bore, .ca-flow .coil-body { fill: none; stroke: #2f86d6; stroke-width: 5.5; stroke-linecap: butt; stroke-linejoin: round; }
+.ca-flow .coolant-shine, .ca-flow .coil-shine { fill: none; stroke: #c4e4ff; stroke-width: 1.4; stroke-linecap: butt; stroke-linejoin: round; opacity: 0.85; transform: translateY(-1px); }
+.ca-flow .coil-halo { fill: none; stroke: #d6f1ff; stroke-width: 18; stroke-linejoin: round; opacity: 0; transition: opacity 0.4s; }
+.ca-flow .coil--cold .coil-halo { opacity: 0.28; }
+.ca-flow .brass-pipe { fill: none; stroke: #c9a227; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+.ca-flow .air-cable { fill: none; stroke: #6b5417; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+.ca-flow .air-cable-core { fill: none; stroke: #e8c352; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+.ca-flow .pump__coupling { fill: #7b8794; stroke: #263746; stroke-width: 1.5; }
+.ca-flow .pump__brass { fill: #c9a227; stroke: #8a6d1f; stroke-width: 1.5; }
+.ca-flow .v-flange { fill: #3d4c5b; stroke: var(--ca-dark); stroke-width: 1.5; }
+.ca-flow .v-body { stroke: var(--ca-dark); stroke-width: 2; transition: fill 0.2s; }
+.ca-flow .v-body--open { fill: var(--ca-ok); }
+.ca-flow .v-body--closed { fill: var(--ca-alarm); }
+.ca-flow .v-body--unknown { fill: #778795; stroke: #263746; stroke-dasharray: 3 3; }
+.ca-flow .v-q { fill: #e6eef5; font: 700 13px monospace; }
+.ca-flow .v-stem { stroke: #c3cdd6; stroke-width: 3; }
+.ca-flow .v-lever { fill: #3b6bff; transition: transform 0.25s ease-out; }
+.ca-flow .catalog-valve__flange{fill:#607386;stroke:var(--ca-dark);stroke-width:2}.ca-flow .catalog-valve__housing{fill:#344656;stroke:#16232e;stroke-width:3}.ca-flow .catalog-valve__disc{stroke:#a9bbc9;stroke-width:2;transition:fill .2s}.ca-flow .catalog-valve__disc--open{fill:var(--ca-ok)}.ca-flow .catalog-valve__disc--closed{fill:#ff5d5d}.ca-flow .catalog-valve__disc--unknown{fill:#6f8193;stroke-dasharray:3 2}.ca-flow .catalog-valve__bolt{fill:#c3d1dc}.ca-flow .catalog-valve__stem{stroke:#c3cdd6;stroke-width:4;stroke-linecap:round}.ca-flow .catalog-valve__lever{fill:#f0662a;stroke:#7a2b10;stroke-width:1.5;transition:transform .25s ease-out;filter:drop-shadow(0 1px 1px #0008)}
+.ca-flow .v-actuator { fill: #e2412d; stroke: var(--ca-dark); stroke-width: 1.5; }
+.ca-flow .tag { position: absolute; background: #05090d; color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; padding: 3px 7px; border-radius: 3px; border: 1px solid var(--ca-line); line-height: 1.35; pointer-events: none; white-space: nowrap; }
+.ca-flow .tag .led { width: 10px; height: 10px; vertical-align: -1px; margin-left: 4px; }
+.ca-flow .level-tag { display: flex; align-items: center; gap: 8px; transform: translateY(-50%); min-height: 30px; justify-content: flex-end; min-width: 128px; text-align: right; z-index: 3; }
+.ca-flow .level-tag--right { justify-content: flex-start; text-align: left; }
+
+/* bomba */
+.ca-flow .pump__hit { padding: 0; border: 0; background: none; display: block; }
+.ca-flow .pump__label { font-size: 10px; font-weight: 600; fill: #cfe0ee; }
+.ca-flow .impeller { transform-origin: 156px 50px; }
+.ca-flow .impeller--on { animation: caflow-spin 0.6s linear infinite; }
+@keyframes caflow-spin { to { transform: rotate(360deg); } }
+.ca-flow .led { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #1e2b36; border: 2px solid #3a4b5a; }
+.ca-flow .led--on { background: var(--ca-water); border-color: #bfeaff; box-shadow: 0 0 10px var(--ca-water); }
+.ca-flow .led--alarm { background: var(--ca-alarm); border-color: #ffb0b0; box-shadow: 0 0 10px var(--ca-alarm); }
+
+/* tanque */
+.ca-flow .tank { position: relative; }
+.ca-flow .tank__wave { animation: caflow-wave 3s linear infinite; }
+@keyframes caflow-wave { to { transform: translateX(-112px); } }
+.ca-flow .tank__readout { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); display: flex; align-items: baseline; gap: 6px; padding: 8px 14px; background: rgba(8, 16, 24, 0.72); border-radius: 8px; pointer-events: none; color: var(--ca-text); }
+.ca-flow .tank__readout strong { font: 700 34px var(--mono); }
+.ca-flow .tank__readout span { color: var(--ca-muted); font-size: 14px; }
+.ca-flow .water-supply{position:relative;width:200px;height:145px;display:grid;justify-items:center;color:var(--ca-text);text-align:center}.ca-flow .water-supply svg{display:block}.ca-flow .water-supply b{margin-top:3px;font-size:12px;letter-spacing:.06em}.ca-flow .water-supply span{margin-top:3px;color:var(--ca-muted);font:600 9px var(--mono)}.ca-flow .water-supply--vertical{width:200px;height:245px;justify-items:start}.ca-flow .water-supply--vertical b,.ca-flow .water-supply--vertical span{width:200px;text-align:center}.ca-flow .supply-tank{fill:#51606e;stroke:var(--ca-dark);stroke-width:4}.ca-flow .supply-water{fill:var(--ca-water);opacity:.8}.ca-flow .supply-water.active{fill:var(--ca-water);opacity:.9;filter:drop-shadow(0 0 5px var(--ca-water))}.ca-flow .supply-neck{fill:#6f8193;stroke:var(--ca-dark);stroke-width:3}.ca-flow .supply-rim,.ca-flow .supply-pipe{fill:none;stroke:#9fb1c0;stroke-width:7;stroke-linecap:round}
+
+/* Pieza exacta del catálogo scada-parts-codos-tes */
+.ca-flow .industrial-supply{position:relative;width:200px;height:150px;display:grid;justify-items:center;color:var(--ca-text);text-align:center}
+.ca-flow .industrial-supply svg{display:block}
+.ca-flow .industrial-supply b{font-size:12px;letter-spacing:.06em}
+.ca-flow .industrial-supply span{margin-top:3px;color:var(--ca-muted);font:600 10px var(--mono)}
+.ca-flow .industrial-supply__body{fill:#51606e;stroke:var(--ca-dark);stroke-width:4}
+.ca-flow .industrial-supply__water{fill:var(--ca-water);opacity:.9;filter:drop-shadow(0 0 5px var(--ca-water));animation:industrial-supply-wave 1.8s ease-in-out infinite alternate}
+.ca-flow .industrial-supply__water.active{opacity:.95}
+.ca-flow .industrial-supply__neck{fill:var(--ca-steel);stroke:var(--ca-dark);stroke-width:3}
+.ca-flow .industrial-supply__line{fill:none;stroke:#a7bac9;stroke-width:7;stroke-linecap:round}
+@keyframes industrial-supply-wave{to{transform:translateY(-4px)}}
+
+/* instrumentos */
+.ca-flow .gauge { position: relative; }
+.ca-flow .dial__face { fill: #f1f4f7; stroke: #8795a3; stroke-width: 3; }
+.ca-flow .dial__tick { stroke: #3a4652; stroke-width: 1.5; }
+.ca-flow .dial__num { font-size: 9px; fill: #1f5fbf; font-weight: 600; }
+.ca-flow .dial__needle { stroke: #d6322b; stroke-width: 2.5; stroke-linecap: round; }
+.ca-flow .dial__hub { fill: #8a96a8; stroke: #3a4652; }
+.ca-flow .dial__value { font-family: var(--mono); font-size: 11px; fill: #1f2d3a; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .ca-flow .pipe-flow, .ca-flow .tank__wave, .ca-flow .impeller--on, .ca-flow .drip { animation: none; }
+}
+
+/* perillas de solo lectura (Perturbacion / Setpoint) */
+.ca-knob-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ca-knob { width: 100%; max-width: 130px; display: block; touch-action: none; }
+.ca-knob-tick { fill: #5d86b8; font-size: 12px; font-weight: 600; }
+.ca-readout { display: block; min-width: 96px; padding: 4px 8px; text-align: center; font-weight: 700; font-family: var(--mono); font-size: 13px; color: #dbe8ff; background: #0f2036; border: 1px solid #456; border-radius: 4px; }
+.ca-readout.nd { color: #9aa7b4; background: #f4f6f8; border: 1px dashed #c6cfd8; }
+.ca-knob-sub { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.ca-pert-sub { margin: -4px 0 6px; text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+@media (max-height: 940px) {
+  .lv-scada { gap: 8px; }
+  .lv-title { padding: 9px 16px; }
+  .lv-title h2 { font-size: 17px; }
+  .lv-main { gap: 10px; min-height: 0; }
+  .lv-main .process-mimic .pm-canvas { height: auto; min-height: 170px; }
+  .mimic-panel { padding-bottom: 10px; }
+  .mimic-panel .panel-head { margin-bottom: 6px; }
+  .lv-trend { padding: 12px; }
+  .lv-trend-head { margin-bottom: 6px; }
+  .lv-chart { min-height: 230px; padding: 10px; }
+  .lv-main .lv-chart .chart { min-height: 150px; }
+  .lv-chart-foot { padding-top: 6px; }
+  .lv-control-card { padding: 10px 12px; min-height: 0; }
+  .lv-control-card h3 { padding-bottom: 6px; margin-bottom: 7px; }
+  .lv-signals > div, .lv-record > div:not(.lv-rec-icon) { padding: 5px 0; }
+  .lv-rec-icon { width: 34px; height: 34px; font-size: 17px; margin-bottom: 6px; }
+  .lv-dial { width: 74px; height: 74px; }
+  .lv-dial:after { inset: 24px; }
+  .lv-dial i { left: 35px; top: 9px; height: 29px; transform-origin: 2px 27px; }
+  .lv-options .lv-opt-btns { gap: 5px; }
+  .lv-options button, .lv-options a { min-height: 27px; font-size: 11px; }
+  .lv-options small { margin-top: 5px; }
+  .co-box { height: 96px; }
+  .ca-knob { max-width: 104px; }
+  .ca-knob-wrap { gap: 2px; }
+  .ca-readout { font-size: 12px; min-width: 84px; }
+  .ca-pert-sub { margin-top: -2px; }
+}
+
+/* Pantallas muy bajas (<=800px): compactacion extra de las tarjetas */
+@media (max-height: 800px) {
+  .ca-knob { max-width: 88px; }
+  .ca-knob-tick { font-size: 11px; }
+  .lv-control-card { padding: 8px 10px; }
+  .lv-control-card h3 { padding-bottom: 4px; margin-bottom: 5px; }
+  .lv-rec-icon { width: 28px; height: 28px; font-size: 14px; margin-bottom: 4px; }
+  .lv-signals > div, .lv-record > div:not(.lv-rec-icon) { padding: 4px 0; }
+  .lv-title { padding: 7px 14px; }
+  .co-box { height: 72px; }
+  .lv-options > small { display: none; }
+  .lv-options .co-hist { min-height: 30px; margin-top: 6px; }
+  .lv-options .lv-opt-btns button { min-height: 25px; }
+}
+
+/* lectura de presion del tanque T2 (puerto de BOSETOS/scada-pressure) */
+.ca-flow .psi {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 26px;
+  padding: 4px 6px;
+  text-align: center;
+  background: #05090d;
+  border: 1px solid var(--ca-line);
+  border-radius: 4px;
+  display: grid;
+  gap: 2px;
+  pointer-events: none;
+}
+.ca-flow .psi span { font-size: 10px; color: #cfe0ee; font-weight: 600; }
+.ca-flow .psi strong { font-family: var(--mono); font-size: 24px; color: var(--ca-ok); }
+
+/* componentes del mimico de temperatura (puerto de BOSETOS/scada-temp) */
+.ca-flow .ball { fill: #0b1218; stroke: #9fb6c9; stroke-width: 2; }
+/* Resistencia tubular en horquilla, reducida 20 % */
+.ca-flow .heater-wall { fill: none; stroke: #2b1a14; stroke-width: 11.2; stroke-linejoin: round; }
+.ca-flow .heater-body { fill: none; stroke: #8c99a6; stroke-width: 8; stroke-linejoin: round; transition: stroke .3s; }
+.ca-flow .heater-shine { fill: none; stroke: #e3e9ee; stroke-width: 1.3; stroke-linejoin: round; opacity: 0.8; transform: translateY(-1.6px); }
+.ca-flow .heater-halo { fill: none; stroke: #ff7a2f; stroke-width: 17.6; stroke-linejoin: round; opacity: 0; transition: opacity .4s; }
+.ca-flow .heater-flange { fill: #9aa6b2; stroke: #2a323b; stroke-width: 1.2; }
+.ca-flow .heater-neck { fill: #7f8b97; }
+.ca-flow .heater-head { fill: #46515c; stroke: #1c242c; stroke-width: 1.2; }
+.ca-flow .heater-stud { fill: #c9d3dd; }
+.ca-flow .heater--on .heater-body { stroke: #ff6a3d; }
+.ca-flow .heater--on .heater-shine { stroke: #ffd2b8; }
+.ca-flow .heater--on .heater-halo { opacity: 0.28; }
+.ca-flow .readout { padding: 6px 12px; background: #05090d; border: 1px solid var(--ca-line); border-radius: 6px; display: grid; gap: 2px; text-align: center; }
+.ca-flow .readout span { font-size: 10px; font-weight: 600; color: #cfe0ee; letter-spacing: 0.04em; }
+.ca-flow .readout strong { font-family: var(--mono); font-size: 24px; color: var(--ca-ok); }
+.lv-valve > .ca-knob-wrap { margin: auto; }
+
+/* Leyenda centrada en las tendencias de los SCADA */
+.lv-chart .chart-legend { justify-content: center; }
+
+/* Válvula Belimo del nivel: estado real de apertura/cierre desde MQTT */
+.process-mimic .pm-act-go { fill: #3ddc97; }
+.process-mimic .pm-act-stop { fill: #ff5d5d; }
+.process-mimic .pm-valve-tag{color:#fff;background:#05090d;border:1px solid var(--pm-line);border-radius:3px;padding:1px 6px;z-index:3}
+.process-mimic .valve{position:relative}.process-mimic .valve__hit{position:absolute;padding:0;border:0;background:none;border-radius:6px;pointer-events:none}.process-mimic .valve__tag{position:absolute;font-size:12px;font-weight:600;color:#fff;text-align:center;pointer-events:none;background:#05090d;padding:1px 6px;border-radius:3px;border:1px solid var(--pm-line);white-space:nowrap;width:auto !important}.process-mimic .v-pipe{fill:var(--pm-steel)}.process-mimic .v-flange{fill:#3d4c5b;stroke:var(--pm-dark);stroke-width:1.5}.process-mimic .v-body{stroke:var(--pm-dark);stroke-width:2;transition:fill .2s}.process-mimic .v-body--open{fill:var(--pm-ok)}.process-mimic .v-body--closed{fill:#ff5d5d}.process-mimic .v-body--unknown{fill:#778795;stroke:#263746;stroke-dasharray:3 3}.process-mimic .v-q{fill:#e6eef5;font:700 13px monospace}.process-mimic .v-stem{stroke:#c3cdd6;stroke-width:3}.process-mimic .v-lever{fill:#3b6bff;transition:transform .25s ease-out}
+
+/* ---------------- Control de nivel (dry-run) en la tarjeta Opciones ---------------- */
+.co-modo { margin-bottom: 4px; }
+.co-modo .pill { font-size: 10px; padding: 3px 8px; }
+.lv-options .lv-opt-btns { gap: 6px; }
+.lv-pid input,.ca-pert input,.ca-command input{width:72px;padding:5px;border:1px solid var(--border);border-radius:5px;font:700 12px var(--mono)}
+.lv-pid button,.ca-pert button,.ca-command button{padding:6px 9px;border:1px solid #9eb09a;border-radius:6px;background:#eef5eb;font-weight:700;cursor:pointer}
+.lv-pid button:disabled,.ca-pert button:disabled,.ca-command button:disabled{opacity:.45;cursor:not-allowed}
+.ca-command{display:flex;flex-direction:column;align-items:center;gap:5px}.ca-pert{display:flex;flex-direction:column;gap:6px}
+.ca-knob-control .ca-knob{cursor:grab;touch-action:none;user-select:none}.ca-knob-control .ca-knob:active{cursor:grabbing}.ca-knob-control.disabled{opacity:.45}.ca-knob-control.disabled .ca-knob{cursor:not-allowed}
+.co-confirm{width:min(520px,100%)}.co-confirm ul{display:grid;gap:7px;margin:10px 0;padding-left:22px;font:600 12px var(--mono)}.co-real-warning{padding:10px;border:1px solid #e53935;border-radius:8px;background:#fff0f0;color:#b71c1c;font-weight:800}.co-confirm-actions{display:flex;justify-content:flex-end;gap:8px;padding:11px 14px;border-top:1px solid var(--border)}.co-confirm-actions button{padding:8px 13px;border:1px solid var(--border);border-radius:8px;background:#f4f6f4;font-weight:800;cursor:pointer}.co-confirm-actions .danger{background:#c62828;border-color:#b71c1c;color:#fff}
+.co-aviso { margin: 8px 0 0; font-size: 11px; font-weight: 700; color: var(--err); }
+.co-box { height: 132px; margin-top: 10px; padding: 6px 8px; overflow-y: auto; overscroll-behavior: contain; background: #f7faf8; border: 1px solid var(--border); border-radius: 10px; scrollbar-width: thin; scrollbar-color: #cdd6cb transparent; }
+.co-box::-webkit-scrollbar { width: 8px; }
+.co-box::-webkit-scrollbar-thumb { background: #cdd6cb; border-radius: 4px; }
+.co-box::-webkit-scrollbar-track { background: transparent; }
+.co-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.co-vacio { margin: 0; font: 600 10px var(--mono); color: var(--muted); }
+.co-item { display: flex; gap: 6px; align-items: baseline; font: 600 10px var(--mono); }
+.co-item b { min-width: 78px; }
+.co-item .ok { color: var(--uss-green-d); }
+.co-item .err { color: var(--err); }
+.co-item .wait { color: #b26a00; }
+.co-hist { display: flex; align-items: center; justify-content: center; min-height: 34px; margin-top: 8px; border-radius: 10px; background: var(--uss-green); color: #102500; font-size: 12px; font-weight: 800; text-decoration: none; }
+.lv-valve-cmds { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.lv-valve-cmds button { flex: 1; min-width: 70px; min-height: 32px; border: 1px solid #dce4d8; border-radius: 8px; background: #f7faf6; font-size: 11px; font-weight: 800; cursor: pointer; }
+.lv-valve-cmds button:disabled { color: #a7afa4; background: #f1f2f1; cursor: not-allowed; }
+.lv-sp-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.lv-sp-row input { width: 92px; min-height: 32px; padding: 4px 8px; border: 1px solid #dce4d8; border-radius: 8px; font: 700 12px var(--mono); }
+.lv-sp-row button { min-height: 32px; padding: 0 10px; border: 1px solid var(--uss-green-d); border-radius: 8px; background: var(--uss-green); color: #102500; font-size: 11px; font-weight: 800; cursor: pointer; }
+.lv-sp-row button:disabled { color: #a7afa4; background: #f1f2f1; border-color: #dce4d8; cursor: not-allowed; }
+.lv-sp-row .co-aviso { flex-basis: 100%; margin: 0; }
+
+/* Botón + emergente de órdenes (no altera el alto de las tarjetas) */
+.co-ver-row { margin-top: 6px; }
+.co-ver { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 30px; padding: 4px 10px; border: 1px solid var(--uss-green-d); border-radius: 10px; background: #eaffdf; color: #102500; font-size: 12px; font-weight: 800; cursor: pointer; transition: filter 0.15s; }
+.co-ver:hover { filter: brightness(1.04); }
+.co-cont { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: #102500; color: var(--uss-green); font: 800 11px var(--mono); text-align: center; }
+.co-cont.vacio { background: #e7eae6; color: var(--muted); }
+
+.co-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 16, 22, 0.55); }
+.co-modal-caja { width: min(580px, 100%); max-height: min(72vh, 560px); display: flex; flex-direction: column; background: #fff; border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35); overflow: hidden; }
+.co-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.co-modal-head b { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+.co-modal-head button { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: #f4f6f4; font-size: 17px; line-height: 1; cursor: pointer; }
+.co-modal-head button:hover { background: #eaffdf; border-color: var(--uss-green-d); }
+.co-modal-cuerpo { overflow-y: auto; padding: 10px 14px; }
+.co-modal-cuerpo .co-list { display: grid; gap: 6px; }
+.co-modal-cuerpo .co-item { padding: 7px 9px; background: #f7faf8; border: 1px solid var(--border); border-radius: 8px; font-size: 11px; align-items: center; }
+.co-hora { margin-left: auto; font-style: normal; color: var(--muted); font-size: 10px; }
+.co-modal-pie { padding: 9px 14px; border-top: 1px solid var(--border); font-size: 10.5px; color: var(--muted); }
+
+/* Fila compacta: píldora de modo + botón de órdenes (mismo renglón) */
+.co-top { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.co-top .pill { flex: 0 0 auto; white-space: nowrap; font-size: 10px; padding: 3px 8px; }
+.co-top .co-ver { flex: 1 1 auto; margin-top: 0; min-height: 28px; padding: 3px 9px; }
+
+/* Válvula proporcional del nivel (diseño de caudal, vertical) */
+.process-mimic .v-actuator{fill:#e2412d;stroke:var(--pm-dark);stroke-width:1.5;transition:fill .2s}
+.process-mimic .v-actuator--go{fill:#3ddc97}
+.process-mimic .v-actuator--stop{fill:#ff5d5d}
+.process-mimic .pm-vp-info{position:absolute;left:82px;top:8px;display:grid;grid-template-columns:auto 1fr;gap:0 7px;padding:6px 10px;background:#05090d;border:1px solid var(--pm-line);border-radius:6px;white-space:nowrap;pointer-events:none;color:var(--pm-text)}
+.process-mimic .pm-vp-info strong{grid-row:1/3;align-self:center;color:var(--pm-water);font:700 23px monospace}
+.process-mimic .pm-vp-info span,.process-mimic .pm-vp-info small{color:var(--pm-muted);font-size:11px}
+
+/* ── Cabecera de módulo con modo REAL / SIMULADOR ── */
+.mod-header{--accent:var(--uss-green);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:13px 20px;border-left:6px solid var(--accent);border-radius:14px;background:linear-gradient(120deg,#111,#292929);color:#fff;box-shadow:var(--shadow-lg)}
+.mod-header--sin-comunicacion{--accent:#ef4444}.mod-header--reconectando,.mod-header--simulado{--accent:#f59e0b}
+.mod-header__id{font:700 10px var(--mono);letter-spacing:.14em;color:var(--accent)}
+.mod-header__title{margin:4px 0 0;font-size:22px;font-weight:800;text-transform:uppercase}
+.mod-header__meta{margin:4px 0 0;font:600 11px var(--mono);letter-spacing:.04em;color:var(--accent)}
+.mod-header__actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-btn{display:grid;grid-template-columns:auto auto;column-gap:8px;align-items:center;padding:6px 14px;border-radius:12px;border:1px solid #3f3f46;background:#18181b;color:#fff;cursor:pointer;text-align:left;transition:border-color .2s,background .2s}
+.mode-btn:hover{border-color:#a1a1aa}
+.mode-btn__label{font-size:10px;text-transform:uppercase;color:#a1a1aa}
+.mode-btn__value{font-weight:800;font-size:14px}
+.mode-btn__action{grid-column:1/-1;font-size:11px;color:#a1a1aa}
+.mode-btn--real .mode-btn__value{color:var(--uss-green)}
+.mode-btn--simulador{border-color:#f59e0b;background:rgba(245,158,11,.12)}
+.mode-btn--simulador .mode-btn__value{color:#f59e0b}
+.status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(239,68,68,.15)}
+.status-badge__dot{width:10px;height:10px;border-radius:50%;background:#ef4444}
+.status-badge--conectado{background:rgba(74,222,0,.15)}.status-badge--conectado .status-badge__dot{background:var(--uss-green);box-shadow:0 0 9px var(--uss-green)}
+.status-badge--reconectando,.status-badge--simulado{background:rgba(245,158,11,.15)}.status-badge--reconectando .status-badge__dot,.status-badge--simulado .status-badge__dot{background:#f59e0b}
+@media (max-width:900px){.mod-header{padding:9px 16px}.mod-header__title{font-size:17px}}
+
+/* ── Caudal: mímico a la izquierda (alto completo) · tendencia + controles a la derecha ── */
+.lv-main.ca-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.35fr);align-items:stretch}
+.ca-layout > .mimic-panel{display:flex;flex-direction:column;min-height:0}
+.ca-layout > .mimic-panel .ca-canvas,.ca-layout > .mimic-panel .pm-canvas{flex:1 1 auto;min-height:420px;height:auto}
+.ca-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ca-side .lv-trend{flex:0 0 auto}
+.ca-side .lv-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1100px){.lv-main.ca-layout{grid-template-columns:1fr}.ca-side .lv-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.ca-side .lv-controls{grid-template-columns:1fr}}
+/* orden en 3 columnas: Opciones · Controlador · Perturbación / Control PID (doble) · Histórico */
+.ca-side .lv-options{order:1}.ca-side .lv-signals{order:2}.ca-side .ca-pert{order:3}.ca-side .lv-pid{order:4;grid-column:span 3}
+@media (max-width:700px){.ca-side .lv-pid{grid-column:auto}}
+.ca-side .lv-chart,.ca-side .lv-chart > div{flex:none}.ca-side .lv-chart .chart{flex:none;height:230px;min-height:0}
+
+/* cabecera más fina */
+.mod-header{padding:8px 16px;border-left-width:5px;border-radius:12px;gap:12px}
+.mod-header__id{font-size:9px}
+.mod-header__title{margin-top:2px;font-size:16px}
+.mod-header__meta{margin-top:2px;font-size:10px}
+.mode-btn{display:inline-flex;gap:6px;padding:4px 10px;border-radius:9px}
+.mode-btn__label{font-size:9px}.mode-btn__value{font-size:12px}
+.status-badge{padding:5px 11px;font-size:11px;gap:6px}.status-badge__dot{width:8px;height:8px}
+/* panel emergente Histórico */
+.co-top{flex-wrap:wrap;gap:6px}
+.co-hist{max-width:340px}
+.co-hist-list{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin:0}
+.co-hist-list dt{color:#6b7280;font-size:13px}.co-hist-list dd{margin:0;text-align:right;font-weight:800}
+.co-hist-list dd.nodata{color:#9ca3af}
+.co-hist-dot{font-style:normal;color:#ef4444;margin-right:4px}.co-hist-dot.on{color:var(--uss-green)}
+
+/* ── Caudal: los 4 paneles en UNA fila (compactos) ── */
+.ca-side .lv-controls{grid-template-columns:minmax(0,.95fr) minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr);gap:10px;align-items:stretch}
+.ca-side .lv-options{order:1}.ca-side .lv-signals{order:2}.ca-side .lv-pid{order:3;grid-column:auto}.ca-side .ca-pert{order:4}
+.ca-side .lv-control-card{padding:8px 10px;min-height:0;border-radius:12px;font-size:12px}
+.ca-side .lv-control-card h3{font-size:10px;padding-bottom:4px;margin-bottom:6px}
+.ca-side .lv-control-card small{font-size:10px}
+.ca-side .co-top{gap:4px}
+.ca-side .co-top .pill{font-size:9px;padding:2px 6px}
+.ca-side .co-ver{font-size:11px;padding:3px 6px}
+.ca-side .lv-opt-btns button{font-size:11px;padding:4px 6px}
+.ca-side .lv-signals div{padding:4px 0;font-size:11px}
+.ca-side .lv-signals b{font-size:11px}
+/* PID: campos arriba, perilla al lado, más pequeña */
+.ca-side .lv-pid-body{gap:6px;justify-content:space-between;align-items:center}
+.ca-side .lv-pid dl{min-width:0}
+.ca-side .lv-pid dl div{gap:6px;padding:3px 0}
+.ca-side .lv-pid dt{font-size:11px}
+.ca-side .lv-pid input,.ca-side .ca-pert input,.ca-side .ca-command input{width:52px;padding:3px 4px;font-size:11px}
+.ca-side .lv-pid button,.ca-side .ca-pert button{font-size:11px;padding:4px 8px}
+.ca-side .ca-knob{width:92px;height:92px}
+.ca-side .ca-knob-wrap{gap:2px}
+.ca-side .ca-readout{font-size:12px;padding:1px 8px}
+.ca-side .ca-knob-sub{font-size:8px}
+.ca-side .ca-pert-sub{font-size:9px;margin:0 0 2px}
+@media (max-width:1300px){.ca-side .lv-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.ca-side .lv-controls{grid-template-columns:1fr}}
+/* paneles de control estirados hasta abajo (alineados con el final del mímico) */
+.ca-side .lv-controls{flex:1 1 auto;grid-template-rows:1fr;align-content:stretch}
+.ca-side .lv-control-card{height:100%;display:flex;flex-direction:column}
+.ca-side .lv-pid > button,.ca-side .ca-pert > button:last-child{margin-top:auto}
+@media (max-width:1300px){.ca-side .lv-controls{grid-template-rows:none}}
+/* PID: tabla Kc | Ti | Td arriba (nombre encima del valor) y Setpoint grande debajo */
+.ca-side .lv-pid-body{flex-direction:column;align-items:stretch;gap:8px;flex:1 1 auto}
+.ca-side .lv-pid dl{display:grid;grid-template-columns:repeat(3,1fr);margin:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ca-side .lv-pid dl div{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;border-bottom:0;border-right:1px solid var(--border)}
+.ca-side .lv-pid dl div:last-child{border-right:0}
+.ca-side .lv-pid dt{padding:4px 0;text-align:center;font-size:11px;background:#f4f6f3;border-bottom:1px solid var(--border)}
+.ca-side .lv-pid dd{margin:0;padding:4px}
+.ca-side .lv-pid dd input{width:100%;box-sizing:border-box;text-align:center;font-size:13px;padding:4px 2px}
+.ca-side .lv-pid .ca-command{flex:1 1 auto;justify-content:center}
+.ca-side .lv-pid .ca-knob{width:130px;height:130px}
+.ca-side .lv-pid .ca-readout{font-size:14px}
+.ca-side .lv-pid .ca-knob-sub{font-size:9px}
+.ca-side .lv-pid .ca-command input{width:70px;text-align:center}
+
+/* número del setpoint editable: azul con letra blanca, también cuando está bloqueado */
+.ca-readout--edit{width:76px;box-sizing:border-box;text-align:center;-moz-appearance:textfield}
+.ca-readout--edit::-webkit-outer-spin-button,.ca-readout--edit::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ca-readout--edit:focus{outline:2px solid #4aa3ff;outline-offset:2px}
+.ca-side .lv-pid .lv-pid-apply{margin-top:0;width:100%}
+.ca-side .lv-pid .ca-command .ca-readout--edit{width:80px}
+/* columna PID dividida: Control PID arriba · Setpoint abajo */
+.ca-side .ca-pid-col{order:3;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ca-side .ca-pid-col .lv-pid{height:auto;flex:0 0 auto}
+.ca-side .ca-pid-col .ca-sp{flex:1 1 auto}
+.ca-side .ca-sp .ca-command{flex:1 1 auto;justify-content:center}
+.ca-side .ca-sp .ca-knob{width:112px;height:112px}
+/* cabecera de tendencia en una línea: título a la izquierda · muestras + REAL a la derecha */
+.ca-side .lv-trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ca-trend-right{display:flex;align-items:center;gap:8px}
+.ca-trend-right .pill{font-size:10px;padding:2px 8px}
+/* Setpoint arriba · Control PID abajo */
+.ca-side .ca-pid-col .ca-sp{order:1}.ca-side .ca-pid-col .lv-pid:not(.ca-sp){order:2}
+/* Perturbación: perilla centrada en vertical y del mismo tamaño que la del setpoint */
+.ca-side .ca-pert .ca-pert-sub{margin-top:auto}
+.ca-side .ca-pert .ca-knob{width:112px;height:112px}
+/* Controlador con estilo tabla (como la del PID): misma distribución, se mantienen los fondos de los valores */
+.ca-side .ca-sig-table{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ca-side .ca-sig-table > div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;padding:0;border-bottom:1px solid var(--border)}
+.ca-side .ca-sig-table > div:last-child{border-bottom:0}
+.ca-side .ca-sig-table span{display:flex;align-items:center;padding:6px 8px;background:#f4f6f3;border-right:1px solid var(--border);font-weight:700;color:var(--muted);font-size:11px}
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{display:flex;align-items:center;justify-content:center;margin:4px;text-align:center}
+.ca-side .lv-signals .ca-sig-table{display:block;padding:0;border-bottom:1px solid var(--border)}.ca-side .lv-signals .ca-sig-table > div{display:grid;gap:0}
+/* PID más compacto → más espacio para la perilla del Setpoint */
+.ca-side .ca-pid-col .lv-pid:not(.ca-sp) .lv-pid-body{gap:5px}
+.ca-side .lv-pid dt{padding:2px 0;font-size:10px}
+.ca-side .lv-pid dd{padding:2px}
+.ca-side .lv-pid dd input{font-size:11px;padding:2px}
+.ca-side .lv-pid .lv-pid-apply{padding:3px 8px;font-size:10px}
+.ca-side .ca-sp .ca-knob{width:140px;height:140px}
+/* sin recuadro negro de foco al hacer clic en la perilla (teclado: aro azul suave) */
+.ca-knob:focus{outline:none}
+.ca-knob:focus-visible{outline:none;filter:drop-shadow(0 0 4px #4aa3ff)}
+/* perilla del Setpoint más grande */
+.ca-side .ca-sp .ca-knob{width:170px;height:170px}
+/* quitar el tope max-width:130px (y 104/88 en pantallas medianas) que impedía agrandarla */
+.ca-side .ca-sp .ca-knob,.ca-side .ca-pert .ca-knob{max-width:none}
+.ca-side .ca-sp .ca-knob{width:145px;height:145px}
+/* tendencia más baja (había un min-height:360px) para que todo quepa sin scroll */
+.ca-side .lv-chart{min-height:0;padding:8px 10px}
+.ca-side .lv-chart .chart{height:200px}
+.ca-side .lv-chart .chart-legend{margin-bottom:4px!important}
+.ca-side .lv-chart-foot{padding-top:6px}
+/* ── Caudal: TODO cabe en la pantalla (sin scroll). La tendencia absorbe el espacio que sobre/falte ── */
+@media (min-width:1101px){
+  .lv-scada:has(> .ca-layout){height:calc(100vh - 112px);min-height:560px}
+  .lv-main.ca-layout{flex:1 1 auto;min-height:0}
+  .ca-layout > .mimic-panel .ca-canvas,.ca-layout > .mimic-panel .pm-canvas{min-height:0}
+  .ca-side{min-height:0}
+  .ca-side .lv-trend{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart > div{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .ca-side .lv-chart .chart{flex:1 1 auto;height:auto;min-height:110px}
+  .ca-side .lv-controls{flex:0 0 auto}
+  .ca-side .ca-sp .ca-knob{width:125px;height:125px}
+}
+/* "Modo" y "REAL/SIMULADOR" con el mismo tamaño de letra */
+.mode-btn__label,.mode-btn__value{font-size:12px;line-height:1.2}
+.mode-btn .mode-btn__label{font-size:12px;font-weight:800;letter-spacing:0;text-transform:uppercase}.mode-btn .mode-btn__value{font-size:12px;font-weight:800;letter-spacing:0}
+
+/* ── Nivel / Presión / Temperatura con el mismo diseño que Caudal ── */
+.co-fieldset{border:0;margin:0;padding:0;min-width:0}
+.ca-side .lv-options > .co-ver{margin-top:6px;width:100%}
+.ca-side .lv-options .co-top{display:flex;flex-direction:column;align-items:stretch}
+.ca-side .lv-options .co-top .co-ver{width:100%;justify-content:center}
+/* PID de solo lectura (presión): valor centrado como celda */
+.ca-side .lv-pid dd.ca-pid-ro{padding:4px 2px;text-align:center;font:700 12px var(--mono)}
+/* PidEditor de nivel con estilo tabla */
+.ca-side .pid-editor{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:8px;overflow:hidden;gap:0}
+.ca-side .pid-editor label{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;border-right:1px solid var(--border);text-align:center;font-weight:800;font-size:10px;color:var(--muted)}
+.ca-side .pid-editor label:nth-of-type(3){border-right:0}
+.ca-side .pid-editor label::first-line{line-height:1}
+.ca-side .pid-editor input{margin:2px;width:auto;box-sizing:border-box;text-align:center;font:700 11px var(--mono);padding:2px;border:1px solid var(--border);border-radius:5px}
+.ca-side .pid-editor > button{grid-column:1/-1;margin:5px;padding:3px 8px;font-size:10px;border:1px solid #9eb09a;border-radius:6px;background:#eef5eb;font-weight:700;cursor:pointer}
+.ca-side .pid-editor > .co-aviso{grid-column:1/-1;padding:0 6px 4px}
+/* Apertura de válvula (nivel) dentro de la 4ª columna */
+.ca-side .lv-valve .lv-valve-state{display:flex;justify-content:center;gap:10px;font-size:11px}
+.ca-side .lv-valve .lv-valve-cmds{margin-top:auto}
+.ca-side .ca-sp .co-aviso{font-size:10px;text-align:center}
+.ca-side .pid-editor label{min-width:0}
+.ca-side .pid-editor input{width:calc(100% - 4px);min-width:0}
+/* tabla Controlador compacta (Presión tiene 8 filas) y valores en una sola línea */
+.ca-side .ca-sig-table > div{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.ca-side .ca-sig-table span{padding:3px 6px;font-size:10px;line-height:1.15}
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{margin:2px 3px;padding:1px 4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* la tendencia nunca se aplasta por debajo de 220 px (si no cabe, la página hace scroll en vez de solaparse) */
+@media (min-width:1101px){.ca-side .lv-trend{min-height:220px}.lv-scada:has(> .ca-layout){height:auto;min-height:calc(100vh - 112px)}}
+/* Nivel: el pill REAL/DRY-RUN ya se muestra junto a la tendencia → ocultar el de Opciones */
+.ca-side .lv-options .co-fieldset .co-top > .pill:not(.pill-dark){display:none}
+/* valores de Controlador: se ven completos; si no caben, saltan de línea dentro de la celda */
+.ca-side .ca-sig-table b,.ca-side .ca-sig-table strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;line-height:1.2;text-align:center;padding:2px 4px}
+/* Presión / Temperatura: su 4º panel no tiene botón abajo → centrar el bloque (antes quedaba pegado al fondo) */
+.ca-side .ca-pert:not(:has(> button)) > :last-child{margin-bottom:auto}
+.ca-side .ca-pert > small{display:block;text-align:center;width:100%}
+/* cabecera: acento #EE3F3A (borde, id y ficha del PLC) en modo REAL; título siempre blanco; simulador sigue en naranja */
+.mod-header,.mod-header--conectado,.mod-header--sin-comunicacion{--accent:#ee3f3a}
+.mod-header--reconectando,.mod-header--simulado{--accent:#f59e0b}
+.mod-header__title{color:#fff}
+
+/* ── Opciones: MISMO ORDEN en los 4 SCADA ──
+   1 Órdenes · 2 Histórico · 3 usuario · 4 botones (Iniciar, Detener…) · 5 mensaje de estado al fondo */
+.ca-side .lv-options{display:flex;flex-direction:column}
+.ca-side .lv-options .lv-opt-btns{flex:0 0 auto}
+.ca-side .lv-options > small:last-child{margin-top:auto}
+/* Nivel (ControlPanel): reordenar sus piezas con el mismo esquema */
+.ca-side .lv-options > .co-fieldset:first-of-type{display:contents}
+.ca-side .lv-options > h3{order:0}
+.ca-side .lv-options .co-top{order:1;margin-bottom:0}
+.ca-side .lv-options > .co-ver{order:2;margin-top:6px}
+.ca-side .lv-options .co-top .pill-dark{order:3;display:block;align-self:center;background:none;border:0;color:var(--muted);font-size:10px;font-weight:400;padding:0;text-transform:none}
+.ca-side .lv-options .lv-opt-btns{order:4;margin-top:6px}
+.ca-side .lv-options .co-condiciones,.ca-side .lv-options .co-aviso{order:5;margin-top:auto !important;padding-left:0 !important;list-style:none;text-align:center;font-size:10px !important}
+.ca-side .lv-options > .co-fieldset .co-top{display:contents}.ca-side .lv-options > .co-fieldset .co-ver{order:1}
+.ca-side .lv-options > small{order:3;margin-top:4px}.ca-side .lv-options > small:last-child{order:5;margin-top:auto}.ca-side .lv-options button,.ca-side .lv-options .co-top{flex:0 0 auto}
+
+/* aviso de seguridad del mímico (p. ej. nivel alto → V1 cerrada) */
+.ca-canvas { position: relative; }
+.ca-aviso { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 999px; background: #ee3f3a; color: #fff; font-weight: 800; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,.35); white-space: nowrap; }
+.ca-aviso { top: 14px; left: 16px; right: 72px; transform: none; white-space: normal; text-align: center; border-radius: 12px; }
+
+/* PLC virtual (modo simulador) */
+.plcv { margin-top: 10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fafafa; display: grid; gap: 8px; }
+.plcv-head { display: flex; align-items: center; gap: 8px; }
+.plcv-head b { flex: 1; font-size: 13px; }
+.plcv-head button { border: 0; border-radius: 999px; padding: 5px 12px; background: #ee3f3a; color: #fff; font-weight: 700; cursor: pointer; }
+.plcv-head button:disabled { background: #d1d5db; color: #6b7280; cursor: default; }
+.plcv-dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; }
+.plcv-dot.conectando { background: #f59e0b; animation: plcv-pulso 1s infinite; }
+.plcv-dot.conectado { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+@keyframes plcv-pulso { 50% { opacity: .3; } }
+.plcv-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12px; color: #dc2626; }
+.plcv-checks li.ok { color: #16a34a; }
+.plcv-head { flex-wrap: wrap; }
+.plcv-head b { font-size: 12px; line-height: 1.2; }
+.plcv-head button { width: 100%; }
+.plcv { min-width: 0; }
+.plcv-checks { font-size: 11.5px; }
+
+/* cuadro del PLC virtual con scroll propio: no estira la columna ni las demás tarjetas */
+.plcv { max-height: 190px; overflow-y: auto; scrollbar-width: thin; }
+.plcv::-webkit-scrollbar { width: 6px; }
+.plcv::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* cuadro PLC virtual más compacto y separado de Órdenes */
+.plcv { max-height: 150px; margin: 4px 0 14px; padding: 8px 10px; gap: 6px; }
+.plcv-head b { font-size: 11.5px; }
+.plcv-head button { padding: 4px 10px; font-size: 12px; }
+.plcv-checks { font-size: 11px; gap: 2px; }
+.plcv > small { font-size: 10.5px; }
+.plcv { margin: 10px 0 8px; }
+
+/* PLC virtual: entre Detener y el mensaje (los hijos de Opciones usan order) */
+.ca-side .lv-options > .plcv { order: 4; flex: none; margin: 10px 0 2px; }
+.ca-side .lv-options .lv-opt-btns { flex: none; }
+.ca-side .lv-options > .plcv { flex: 1 1 0; min-height: 0; max-height: none; }   /* usa solo el espacio libre: no agranda la tarjeta */
+
+/* ───────── Emergente único (confirmaciones y avisos) ───────── */
+.em-fondo { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 14, 20, 0.55); backdrop-filter: blur(3px); animation: em-in .14s ease-out; }
+.em-caja { max-height: min(86vh, 640px); display: flex; flex-direction: column; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); overflow: hidden; border-top: 4px solid #2b2b2b; animation: em-sube .16s ease-out; }
+.em-caja--peligro { border-top-color: #dc2626; }
+.em-caja--aviso { border-top-color: #f59e0b; }
+.em-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+.em-head b { display: block; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; color: #111827; }
+.em-head small { display: block; margin-top: 2px; font: 600 11px var(--mono, monospace); color: #6b7280; }
+.em-x { flex: none; width: 32px; height: 32px; border: 1px solid #e5e7eb; border-radius: 9px; background: #f9fafb; font-size: 18px; line-height: 1; cursor: pointer; color: #374151; }
+.em-x:hover { background: #fee2e2; border-color: #ee3f3a; color: #ee3f3a; }
+.em-cuerpo { overflow-y: auto; padding: 14px 16px; font-size: 13px; color: #1f2937; }
+.em-pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; background: #fafafa; font-size: 11.5px; color: #6b7280; }
+.em-sub { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; }
+.em-cond { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 5px; }
+.em-cond li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid #eef0f2; border-radius: 9px; background: #f8fafc; }
+.em-cond li i { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
+.em-cond li i.ok { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+.em-cond li i.mal { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
+.em-cond li b { font: 700 12px var(--mono, monospace); }
+.em-alerta { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; }
+.em-alerta--peligro { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+.em-alerta--aviso { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.em-btn { min-width: 104px; padding: 9px 16px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; color: #111827; }
+.em-btn:hover { background: #f3f4f6; }
+.em-btn--ok { background: #16a34a; border-color: #15803d; color: #fff; }
+.em-btn--ok:hover { background: #15803d; }
+.em-btn--peligro { background: #dc2626; border-color: #b91c1c; color: #fff; }
+.em-btn--peligro:hover { background: #b91c1c; }
+@keyframes em-in { from { opacity: 0; } }
+@keyframes em-sube { from { transform: translateY(10px) scale(.98); opacity: 0; } }
+
+/* Botón cerrar [×] de TODOS los emergentes: SIEMPRE cuadro rojo de la marca, × blanca y SIN borde */
+.em-x, .co-modal-head button, .co-modal-head > button, .cat-cerrar, .af-modal-cerrar, .lz-lados-x {
+  background: #ee3f3a !important; border: none !important; color: #fff !important;
+  font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.em-x:hover, .co-modal-head button:hover, .cat-cerrar:hover, .af-modal-cerrar:hover, .lz-lados-x:hover { background: #c92f2a !important; border: none !important; color: #fff !important; }

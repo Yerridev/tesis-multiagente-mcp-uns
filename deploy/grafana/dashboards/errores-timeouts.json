@@ -1,0 +1,40 @@
+{
+  "title": "Errores y timeouts de control",
+  "uid": "errores-timeouts",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["mcp", "control", "errores"],
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Órdenes rechazadas, vencidas, con timeout o error",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT expedida, id, tipo, estado, motivo, usuario, correlacion FROM ordenes_control WHERE estado IN ('Rechazado','Vencido','Timeout','Error') AND expedida > now() - interval '24 hours' ORDER BY expedida DESC LIMIT 100",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Rechazos + timeouts por hora",
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT time_bucket('1 hour', expedida) AS time, count(*) AS fallos FROM ordenes_control WHERE estado IN ('Rechazado','Vencido','Timeout','Error') AND expedida > now() - interval '24 hours' GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    }
+  ]
+}

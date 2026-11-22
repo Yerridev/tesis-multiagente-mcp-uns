@@ -1,0 +1,9 @@
+# Python de los conectores, simuladores y pruebas (se instala en .venv con bat\00-instalar-python.bat)
+# Requiere Python 3.10 o superior (64 bits).
+paho-mqtt==2.1.0
+python-snap7==3.3.1
+pycomm3==1.2.14
+pymodbus==3.11.4
+# servidor MCP de nivel y pruebas de agentes
+mcp>=1.16,<2
+httpx==0.28.1

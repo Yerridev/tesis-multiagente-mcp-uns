@@ -1,0 +1,388 @@
+# =====================================================================
+#  MCP-INDUSTRIAL-NET · Docker Compose (base = perfil de producción)
+#  Reglas: control DRY-RUN · sin secretos en la imagen · sin PLC como
+#  requisito de arranque · Mosquitto/Postgres/MCP no publicados a la LAN.
+#  Perfiles: core | simulation | monitoring | edge
+#  Desarrollo/local: usar compose.override.yaml (relaja Mosquitto y
+#  publica solo en loopback los puertos de depuración).
+# =====================================================================
+#
+#  STACK COMPLETO PYTHON (proyecto "mcp-industrial-py", contenedores mcpy-*).
+#  Es INDEPENDIENTE del original: otro proyecto, otros contenedores, otros volumenes
+#  (base de datos propia). Usa los MISMOS puertos y los MISMOS PLC que el original,
+#  por eso SOLO se levanta con el original APAGADO:
+#      bat\41-levantar-py-completo.bat   (comprueba que el original este apagado)
+#      bat\42-detener-py-completo.bat
+#  Para mirar el Python con el original encendido: bat 39/40 (solo lectura, :8181).
+# =====================================================================
+name: mcp-industrial-py
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ---------------------------------------------------------------- frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: mcpy-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - frontend_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: mcpy-backend
+    environment:
+      Mqtt__Host: mosquitto
+      Mqtt__Port: "1883"
+      Mqtt__CaudalControlHost: host.docker.internal
+      Mqtt__CaudalControlPort: "1883"
+      # ordenes de presion/temperatura: mosquitto (real) o el broker Windows host.docker.internal (planta simulada)
+      Mqtt__PresionControlHost: ${PRESION_CONTROL_HOST:-mosquitto}
+      Mqtt__PresionControlPort: "1883"
+      Mqtt__TemperaturaControlHost: ${TEMP_CONTROL_HOST:-mosquitto}
+      Mqtt__TemperaturaControlPort: "1883"
+      # real = laboratorio fisico · simulado = simulador/*.py (llaves manuales via /api/sim/llave)
+      MODO_PLANTA: ${MODO_PLANTA:-real}
+      Control__Modo: ${CONTROL_MODO:-DryRun}
+      Control__HabilitadoEscritura: ${CONTROL_HABILITADOESCRITURA:-false}
+      CONTROL_REAL: ${CONTROL_REAL:-0}
+      # Operacion degradada: 1 = permite expedir ordenes con el sensor de nivel saturado
+      # (el nivel no es medible). La orden queda marcada en la auditoria. 0 = bloquea (seguro).
+      CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO: ${CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO:-0}
+      Control__AuditoriaRuta: /data/auditoria
+      Agente__ConversacionesRuta: /data/conversaciones
+      Lienzo__Ruta: /data/lienzos
+      # Control de caudal (S7-200): MODO DRY-RUN por defecto.  Para escribir en
+      # el PLC hacen falta los TRES interruptores a la vez (config + entorno +
+      # selector REMOTO en el tablero): por eso el modo Real NO se arma aquí.
+      ControlCaudal__Modo: ${CONTROL_CAUDAL_MODO:-DryRun}
+      ControlCaudal__HabilitadoEscritura: ${CONTROL_CAUDAL_HABILITADOESCRITURA:-false}
+      ControlCaudal__TimeoutSegundos: "12"
+      ControlCaudal__ExpiracionSegundos: "20"
+      CONTROL_CAUDAL_REAL: ${CONTROL_CAUDAL_REAL:-0}
+      # Control de presion (cFP-2200): el conector de escritura vive en la VM
+      # LAB-AUTOMATIZACION (192.168.114.80) y usa el mismo broker del stack.
+      ControlPresion__Modo: ${CONTROL_PRESION_MODO:-DryRun}
+      ControlPresion__HabilitadoEscritura: ${CONTROL_PRESION_HABILITADOESCRITURA:-false}
+      ControlPresion__TimeoutSegundos: "12"
+      ControlPresion__ExpiracionSegundos: "20"
+      CONTROL_PRESION_REAL: ${CONTROL_PRESION_REAL:-0}
+      ControlTemperatura__Modo: ${CONTROL_TEMPERATURA_MODO:-DryRun}
+      ControlTemperatura__HabilitadoEscritura: ${CONTROL_TEMPERATURA_HABILITADOESCRITURA:-false}
+      ControlTemperatura__TimeoutSegundos: "15"
+      ControlTemperatura__ExpiracionSegundos: "20"
+      CONTROL_TEMPERATURA_REAL: ${CONTROL_TEMPERATURA_REAL:-0}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
+      Health__DatabaseEnabled: "true"
+      Health__DatabaseHost: timescaledb
+      Health__DatabasePort: "5432"
+      # usuarios, sesiones (8 h) e historial de accesos en TimescaleDB (esquema seguridad)
+      Auth__Conexion: Host=timescaledb;Port=5432;Database=${POSTGRES_DB:-mcpindustrial};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-cambiar_esto}
+      Auth__HorasSesion: "8"
+      Auth__AdminUsuario: ${ADMIN_USUARIO:-}
+      Auth__AdminPassword: ${ADMIN_PASSWORD:-}
+      Auth__TokenServicio: ${SERVICIO_TOKEN:-}
+    volumes:
+      - backend-auditoria:/data/auditoria
+      # chats con los agentes (un JSON por conversacion) visibles en la PC: registros/conversaciones
+      - ./registros/conversaciones:/data/conversaciones
+      # posiciones de los nodos de los lienzos (iguales en cualquier navegador)
+      - ./registros/lienzos:/data/lienzos
+    networks:
+      - frontend_net
+      - application_net
+      - data_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- mosquitto
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mcpy-mosquitto
+    volumes:
+      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    networks:
+      - application_net
+      - control_net
+    # Publicacion SOLO en la tarjeta del laboratorio (192.168.114.100) para que
+    # los conectores edge de la VM de presion (192.168.114.80) publiquen aqui.
+    # No se publica en la Wi-Fi ni en loopback: el stackDocker sigue siendo interno.
+    ports:
+      # 192.168.114.100 solo existe con el cable del laboratorio; sin el, se publica en 127.0.0.1
+      # (lo decide bat\_modo-planta.bat; 01-red-laboratorio lo vuelve a poner en .100)
+      - "${MQTT_LAB_IP:-192.168.114.100}:1884:1883"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883 || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- timescaledb
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    container_name: mcpy-timescaledb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mcpindustrial}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiar_esto}
+      INGESTOR_PASSWORD: ${INGESTOR_PASSWORD:-ingestor_cambiar}
+      BACKEND_RO_PASSWORD: ${BACKEND_RO_PASSWORD:-lector_cambiar}
+    volumes:
+      - tsdb-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - data_net          # internal: el 5432 jamÃ¡s se publica a la LAN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mcpindustrial}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- ingestor-nivel
+  ingestor-nivel:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingestor
+    container_name: mcpy-ingestor-nivel
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      INGESTOR_EQUIPO: ${INGESTOR_EQUIPO:-nivel-mcn09}
+      INGESTOR_SALUD_PUERTO: "8099"
+      DB_DSN: postgresql://ingestor:${INGESTOR_PASSWORD:-ingestor_cambiar}@timescaledb:5432/${POSTGRES_DB:-mcpindustrial}
+    networks:
+      - application_net
+      - data_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [simulation]
+
+  # ---------------------------------------------------------------- ingestor-presion
+  # Persistencia de las seÃ±ales del cFP-2200 (publicadas por el conector edge
+  # que corre en la VM LAB-AUTOMATIZACION a traves del broker del host).
+  ingestor-presion:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingestor
+    container_name: mcpy-ingestor-presion
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      INGESTOR_EQUIPO: presion-mcp09
+      # El HEALTHCHECK de Dockerfile.ingestor sondea 8099 (uno por contenedor).
+      INGESTOR_SALUD_PUERTO: "8099"
+      DB_DSN: postgresql://ingestor:${INGESTOR_PASSWORD:-ingestor_cambiar}@timescaledb:5432/${POSTGRES_DB:-mcpindustrial}
+    networks:
+      - application_net
+      - data_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- ingestor-caudal
+  # Persistencia de las seÃ±ales del S7-200 de caudal (conector edge unificado
+  # lectura+escritura que corre en el host).
+  ingestor-caudal:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingestor
+    container_name: mcpy-ingestor-caudal
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      INGESTOR_EQUIPO: caudal-mcc09
+      # El HEALTHCHECK de Dockerfile.ingestor sondea 8099 (uno por contenedor).
+      INGESTOR_SALUD_PUERTO: "8099"
+      DB_DSN: postgresql://ingestor:${INGESTOR_PASSWORD:-ingestor_cambiar}@timescaledb:5432/${POSTGRES_DB:-mcpindustrial}
+    networks:
+      - application_net
+      - data_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [core, simulation, monitoring, edge]
+
+  # ---------------------------------------------------------------- connector-nivel
+  # Conector de CONTROL (dry-run por defecto). En el perfil edge puede correr en
+  # contenedor apuntando a Mosquitto publicado; la recomendaciÃ³n para acceso
+  # estable al PLC es el modo edge-host (ver docs/08-operacion-edge-plc.md).
+  connector-nivel:
+    build:
+      context: .
+      dockerfile: Dockerfile.connector
+    container_name: mcpy-connector-nivel
+    environment:
+      CONECTOR_MODO: ${CONECTOR_MODO:-dry-run}
+      CONTROL_REAL: ${CONTROL_REAL:-0}
+      CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO: ${CONTROL_PERMITIR_SENSOR_FUERA_DE_RANGO:-0}
+      MQTT_HOST: mosquitto
+      PLC_NIVEL_IP: ${PLC_NIVEL_IP:-192.168.114.9}
+      CONECTOR_SALUD_PUERTO: "8098"
+    # planta simulada: PLC_NIVEL_IP=host.docker.internal (el MicroLogix virtual corre en la PC)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["sh", "-c", "python conector_control_nivel.py --modo \"$${CONECTOR_MODO:-dry-run}\" --broker \"$${MQTT_HOST:-mosquitto}\" --plc \"$${PLC_NIVEL_IP:-192.168.114.9}\" --habilitado-real"]
+      # CONTROL_REAL queda AUSENTE a propÃ³sito. Sin --habilitado-real el modo real rechaza.
+    networks:
+      - control_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+    <<: *logging
+    profiles: [simulation, edge]
+
+  # ---------------------------------------------------------------- mcp-nivel
+  mcp-nivel:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: mcpy-mcp-nivel
+    environment:
+      BACKEND_URL: http://backend:8080
+      MCP_NIVEL_PUERTO: "8000"
+      # token de solo lectura para consultar el backend (el backend exige sesion)
+      SERVICIO_TOKEN: ${SERVICIO_TOKEN:-}
+    networks:
+      - application_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [simulation]
+
+  # ---------------------------------------------------------------- agents
+  # Backend en modo AGENTS_ONLY=1: sin servicio de control ni MQTT de control.
+  agents:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    container_name: mcpy-agents
+    environment:
+      Mqtt__Host: mosquitto
+      Mqtt__Port: "1883"
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
+      # contenedor interno de solo lectura (sin control): sin login
+      Auth__Habilitado: "false"
+    networks:
+      - application_net
+    depends_on:
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+    <<: *logging
+    profiles: [simulation]
+
+  # ---------------------------------------------------------------- grafana
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: mcpy-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-cambiar_esto}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      POSTGRES_DB: ${POSTGRES_DB:-mcpindustrial}
+      TSDB_RO_PASSWORD: ${BACKEND_RO_PASSWORD:-lector_cambiar}
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - data_net
+      - monitoring_net
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *logging
+    profiles: [monitoring]
+
+  # ---------------------------------------------------------------- prometheus
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: mcpy-prometheus
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring_net
+    restart: unless-stopped
+    <<: *logging
+    profiles: [monitoring]
+
+# ------------------------------------------------------------------ redes
+networks:
+  # Navegador â†’ frontend/Nginx
+  frontend_net:
+    driver: bridge
+  # Servicios de aplicaciÃ³n (backend, mosquitto, ingestores, mcp, agents)
+  application_net:
+    driver: bridge
+  # Datos: solo backend/ingestor/grafana/timescaledb (sin salida a la LAN)
+  data_net:
+    driver: bridge
+    internal: true
+  # Monitoreo (grafana â†” prometheus)
+  monitoring_net:
+    driver: bridge
+  # Control: conector â†” mosquitto (y hacia la red OT desde el host/edge)
+  control_net:
+    driver: bridge
+
+# ------------------------------------------------------------------ volÃºmenes
+volumes:
+  tsdb-data:
+  grafana-data:
+  prometheus-data:
+  mosquitto-data:
+  backend-auditoria:

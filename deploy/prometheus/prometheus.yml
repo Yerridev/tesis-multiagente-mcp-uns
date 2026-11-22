@@ -1,0 +1,16 @@
+# Prometheus — perfil monitoring (opcional).
+# El backend todavía no expone /metrics; se scrapa Grafana (que sí expone métricas)
+# como ancla inicial. Añadir el backend cuando implemente OpenTelemetry/Prometheus.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  # Cuando el backend publique /metrics (y se conecte a monitoring_net):
+  # - job_name: backend
+  #   static_configs:
+  #     - targets: ["backend:8080"]
